@@ -2378,3 +2378,129 @@ select {
 .health-list .kv {
   cursor: pointer;
 }
+
+/* ================= Gelen kutusu, yönetim, sezon ================= */
+.inbox {
+  display: grid;
+  grid-template-columns: minmax(340px, 0.9fr) minmax(400px, 1.3fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.inbox > .panel {
+  margin-bottom: 0;
+}
+
+.inbox-filters {
+  margin: 10px 12px 6px;
+}
+
+.inbox-list {
+  max-height: calc(100vh - 330px);
+  min-height: 300px;
+  overflow-y: auto;
+}
+
+.inbox-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  padding: 9px 14px;
+  border: none;
+  border-bottom: 1px solid var(--row-line);
+  background: none;
+  color: var(--text-soft);
+  text-align: left;
+}
+
+.inbox-row:hover {
+  background: var(--row-hover);
+}
+
+.inbox-row.selected {
+  background: rgba(246, 207, 60, 0.14);
+  box-shadow: inset 3px 0 var(--accent);
+}
+
+.inbox-row.unread .inbox-row-title {
+  color: #fff;
+  font-weight: 700;
+}
+
+.inbox-row.unread .inbox-row-title::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: 1px;
+}
+
+.inbox-row-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+}
+
+.inbox-row-meta .tag,
+.inbox-detail-meta .tag {
+  margin-left: 0;
+}
+
+.inbox-detail-meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.inbox-body {
+  margin: 14px 0;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.inbox-actions {
+  justify-content: flex-start;
+}
+
+.inbox-badge {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.tag-free {
+  margin-left: 0;
+  background: rgba(34, 163, 90, 0.35);
+  color: #c9f7d6;
+}
+
+.confidence-bar {
+  margin: 6px 8px 0;
+}
+
+.history-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 14px;
+}
+
+.gameover {
+  border-color: rgba(239, 68, 68, 0.6);
+}
+
+.gameover .panel-title {
+  background: linear-gradient(180deg, #a8322b, #7a1f1a);
+  color: #fff;
+}
+
+.gameover-reason {
+  margin: 0 0 12px !important;
+  font-size: 15px;
+  font-weight: 600;
+}

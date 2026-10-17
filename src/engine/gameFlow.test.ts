@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { gameData } from '../gameData';
 import { advance, finishUserMatch, isSeasonOver, nextMatchDate, startUserMatch } from './gameFlow';
-import { createWorld } from './generation/worldGenerator';
+import { createWorld, leagueClubs } from './generation/worldGenerator';
 import { computeStandings } from './league/standings';
 import { simulateToEnd } from './match/engine';
 import { playSeason } from './testing';
@@ -13,7 +13,7 @@ const START = '2026-07-01';
 function advanceToMatchDay(world: GameWorld): void {
   const target = nextMatchDate(world)!;
   while (world.date < target) {
-    const r = advance(world);
+    const r = advance(world, gameData);
     expect(r.kind).toBe('moved');
   }
 }
@@ -23,13 +23,13 @@ describe('oyun akışı', () => {
     const world = createWorld(gameData, 5, 'galatasaray', START);
     const first = nextMatchDate(world)!;
 
-    const r = advance(world);
+    const r = advance(world, gameData);
     expect(r.kind).toBe('moved');
     if (r.kind === 'moved' && world.date < first) expect(r.news.length).toBeGreaterThan(0);
     advanceToMatchDay(world);
     expect(world.date).toBe(first);
 
-    const result = advance(world);
+    const result = advance(world, gameData);
     expect(result.kind).toBe('userMatch');
     // Kendi maçımız oynanmadan diğer maçlar da oynanmaz.
     expect(world.season.fixtures.filter((f) => f.round === 1).every((f) => !f.result)).toBe(true);
@@ -56,7 +56,7 @@ describe('oyun akışı', () => {
     playSeason(world);
     expect(isSeasonOver(world)).toBe(true);
 
-    const table = computeStandings(world.clubs.map((c) => c.id), world.season.fixtures);
+    const table = computeStandings(leagueClubs(world).map((c) => c.id), world.season.fixtures);
     expect(table.every((r) => r.played === 34)).toBe(true);
     expect(table.reduce((s, r) => s + r.goalsFor, 0)).toBe(table.reduce((s, r) => s + r.goalsAgainst, 0));
 

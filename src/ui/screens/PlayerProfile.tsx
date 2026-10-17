@@ -81,6 +81,18 @@ function TransferActions({ player }: { player: Player }) {
     );
   }
 
+  if (!player.clubId) {
+    return (
+      <section className="panel action-panel">
+        <div className="panel-body action-bar">
+          <span className="muted">Serbest oyuncu — bonservis ödemeden, yalnızca sözleşmeyle imzalayabilirsin.</span>
+          <button className="btn btn-go" onClick={() => setDialog('contract')}>Sözleşme Teklif Et</button>
+        </div>
+        {dialog === 'contract' && <ContractDialog player={player} onClose={() => setDialog(null)} />}
+      </section>
+    );
+  }
+
   const transferBlock = offerBlocker(world, player, 'transfer');
   const loanBlock = offerBlocker(world, player, 'loan');
   return (

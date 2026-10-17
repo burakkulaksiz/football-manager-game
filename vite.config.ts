@@ -3,9 +3,13 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  // Kişisel, yerelde çalışan oyun: tek paket yeterli, boyut uyarısı gereksiz.
+  build: { chunkSizeWarningLimit: 2000 },
   test: {
     // Motor testleri saf TS; tarayıcı ortamına gerek yok.
     environment: 'node',
     include: ['src/**/*.test.ts'],
+    // İstatistik testleri binlerce maç oynatır; paralel koşarken 5 sn yetmeyebilir.
+    testTimeout: 30_000,
   },
 });

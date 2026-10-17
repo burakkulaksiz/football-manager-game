@@ -3,6 +3,7 @@
  * GameWorld düz veri olduğu için IndexedDB'ye olduğu gibi yazılır.
  */
 import { CURRENT_WORLD_VERSION, getClub, migrateWorld, type GameWorld } from '../engine';
+import { gameData } from '../gameData';
 import { db, type SaveSlot } from './db';
 
 /** Kayıt biçimi = dünya biçimi sürümü (bkz. engine/migrate.ts). */
@@ -86,7 +87,7 @@ export async function loadGame(id: number): Promise<GameWorld> {
     throw new Error(`Bu kayıt daha yeni bir oyun sürümüne ait (biçim ${slot.formatVersion}); açılamıyor.`);
   }
   // Eski kayıtlar yeni biçime dönüştürülür (finans, transfer alanları eklenir).
-  const world = slot.formatVersion < SAVE_FORMAT_VERSION ? migrateWorld(data.world, slot.formatVersion) : data.world;
+  const world = slot.formatVersion < SAVE_FORMAT_VERSION ? migrateWorld(data.world, slot.formatVersion, gameData) : data.world;
   if (!world || !world.players || !world.season || !world.tactics || !world.finances) throw new Error('Kayıt dosyası bozuk.');
   return world;
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getClub, nextFixtureFor } from '../../engine';
+import { getClub, nextFixtureFor, unreadCount } from '../../engine';
 import { hasUnsavedProgress, useGameStore, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { QuitDialog, SaveDialog } from '../components/SaveDialogs';
@@ -12,7 +12,12 @@ function NextMatchCard() {
   const world = useWorld();
   const next = nextFixtureFor(world, world.playerClubId);
   if (!next) {
-    return <div className="next-card"><div className="next-card-title">Sezon tamamlandı</div></div>;
+    return (
+      <div className="next-card">
+        <div className="next-card-title">Sezon arası</div>
+        <div className="next-card-date">Yeni sezon 1 Temmuz</div>
+      </div>
+    );
   }
   const home = getClub(world, next.homeId);
   const away = getClub(world, next.awayId);
@@ -40,6 +45,7 @@ export function Sidebar() {
   const world = useWorld();
   // Transfer Merkezi rozeti: yanıt bekleyen teklifler
   const pendingActions = actionableOffers(world.offers, world.playerClubId);
+  const unread = unreadCount(world);
   const [dialog, setDialog] = useState<'save' | 'quit' | null>(null);
   // Oyuncu profili açıkken "Kadro" vurgulu kalsın.
   const isActive = (id: string) => id === screen || (screen === 'player' && id === 'squad');
@@ -58,6 +64,7 @@ export function Sidebar() {
               >
                 {item.label}
                 {item.id === 'transfers' && pendingActions > 0 && <span className="menu-badge">{pendingActions}</span>}
+                {item.id === 'inbox' && unread > 0 && <span className="menu-badge inbox-badge">{unread}</span>}
               </button>
             ))}
           </div>

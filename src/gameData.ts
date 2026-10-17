@@ -4,6 +4,7 @@
  * data/names/ içine yeni bir <havuz>.json eklemek yeterli, burada değişiklik gerekmez.
  */
 import clubs from '../data/clubs.json';
+import lowerClubs from '../data/lower_league.json';
 import nations from '../data/nations.json';
 import { validateGameData, type GameData } from './engine/data';
 
@@ -18,4 +19,4 @@ for (const [path, pool] of Object.entries(poolModules)) {
   namePools[key] = pool;
 }
 
-export const gameData: GameData = validateGameData({ clubs, nations, namePools });
+export const gameData: GameData = validateGameData({ clubs, lowerClubs, nations, namePools });

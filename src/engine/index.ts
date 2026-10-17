@@ -29,6 +29,10 @@ export * from './squad/discipline';
 export * from './squad/morale';
 export * from './squad/development';
 export * from './squad/condition';
+export * from './season/expectation';
+export * from './season/board';
+export * from './season/seasonEnd';
+export * from './season/rollover';
 
 /** Yeni kariyer bu tarihte başlar (yaz transfer dönemi başı). */
 export const SEASON_START_DATE = '2026-07-01';

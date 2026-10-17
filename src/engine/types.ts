@@ -31,6 +31,8 @@ export interface Club {
   wageBudget: number;
   fanExpectation: FanExpectation;
   colors: { primary: string; secondary: string };
+  /** 1 = Süper Lig, 2 = (kurgusal) 1. Lig. JSON'da yoksa 1 sayılır. */
+  division?: 1 | 2;
 }
 
 export interface Contract {
@@ -165,7 +167,7 @@ export interface MatchResult {
 /* Finans                                                              */
 /* ------------------------------------------------------------------ */
 
-export type IncomeCategory = 'tickets' | 'tv' | 'sponsor' | 'transfersIn';
+export type IncomeCategory = 'tickets' | 'tv' | 'sponsor' | 'transfersIn' | 'prize';
 export type ExpenseCategory = 'wages' | 'bonuses' | 'transfersOut' | 'signingBonuses';
 
 /** Bir ayın gelir/gider dökümü (giderler pozitif sayı). */
@@ -239,7 +241,9 @@ export type NewsCategory =
   | 'injury'
   | 'discipline'
   | 'player'
-  | 'training';
+  | 'training'
+  | 'board'
+  | 'season';
 
 /* ------------------------------------------------------------------ */
 /* Antrenman                                                           */
@@ -304,4 +308,46 @@ export interface GameWorld {
   /** En yeni sonda; en fazla NEWS_LIMIT kayıt tutulur. */
   news: NewsItem[];
   nextNewsId: number;
+  board: BoardState;
+  /** Biten sezonların özeti (en yeni sonda). */
+  history: SeasonSummary[];
+  /** 'running' = sezon sürüyor, 'ended' = son maç oynandı, yeni sezon 1 Temmuz'da başlar. */
+  seasonState: 'running' | 'ended';
+  /** Görevden alındıysa kariyer biter. */
+  gameOver: { date: GameDate; reason: string } | null;
+}
+
+/* ------------------------------------------------------------------ */
+/* Yönetim ve sezon geçmişi                                            */
+/* ------------------------------------------------------------------ */
+
+export interface BoardState {
+  /** Yönetimin güveni 0–100. */
+  confidence: number;
+  /** Sezon hedefi (lig sırası). */
+  targetPosition: number;
+}
+
+export interface SeasonAward {
+  title: string;
+  playerId: number;
+  playerName: string;
+  clubId: string;
+  clubName: string;
+  value: string;
+}
+
+export interface SeasonSummary {
+  year: number;
+  table: { clubId: string; name: string; points: number; goalDifference: number }[];
+  championId: string;
+  relegatedIds: string[];
+  promotedIds: string[];
+  /** Kulüp isimleri sezon içindeki hâliyle saklanır. */
+  relegatedNames: string[];
+  promotedNames: string[];
+  userClubId: string;
+  userPosition: number;
+  targetPosition: number;
+  awards: SeasonAward[];
 }

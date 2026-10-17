@@ -5,7 +5,8 @@ import { formatDayMonth } from '../labels';
 /** Gezinme çubuğundaki durum metni. */
 function statusText(world: GameWorld): string {
   const next = nextFixtureFor(world, world.playerClubId);
-  if (!next) return 'Sezon tamamlandı';
+  if (world.gameOver) return 'Görevine son verildi';
+  if (!next) return world.seasonState === 'ended' ? 'Sezon arası · yeni sezon 1 Temmuz' : 'Sezon tamamlandı';
   const home = next.homeId === world.playerClubId;
   const opponent = getClub(world, home ? next.awayId : next.homeId);
   const venue = home ? 'İç saha' : 'Deplasman';
@@ -38,7 +39,7 @@ export function NavBar() {
         </button>
       </div>
       <div className={`nav-status${isMatchDay ? ' matchday' : ''}`}>{statusText(world)}</div>
-      <button className="btn-continue" onClick={advance} disabled={liveMatch !== null && onMatchScreen}>
+      <button className="btn-continue" onClick={advance} disabled={(liveMatch !== null && onMatchScreen) || world.gameOver !== null}>
         {label}
         <span className="btn-continue-arrow">›</span>
       </button>

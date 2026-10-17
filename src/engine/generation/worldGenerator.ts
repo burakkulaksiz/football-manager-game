@@ -6,6 +6,8 @@ import type { Club, GameWorld, Player, Position } from '../types';
 import { generateSeason } from '../league/schedule';
 import { initFinances } from '../finance/finance';
 import { defaultTactics } from '../match/tactics';
+import { addNews } from '../news';
+import { divisionOf, initialBoard } from '../season/expectation';
 import { DEFAULT_TRAINING } from '../squad/training';
 import { generatePlayer } from './playerGenerator';
 
@@ -114,47 +116,96 @@ export function createWorld(
   const players: Record<number, Player> = {};
   let nextId = 1;
 
-  for (const club of data.clubs) {
-    const base = clubBaseLevel(club.reputation);
-    const wageFactor = 0.6 + club.reputation / 100;
-    const squad = SQUAD_TEMPLATE.map(({ position, role }) => {
-      const player = generatePlayer(rng, data, nextId++, startDate, {
-        position,
-        level: levelForRole(rng, base, role),
-        age: ageForRole(rng, role),
-        nationality: pickNationality(rng, data, role, club.reputation),
-        clubId: club.id,
-        wageFactor,
-        extraPotential: role === 'youth' ? rng.int(5, 30) : 0,
-      });
-      return { player, role, position };
-    });
-
-    assignSquadNumbers(squad);
-    scaleWages(rng, club, squad.map((e) => e.player));
-    for (const { player } of squad) players[player.id] = player;
+  // Kulüpler kopyalanır ki oyun içi değişiklikler kaynak veriyi bozmasın.
+  const clubs: Club[] = [
+    ...data.clubs.map((c) => ({ ...c, colors: { ...c.colors }, division: 1 as const })),
+    ...data.lowerClubs.map((c) => ({ ...c, colors: { ...c.colors }, division: 2 as const })),
+  ];
+  for (const club of clubs) {
+    for (const player of generateClubSquad(rng, data, club, startDate, nextId)) {
+      players[player.id] = player;
+      nextId = Math.max(nextId, player.id + 1);
+    }
   }
 
   const season = generateSeason(rng, data.clubs.map((c) => c.id), Number(startDate.slice(0, 4)));
+  const userClub = clubs.find((c) => c.id === playerClubId)!;
 
-  return {
+  const world: GameWorld = {
     seed,
     rngState: rng.getState(),
     date: startDate,
     playerClubId,
-    // Kulüpler kopyalanır ki oyun içi değişiklikler kaynak veriyi bozmasın.
-    clubs: data.clubs.map((c) => ({ ...c, colors: { ...c.colors } })),
+    clubs,
     players,
     nextPlayerId: nextId,
     season,
     tactics: { [playerClubId]: defaultTactics(Object.values(players).filter((p) => p.clubId === playerClubId)) },
     training: { [playerClubId]: { ...DEFAULT_TRAINING } },
-    finances: initFinances(data.clubs, startDate, players),
+    finances: initFinances(clubs, startDate, players),
     offers: [],
     nextOfferId: 1,
     news: [],
     nextNewsId: 1,
+    board: initialBoard(userClub),
+    history: [],
+    seasonState: 'running',
+    gameOver: null,
   };
+  addNews(world, {
+    category: 'board',
+    title: `${userClub.name} yönetiminden hoş geldin mesajı`,
+    body:
+      `Yönetim kurulu yeni menajerini selamlıyor. Bu sezonki hedefimiz ligi ${world.board.targetPosition}. sırada ya da daha iyi bitirmek. ` +
+      "Yaz transfer dönemi açık; kadroyu Transfer Merkezi'nden güçlendirebilir, taktiği ve antrenmanı ayarlayabilirsin. Başarılar!",
+    important: false,
+    clubId: playerClubId,
+  });
+  return world;
+}
+
+/** Bir kulübün şablona göre 25 kişilik kadrosu (id'ler firstId'den başlar). */
+export function generateClubSquad(rng: Rng, data: GameData, club: Club, date: GameDate, firstId: number): Player[] {
+  const base = clubBaseLevel(club.reputation);
+  const wageFactor = 0.6 + club.reputation / 100;
+  let id = firstId;
+  const squad = SQUAD_TEMPLATE.map(({ position, role }) => {
+    const player = generatePlayer(rng, data, id++, date, {
+      position,
+      level: levelForRole(rng, base, role),
+      age: ageForRole(rng, role),
+      nationality: pickNationality(rng, data, role, club.reputation),
+      clubId: club.id,
+      wageFactor,
+      extraPotential: role === 'youth' ? rng.int(5, 30) : 0,
+    });
+    return { player, role, position };
+  });
+  assignSquadNumbers(squad);
+  scaleWages(rng, club, squad.map((e) => e.player));
+  return squad.map((e) => e.player);
+}
+
+/** Altyapıdan gelen genç oyuncu (16–17 yaş): düşük seviye, yüksek potansiyel. */
+export function generateYouthPlayer(rng: Rng, data: GameData, club: Club, date: GameDate, id: number): Player {
+  const positions: Position[] = ['GK', 'DC', 'DR', 'DL', 'DM', 'MC', 'AMR', 'AML', 'AMC', 'ST'];
+  const position = positions[rng.weightedIndex([1, 2, 1, 1, 1, 2, 1, 1, 1, 2])]!;
+  const player = generatePlayer(rng, data, id, date, {
+    position,
+    level: clubBaseLevel(club.reputation) - 4.5 + rng.normal(0, 1),
+    age: rng.int(16, 17),
+    nationality: pickNationality(rng, data, 'youth', club.reputation),
+    clubId: club.id,
+    wageFactor: 0.6 + club.reputation / 100,
+    extraPotential: rng.int(10, 45),
+  });
+  player.contract.wage = roundNice(Math.max(12_000, player.contract.wage * 0.4));
+  return player;
+}
+
+/** Süper Lig'deki kulüpler. */
+export function leagueClubs(world: GameWorld): Club[] {
+  return world.clubs.filter((c) => divisionOf(c) === 1);
 }
 
 /** Bir kulübün oyuncuları. */

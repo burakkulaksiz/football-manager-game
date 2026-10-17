@@ -2,8 +2,9 @@
  * Oyun akışı: "Devam" butonunun motor tarafı.
  * Bu fonksiyonlar dünyayı YERİNDE değiştirir (store sonra yeni referans oluşturur).
  */
+import type { GameData } from './data';
 import { processDay } from './daily';
-import { addDays, type GameDate } from './date';
+import { addDays, makeDate, type GameDate } from './date';
 import { buildResult } from './match/engine';
 import { applyResult, drawMatchSeed, playFixture, startFixture } from './match/simulate';
 import type { MatchState } from './match/state';
@@ -53,11 +54,11 @@ export function isSeasonOver(world: GameWorld): boolean {
  * Tek günlük ilerleme: takvim + günlük işler (finans, transfer, kiralıklar…).
  * Kullanıcıyı ilgilendiren yeni haberleri döndürür.
  */
-function advanceOneDay(world: GameWorld): NewsItem[] {
+function advanceOneDay(world: GameWorld, data: GameData): NewsItem[] {
   const before = world.nextNewsId;
   world.date = addDays(world.date, 1);
   const rng = Rng.fromState(world.rngState);
-  processDay(world, rng);
+  processDay(world, rng, data);
   world.rngState = rng.getState();
   return world.news.filter((n) => n.id >= before && n.important);
 }
@@ -105,7 +106,8 @@ export function finishUserMatch(world: GameWorld, state: MatchState): Fixture[] 
  *    (teklif yanıtı, gelen teklif, transfer dönemi…) çıkarsa o gün durur.
  *  - Sezon bittiyse bir gün ilerler (yeni sezon döngüsü 9. aşamada).
  */
-export function advance(world: GameWorld, options: { autoPlayUserMatch?: boolean } = {}): AdvanceResult {
+export function advance(world: GameWorld, data: GameData, options: { autoPlayUserMatch?: boolean } = {}): AdvanceResult {
+  if (world.gameOver) return { kind: 'moved', days: 0, news: [] };
   const userFixture = todaysUserFixture(world);
   if (userFixture && !options.autoPlayUserMatch) return { kind: 'userMatch', fixture: userFixture };
 
@@ -114,12 +116,13 @@ export function advance(world: GameWorld, options: { autoPlayUserMatch?: boolean
     const fixtures = playTodaysMatches(world);
     return { kind: 'played', round: fixtures[0]!.round, fixtures };
   }
-  const next = nextMatchDate(world);
+  // Sezon arasında bir sonraki durak yeni sezonun başlangıcıdır (1 Temmuz).
+  const next = nextMatchDate(world) ?? makeDate(world.season.year + 1, 7, 1);
   let days = 0;
   let news: NewsItem[] = [];
   do {
-    news = advanceOneDay(world);
+    news = advanceOneDay(world, data);
     days++;
-  } while (news.length === 0 && next !== null && world.date < next);
+  } while (news.length === 0 && !world.gameOver && world.date < next);
   return { kind: 'moved', days, news };
 }

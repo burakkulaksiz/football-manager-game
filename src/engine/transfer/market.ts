@@ -102,7 +102,8 @@ const PREFERRED_NUMBER: Record<PositionGroup, number[]> = {
   ATT: [7, 9, 10, 11, 17, 19, 77, 99],
 };
 
-function freeSquadNumber(world: GameWorld, player: Player, clubId: string): number {
+/** Kulüpte boştaki uygun forma numarası (mevkiye göre tercihli). */
+export function freeSquadNumber(world: GameWorld, player: Player, clubId: string): number {
   const used = new Set(clubPlayers(world, clubId).filter((p) => p.id !== player.id).map((p) => p.squadNumber));
   const preferred = PREFERRED_NUMBER[groupOf(primaryPosition(player))].find((n) => !used.has(n));
   if (preferred !== undefined) return preferred;
@@ -202,7 +203,7 @@ export function returnLoans(world: GameWorld): void {
 }
 
 /** Oyuncu kulüpten ayrılırken: kullanıcının taktiğinden çıkar. */
-function detachFromClub(world: GameWorld, player: Player, clubId: string): void {
+export function detachFromClub(world: GameWorld, player: Player, clubId: string): void {
   const tactics = world.tactics[clubId];
   if (!tactics) return;
   const next = removePlayer(tactics, player.id);
@@ -216,7 +217,7 @@ function detachFromClub(world: GameWorld, player: Player, clubId: string): void 
 }
 
 /** Transferi tamamlanan oyuncu için açık teklifleri kapatır. */
-function cancelOffersFor(world: GameWorld, playerId: number): void {
+export function cancelOffersFor(world: GameWorld, playerId: number): void {
   for (const o of world.offers) {
     if (o.playerId === playerId && (o.status === 'pending' || o.status === 'countered' || o.status === 'accepted')) {
       o.status = 'cancelled';
@@ -230,4 +231,13 @@ export function formatPlain(amount: number): string {
   if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1).replace('.', ',').replace(',0', '')} Mn`;
   if (amount >= 1_000) return `${Math.round(amount / 1_000)} bin`;
   return String(Math.round(amount));
+}
+
+/** Oyuncuyu serbest bırakır (sözleşme bitti / kadro fazlası). */
+export function releasePlayer(world: GameWorld, player: Player): void {
+  if (player.clubId) detachFromClub(world, player, player.clubId);
+  cancelOffersFor(world, player.id);
+  player.clubId = null;
+  player.squadNumber = null;
+  player.loan = null;
 }

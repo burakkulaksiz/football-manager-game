@@ -1,4 +1,4 @@
-import { computeStandings, getClub, goalDifference, seasonLabel } from '../../engine';
+import { computeStandings, getClub, goalDifference, leagueClubs, seasonLabel } from '../../engine';
 import { useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { OutcomeBox } from '../components/OutcomeBox';
@@ -14,7 +14,7 @@ function zoneClass(position: number, total: number): string {
 
 export function TableScreen() {
   const world = useWorld();
-  const table = computeStandings(world.clubs.map((c) => c.id), world.season.fixtures);
+  const table = computeStandings(leagueClubs(world).map((c) => c.id), world.season.fixtures);
 
   return (
     <section className="panel">

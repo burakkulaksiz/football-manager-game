@@ -34,6 +34,9 @@ import {
 
 type Tab = 'search' | 'offers' | 'news';
 
+/** Kulüp filtresinde serbest oyuncuları seçen değer. */
+const FREE_AGENTS = '__free';
+
 /** Kullanıcının harekete geçmesi gereken teklif sayısı (menü rozeti için). */
 export function actionableOffers(offers: readonly TransferOffer[], userId: string): number {
   return offers.filter(
@@ -90,15 +93,16 @@ function SearchTab() {
 
   const results = useMemo(() => {
     const rows = Object.values(world.players)
-      .filter((p) => p.clubId && p.clubId !== world.playerClubId)
+      .filter((p) => p.clubId !== world.playerClubId)
       .filter((p) => !position || (p.positions[position] ?? 0) >= 13)
       .filter((p) => {
         const age = ageOn(p.birthDate, world.date);
         return age >= minAge && age <= maxAge;
       })
-      .filter((p) => !clubId || p.clubId === clubId)
+      // '__free' = serbest oyuncular
+      .filter((p) => !clubId || (clubId === FREE_AGENTS ? p.clubId === null : p.clubId === clubId))
       .filter((p) => !attr || p.attributes[attr] >= attrMin)
-      .map((p) => ({ p, value: marketValue(p, world.date), asking: askingPrice(world, p) }))
+      .map((p) => ({ p, value: marketValue(p, world.date), asking: p.clubId ? askingPrice(world, p) : 0 }))
       .filter((r) => !maxValue || r.value <= maxValue)
       .filter((r) => !affordable || r.asking <= budget)
       .sort((a, b) => b.value - a.value);
@@ -144,6 +148,7 @@ function SearchTab() {
           <span>Kulüp</span>
           <select value={clubId} onChange={(e) => setClubId(e.target.value)}>
             <option value="">Tümü</option>
+            <option value={FREE_AGENTS}>Serbest oyuncular</option>
             {world.clubs.filter((c) => c.id !== world.playerClubId).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </label>
@@ -168,18 +173,18 @@ function SearchTab() {
         </thead>
         <tbody>
           {results.slice(0, 150).map(({ p, value, asking }) => {
-            const club = getClub(world, p.clubId!);
+            const club = p.clubId ? getClub(world, p.clubId) : null;
             return (
               <tr key={p.id} onClick={() => openPlayer(p.id)}>
                 <td className="strong">
                   {p.firstName} {p.lastName}
                   {p.loan && <span className="tag">Kiralık</span>}
                 </td>
-                <td><span className="club-cell"><ClubBadge club={club} size={16} /> {club.name}</span></td>
+                <td>{club ? <span className="club-cell"><ClubBadge club={club} size={16} /> {club.name}</span> : <span className="tag tag-free">Serbest</span>}</td>
                 <td><PositionChips player={p} /></td>
                 <td className="num">{ageOn(p.birthDate, world.date)}</td>
                 <td className="num value">{formatMoney(value)}</td>
-                <td className={`num${asking > budget ? ' muted' : ''}`}>{formatMoney(asking)}</td>
+                <td className={`num${asking > budget ? ' muted' : ''}`}>{p.clubId ? formatMoney(asking) : 'Bonservissiz'}</td>
                 <td className="num">{formatMoney(p.contract.wage)}</td>
                 <td>{formatDateShort(p.contract.expires)}</td>
               </tr>

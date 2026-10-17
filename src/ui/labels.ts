@@ -249,6 +249,8 @@ export const NEWS_CATEGORY_LABELS: Record<import('../engine').NewsCategory, stri
   discipline: 'Disiplin',
   player: 'Oyuncu',
   training: 'Antrenman',
+  board: 'Yönetim',
+  season: 'Sezon',
 };
 
 export const INCOME_LABELS: Record<import('../engine').IncomeCategory, string> = {
@@ -256,6 +258,7 @@ export const INCOME_LABELS: Record<import('../engine').IncomeCategory, string> =
   tv: 'Yayın',
   sponsor: 'Sponsor',
   transfersIn: 'Transfer Geliri',
+  prize: 'Ödül',
 };
 
 export const EXPENSE_LABELS: Record<import('../engine').ExpenseCategory, string> = {

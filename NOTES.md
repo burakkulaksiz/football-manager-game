@@ -51,13 +51,18 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
   transfer/offers.ts   Kullanıcı teklifleri, karşı teklif, sözleşme görüşmesi (negotiateTransfer/Renewal),
                        gelen tekliflere yanıt, günlük teklif işleme (processOffers).
   transfer/ai.ts       Yapay zekâ alımları ve kullanıcıya teklifler (aiTransferDay).
-  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 3).
+  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 4; migrateWorld GameData de alır).
   squad/training.ts    Antrenman odağı/yoğunluğu ve etkileri (INTENSITY_EFFECTS, FOCUS_ATTRS).
   squad/injuries.ts    Sakatlık türleri, maç/antrenman sakatlığı, günlük iyileşme.
   squad/discipline.ts  Kart cezaları (maç sonrası).
   squad/morale.ts      Maç sonrası moral, günlük ortalamaya dönüş, şikâyetler.
   squad/development.ts Haftalık gelişim/gerileme (pazartesi).
   squad/condition.ts   Günlük kondisyon toparlanması.
+  season/expectation.ts Beklenti → hedef sıra, lig (division), yeni sezonda beklenti hesabı.
+  season/board.ts      Yönetim güveni: maç sonrası, aylık değerlendirme, görevden alma (gameOver).
+  season/seasonEnd.ts  Sezon sonu: tablo, ödüller, sıralama primi, küme düşen/çıkan seçimi, arşiv.
+  season/rollover.ts   1 Mayıs uyarı, 30 Haziran sözleşmeler, 1 Temmuz yeni sezon (lig değişimi, itibar,
+                       emeklilik, altyapı, kadro budama, bütçeler, fikstür).
   testing.ts           Yalnızca testler: makeResult, playSeason.
   index.ts             Motorun dışa açık yüzü + SEASON_START_DATE (2026-07-01).
 src/store/gameStore.ts Zustand: phase (menu/newGame/load/game), screen + geçmiş, world, liveMatch (canlı maç),
@@ -71,10 +76,11 @@ src/ui/                React. Motoru sadece çağırır, oyun mantığı içerme
   layout/              GameShell, Header, NavBar, Sidebar, StatusBar, pageHeading (başlık hapı + konum yolu)
   screens/             MainMenu, NewGameScreen, SquadScreen, PlayerProfile, ClubInfoScreen,
                        FixturesScreen, TableScreen, StatsScreen, MatchScreen, TacticsScreen, TransferScreen
-                       (ara / teklifler / haberler), FinanceScreen, TrainingScreen, LoadGameScreen, Placeholder
+                       (ara / teklifler / haberler), FinanceScreen, TrainingScreen, InboxScreen, LoadGameScreen
   components/          ClubBadge, Shirt, OutcomeBox, InstructionsPanel (FormationPicker + talimatlar; taktik
                        ekranı ve maç içinde ortak), Modal (portal ile body'ye), NoticeToast, SaveDialogs,
-                       TransferDialogs (OfferDialog, ContractDialog, CounterDialog), Stars, StatusTags
+                       TransferDialogs (OfferDialog, ContractDialog, CounterDialog), Stars, StatusTags,
+                       GameOverOverlay
   styles.css           Tema; renkler CSS değişkenleri olarak (bkz. "Görünüm")
 ```
 Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
@@ -136,6 +142,8 @@ Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
 - `data/nations.json` — `[{ code, name, namePool, weight }]`. `TUR` zorunlu (weight 0: yerli ayrı seçilir).
   weight = yabancı oyuncu üretiminde seçilme ağırlığı.
 - `data/names/<havuz>.json` — `{ firstNames: [], lastNames: [] }`. Yeni dosya eklemek yeterli.
+- `data/lower_league.json` — kurgusal 1. Lig kulüpleri (clubs.json ile aynı biçim, en az 3). Oyunda
+  `division: 2`; kadroları oyun başında üretilir. Küme düşen Süper Lig kulübü de buraya iner.
 - **Kayıt** (IndexedDB, Dexie şema sürümü 2): `saves` = SaveSlot `{ id, name, careerId, clubId, clubName,
   gameDate, season, isAutosave, createdAt, updatedAt, formatVersion }`; `saveData` = `{ id, world: GameWorld }`
   (aynı id). GameWorld olduğu gibi yazılır (düz veri), kayıt anında `structuredClone` ile kopyalanır.
@@ -185,6 +193,32 @@ Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
   `trend` gelişim eğilimi (UI ▲/▼). Antrenör raporu yıldızları = (yetenek − 45) / 25, 0.5–5.
 - Denge (aşama 8 sonrası, ~4600 maç): 2.55 gol, %44.9 ev, %25.0 beraberlik (goalBase 0.27, homeAttack 1.2).
 
+## Sezon döngüsü ve yönetim kuralları (aşama 9)
+- **Lig yapısı:** world.clubs = Süper Lig (division 1) + 1. Lig (division 2). Fikstür ve puan durumu yalnızca
+  `leagueClubs(world)`. 1. Lig maçları oynanmaz; çıkan 3 kulüp itibar² ağırlıklı rastgele seçilir.
+- **Yönetim:** hedef sıra = beklentiden (title 1, europe 4, top_half 8, mid_table 12, avoid_relegation 15).
+  Güven 60'tan başlar. Maç: galibiyet +1.5, beraberlik +0.3 (büyük kulüpte −0.5), yenilgi −2.5 (büyük kulüpte −3.5).
+  Aylık (5. haftadan sonra): (hedef − sıra) × 0.8 (−5…+3); kasa eksi → −3. < 30 uyarı, < 10 ve 8+ hafta oynanmışsa
+  görevden alma. Sezon sonu: şampiyon +30, hedef tuttu +15, 3 sıraya kadar geride −5, daha kötü −20; < 15 → görevden
+  alma; küme düşme → görevden alma. Görevden alınınca `world.gameOver`: Devam kapalı, otomatik kayıt alınmaz.
+- **Sezon sonu (son maçın ertesi günü):** ödüller (Gol Kralı, Asist Kralı, Sezonun Oyuncusu [≥ hafta×0.55 maç],
+  Genç Oyuncusu [≤21 yaş, ≥10 maç], Kalecisi), sıralama primi (15 / 10 / 7 / 5 Mn, sonra 3.5 → 0.8 Mn),
+  world.history'ye SeasonSummary (isimler saklanır), seasonState = 'ended'.
+- **Devam sezon arasında** bir sonraki maç günü yerine 1 Temmuz'a kadar ilerler (haberlerde durur).
+- **1 Mayıs:** sözleşmesi bitecek oyuncularımız için uyarı. **30 Haziran:** kullanıcının sözleşmesi biten oyuncuları
+  serbest kalır; yapay zekâ kadro sırası < 18 ve ≤ 32 yaş olanı yeniler, diğerlerini bırakır.
+- **1 Temmuz (yeni sezon):** küme düşen → division 2, itibar −5, maaş bütçesi ×0.6, temel bütçe ×0.5; çıkan →
+  division 1, itibar +3, ×1.4 / ×1.5. İtibar: şampiyon +3, ilk 4 +1, itibar sırasından 3+ iyi +1 / 3+ kötü −1.
+  Emeklilik: 34+ yaşta 0.25 + (yaş−34)×0.18 (+0.15 CA<90), 38'de kesin; serbest 31+ → +0.4. Emekliler silinir.
+  Altyapı: her kulübe 3–4 genç (16–17 yaş, seviye taban−4.5, ek potansiyel 10–45). Yapay zekâ kadrosu > 30 ise en
+  zayıflar bırakılır. Bütçeler: yayın = maaş bütçesi × (0.45 / 1. Lig 0.3), sponsor 0.3, transfer bütçesi = temel
+  bütçe + (kasa − maaş bütçesi/4) fazlasının %30'u. Beklenti itibar sırasından. Sarı kartlar sıfırlanır.
+- **Serbest oyuncular:** clubId = null. Kullanıcı bonservissiz imzalar (negotiateFreeAgent, dönem şartı yok);
+  yapay zekâ transfer döneminde bedelsiz alabilir.
+- **Gelen Kutusu:** world.news içinden `important` ya da kulübümüzle ilgili olanlar; okundu bilgisi haberde.
+- Denge (aşama 9 sonrası): deplasman takımı 75'ten sonra beraberliğe razı (mentalite −1); goalBase 0.275,
+  injuryChance 0.0018. ~4600 maç: 2.52 gol, %44.1 ev, %25.9 beraberlik.
+
 ## Kayıt kuralları (kullanıcıyla kararlaştırıldı)
 - Canlı maç sürerken (başlama öncesi dahil) kayıt **yapılamaz**; liveMatch kaydedilmez.
 - **Otomatik kayıt** her maç gününden sonra (haftanın maçları oynanınca) arka planda alınır.
@@ -230,24 +264,21 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
 - [x] **8. Oyuncu durumu** — kalıcı sakatlıklar, kart cezaları, kondisyon toparlanması, moral (sonuç, forma şansı,
       şikâyet), antrenman (6 odak, 3 yoğunluk), haftalık gelişim/gerileme, antrenör raporu yıldızları, Antrenman
       ekranı, durum etiketleri (kadro/taktik/profil), eski kayıt dönüşümü (biçim 2 → 3).
-- [ ] 9. Yönetim, gelen kutusu, sezon sonu, yeni sezon
+- [x] **9. Yönetim ve sezon döngüsü** — yönetim güveni ve görevden alma, Gelen Kutusu (filtreler, okundu, bağlantılar),
+      sezon sonu (ödüller, primler, küme düşme/çıkma, arşiv), sözleşme bitişleri ve serbest oyuncular, emeklilik,
+      altyapı, yeni sezon; kurgusal 1. Lig (data/lower_league.json); eski kayıt dönüşümü (biçim 3 → 4).
 - [ ] 10. Cila
 
 ## Açık konular / ileride
 - Elle gerçek kadro girişi (ör. `data/squads/<kulüpId>.json`) yok; kullanıcı "şimdilik gerek yok" dedi.
 - Duran top özellikleri (penaltı, korner) mevkiyle ilgisizse düşük çıkabiliyor — 10. aşamada denge.
 - Beraberlik %25.4 (hedef %27; Süper Lig gerçeği ~%25). Daha fazlası gol ortalamasını düşürüyor.
-- Sezon bitince yeni sezona geçiş yok (9. aşama).
 - 2D saha görünümü: kullanıcı "henüz gerekmez" dedi.
 - Belki ileride (kullanıcı "sonra ekleriz belki" dedi): maç ortasında kayıt (liveMatch'i de yazmak).
 
-- Serbest oyuncu havuzu yok (sözleşmesi biten oyuncular 9. aşamada sezon sonuyla birlikte ele alınacak).
 - Oyuncu "transfer listesine koyma" yok; yapay zekâ ilgisi kendiliğinden geliyor.
 
 ## Sıradaki adım
-9. aşama: Yönetim ve sezon döngüsü — yönetim beklentisi (fanExpectation) ve güven seviyesi, kötü giderse
-kovulma; Gelen Kutusu (world.news üzerine: okunmamış sayısı, kategoriler, mesaj detayı; transfer/sakatlık/
-yönetim/oyuncu şikâyeti mesajları); sezon sonu: ödüller (şampiyon, gol kralı, sezonun oyuncusu), küme düşme
-(son 3) → kurgusal 1. Lig takımları gelir, sıralama/yayın ödülleri, sözleşmesi bitenler (serbest/yenileme),
-emeklilik, altyapıdan genç oyuncu üretimi, yeni sezon fikstürü, sarı kart sayaçlarının sıfırlanması.
-CURRENT_WORLD_VERSION = 4 gerekirse.
+10. aşama: Cila — denge (gol kralı ~35 gol, fazla olabilir; duran top özellikleri; transfer sayıları; finans uzun
+vadede), performans (650 oyuncu, günlük döngüler, büyük kayıtlar), arayüz detayları (kadro ekranında hızlı
+filtreler, maç sonrası rapor, menajer adı vb. kullanıcıyla konuşulacak).

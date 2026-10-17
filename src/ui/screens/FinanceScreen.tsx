@@ -1,4 +1,5 @@
 import {
+  emptyReport,
   getClub,
   reportTotals,
   totalWages,
@@ -25,14 +26,9 @@ function signClass(n: number): string {
 
 /** Birden çok ayın toplamı. */
 function sumReports(reports: readonly MonthReport[]): MonthReport {
-  const total: MonthReport = {
-    month: 'Toplam',
-    income: { tickets: 0, tv: 0, sponsor: 0, transfersIn: 0 },
-    expense: { wages: 0, bonuses: 0, transfersOut: 0, signingBonuses: 0 },
-    balanceEnd: reports[reports.length - 1]?.balanceEnd ?? 0,
-  };
+  const total: MonthReport = { ...emptyReport('Toplam'), balanceEnd: reports[reports.length - 1]?.balanceEnd ?? 0 };
   for (const r of reports) {
-    for (const k of INCOMES) total.income[k] += r.income[k];
+    for (const k of INCOMES) total.income[k] += r.income[k] ?? 0;
     for (const k of EXPENSES) total.expense[k] += r.expense[k];
   }
   return total;

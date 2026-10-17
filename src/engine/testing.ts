@@ -1,4 +1,5 @@
 /** Yalnızca testlerde kullanılan yardımcılar. */
+import { gameData } from '../gameData';
 import { advance, isSeasonOver } from './gameFlow';
 import type { GameWorld, GoalEvent, MatchResult, TeamMatchStats } from './types';
 
@@ -23,5 +24,5 @@ export function makeResult(homeGoals: number, awayGoals: number, goals: GoalEven
 /** Sezonu sonuna kadar oynatır (kendi maçımız da arka planda). */
 export function playSeason(world: GameWorld): void {
   let guard = 0;
-  while (!isSeasonOver(world) && guard++ < 1000) advance(world, { autoPlayUserMatch: true });
+  while (!isSeasonOver(world) && guard++ < 1000) advance(world, gameData, { autoPlayUserMatch: true });
 }

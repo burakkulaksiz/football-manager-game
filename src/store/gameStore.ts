@@ -121,7 +121,7 @@ function routeState(route: Route) {
   return { screen: route.screen, selectedPlayerId: route.playerId ?? null };
 }
 
-const START_ROUTE: Route = { screen: 'squad' };
+const START_ROUTE: Route = { screen: 'inbox' };
 
 /** Kariyere giriş (yeni oyun ya da kayıt yükleme) sonrası arayüz durumu. */
 function enterGame(world: GameWorld) {
@@ -154,7 +154,8 @@ export const useGameStore = create<GameState>()((set, get) => {
   /** Maç günü sonrası otomatik kayıt (arka planda; hata olursa bildirim). */
   const runAutosave = () => {
     const { world, revision } = get();
-    if (!world) return;
+    // Kovulduysan otomatik kayıt alınmaz: önceki kayıttan devam edebilmelisin.
+    if (!world || world.gameOver) return;
     autosave(world)
       .then(() => set({ savedRevision: revision }))
       .catch((e: unknown) => get().showNotice(`Otomatik kayıt başarısız: ${String(e)}`, 'error'));
@@ -261,7 +262,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         return;
       }
       // Motor dünyayı yerinde değiştirir; yeni referans React'in yeniden çizmesi için.
-      const result = advance(world);
+      const result = advance(world, gameData);
       if (result.kind === 'userMatch') {
         const state = startUserMatch(world);
         touch(world);

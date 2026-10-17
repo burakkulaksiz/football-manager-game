@@ -29,7 +29,7 @@ const monthOf = (date: GameDate) => date.slice(0, 7);
 export function emptyReport(month: string): MonthReport {
   return {
     month,
-    income: { tickets: 0, tv: 0, sponsor: 0, transfersIn: 0 },
+    income: { tickets: 0, tv: 0, sponsor: 0, transfersIn: 0, prize: 0 },
     expense: { wages: 0, bonuses: 0, transfersOut: 0, signingBonuses: 0 },
     balanceEnd: 0,
   };

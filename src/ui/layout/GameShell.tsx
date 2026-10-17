@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
 import { hasUnsavedProgress, useGameStore, type ScreenId } from '../../store/gameStore';
+import { GameOverOverlay } from '../components/GameOverOverlay';
 import { ClubInfoScreen } from '../screens/ClubInfoScreen';
 import { FinanceScreen } from '../screens/FinanceScreen';
 import { FixturesScreen } from '../screens/FixturesScreen';
+import { InboxScreen } from '../screens/InboxScreen';
 import { MatchScreen } from '../screens/MatchScreen';
 import { PlaceholderScreen } from '../screens/PlaceholderScreen';
 import { PlayerProfile } from '../screens/PlayerProfile';
@@ -19,6 +21,7 @@ import { StatusBar } from './StatusBar';
 
 function ScreenContent({ screen }: { screen: ScreenId }) {
   switch (screen) {
+    case 'inbox': return <InboxScreen />;
     case 'squad': return <SquadScreen />;
     case 'player': return <PlayerProfile />;
     case 'club': return <ClubInfoScreen />;
@@ -60,6 +63,7 @@ export function GameShell() {
         </main>
       </div>
       <StatusBar />
+      <GameOverOverlay />
     </div>
   );
 }

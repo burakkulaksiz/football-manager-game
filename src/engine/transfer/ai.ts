@@ -61,13 +61,16 @@ function attemptPurchase(world: GameWorld, buyer: Club, rng: Rng): void {
 
   const candidates: { player: Player; price: number; score: number }[] = [];
   for (const p of Object.values(world.players)) {
-    if (!p.clubId || p.clubId === buyer.id || p.clubId === world.playerClubId || p.loan) continue;
+    if (p.clubId === buyer.id || p.clubId === world.playerClubId || p.loan) continue;
     if (groupOf(primaryPosition(p)) !== group) continue;
-    if ((squadSizes.get(p.clubId) ?? 0) <= MIN_SQUAD_TO_SELL + 2) continue;
     if (ageOn(p.birthDate, world.date) > 32 || p.currentAbility < level - 8) continue;
-    if (getClub(world, p.clubId).reputation > buyer.reputation + 5) continue;
-    if (!willingToJoin(world, p, buyer.id)) continue;
-    const price = askingPrice(world, p);
+    // Serbest oyuncu bedelsiz; kulübü olan için satıcı kadrosu ve itibar kontrolü
+    if (p.clubId) {
+      if ((squadSizes.get(p.clubId) ?? 0) <= MIN_SQUAD_TO_SELL + 2) continue;
+      if (getClub(world, p.clubId).reputation > buyer.reputation + 5) continue;
+      if (!willingToJoin(world, p, buyer.id)) continue;
+    }
+    const price = p.clubId ? askingPrice(world, p) : 0;
     if (price > fin.transferBudget) continue;
     // Yetenek iyi, fiyat bütçeye göre makul olsun
     candidates.push({ player: p, price, score: p.currentAbility - (price / fin.transferBudget) * 15 + rng.float(0, 6) });

@@ -21,7 +21,10 @@ export interface NamePool {
 }
 
 export interface GameData {
+  /** Süper Lig kulüpleri (data/clubs.json). */
   clubs: Club[];
+  /** Kurgusal 1. Lig kulüpleri (data/lower_league.json): küme düşen yerine çıkanlar buradan. */
+  lowerClubs: Club[];
   nations: Nation[];
   namePools: Record<string, NamePool>;
 }
@@ -45,6 +48,7 @@ function isNonEmptyStringArray(v: unknown): v is string[] {
 
 export function validateGameData(raw: {
   clubs: unknown;
+  lowerClubs?: unknown;
   nations: unknown;
   namePools: Record<string, unknown>;
 }): GameData {
@@ -59,13 +63,15 @@ export function validateGameData(raw: {
     }
   };
 
-  // --- Kulüpler ---
-  if (!Array.isArray(raw.clubs)) {
-    errors.push('clubs.json bir dizi olmalı');
-  } else {
-    const ids = new Set<string>();
-    raw.clubs.forEach((c, i) => {
-      const where = `clubs.json[${i}]`;
+  // --- Kulüpler (iki dosyada da kimlikler benzersiz olmalı) ---
+  const ids = new Set<string>();
+  const validateClubs = (list: unknown, file: string) => {
+    if (!Array.isArray(list)) {
+      errors.push(`${file} bir dizi olmalı`);
+      return;
+    }
+    list.forEach((c, i) => {
+      const where = `${file}[${i}]`;
       if (!isObj(c)) {
         errors.push(`${where}: nesne olmalı`);
         return;
@@ -86,6 +92,11 @@ export function validateGameData(raw: {
         ids.add(c.id);
       }
     });
+  };
+  validateClubs(raw.clubs, 'clubs.json');
+  validateClubs(raw.lowerClubs ?? [], 'lower_league.json');
+  if (Array.isArray(raw.lowerClubs) && raw.lowerClubs.length < 3) {
+    errors.push('lower_league.json: küme düşenlerin yerine çıkacak en az 3 kulüp olmalı');
   }
 
   // --- İsim havuzları ---
@@ -119,5 +130,5 @@ export function validateGameData(raw: {
   if (errors.length > 0) {
     throw new Error(`Oyun verisi hatalı:\n- ${errors.join('\n- ')}`);
   }
-  return raw as unknown as GameData;
+  return { ...raw, lowerClubs: raw.lowerClubs ?? [] } as unknown as GameData;
 }

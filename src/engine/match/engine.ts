@@ -58,14 +58,14 @@ export const TUNING = {
   /** Şutun rakip oyuncuya çarpma olasılığı. */
   blockChance: 0.22,
   onTargetBase: 0.5,
-  goalBase: 0.27,
+  goalBase: 0.275,
   /** İç saha avantajı: hücum ve orta saha çarpanları. */
   homeAttack: 1.2,
   homeMidfield: 1.05,
   /** Dakika başına faul olasılığı (iki takım toplam). */
   foulChance: 0.24,
   /** Takım başına dakikalık sakatlanma olasılığı (ortalama sakatlık eğilimi için). */
-  injuryChance: 0.0013,
+  injuryChance: 0.0018,
   cornerShotChance: 0.28,
   /** Şuta dönüşmeyen atağın kornerle bitme olasılığı. */
   cornerFromAttack: 0.3,
@@ -730,6 +730,8 @@ function aiMentality(state: MatchState, side: Side): Mentality {
   if (diff < 0 && m >= 60) return 1;
   if (diff === 1 && m >= 80) return -2;
   if (diff > 0 && m >= 55) return -1;
+  // Deplasman takımı sona doğru beraberliğe razı olur
+  if (diff === 0 && side === 'away' && m >= 75) return -1;
   return 0;
 }
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   ageOn,
   clubPlayers,
+  divisionOf,
   marketValue,
   naturalPositions,
   POSITIONS,
@@ -84,11 +85,16 @@ export function SquadScreen() {
       <div className="panel-title panel-title-row">
         <span>Oyuncular</span>
         <select value={viewedClubId} onChange={(e) => setViewedClub(e.target.value)}>
-          {world.clubs.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
+          <optgroup label="Süper Lig">
+            {world.clubs.filter((c) => divisionOf(c) === 1).map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </optgroup>
+          <optgroup label="1. Lig">
+            {world.clubs.filter((c) => divisionOf(c) === 2).map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </optgroup>
         </select>
       </div>
       <table className="data-table clickable">

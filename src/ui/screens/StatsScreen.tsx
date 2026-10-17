@@ -2,6 +2,8 @@ import {
   cleanSheets,
   computeStandings,
   getClub,
+  leagueClubs,
+  seasonLabel,
   topAssists,
   topRatings,
   topScorers,
@@ -81,7 +83,7 @@ export function StatsScreen() {
   const scorers = topScorers(fixtures, 15).map((s) => ({ playerId: s.playerId, clubId: s.clubId, value: s.goals }));
   const assists = topAssists(fixtures, 15);
   const ratings = topRatings(fixtures, minApps, 15).map((r) => ({ ...r, value: r.value.toFixed(2) }));
-  const teams = computeStandings(world.clubs.map((c) => c.id), fixtures).sort(
+  const teams = computeStandings(leagueClubs(world).map((c) => c.id), fixtures).sort(
     (a, b) => b.goalsFor - a.goalsFor || a.goalsAgainst - b.goalsAgainst,
   );
   const empty = 'Henüz maç oynanmadı.';
@@ -140,6 +142,43 @@ export function StatsScreen() {
           </table>
         </section>
       </div>
+      <SeasonHistory world={world} />
     </div>
+  );
+}
+
+/** Biten sezonların arşivi: şampiyon, sıramız, küme düşenler ve ödüller. */
+function SeasonHistory({ world }: { world: GameWorld }) {
+  const openPlayer = useGameStore((s) => s.openPlayer);
+  const seasons = [...world.history].reverse();
+  return (
+    <section className="panel">
+      <h2 className="panel-title">Geçmiş Sezonlar</h2>
+      {seasons.length === 0 ? (
+        <div className="panel-body muted">Henüz tamamlanmış sezon yok. Sezon sonunda şampiyon ve ödüller burada listelenir.</div>
+      ) : (
+        <div className="panel-body history-list">
+          {seasons.map((s) => (
+            <div key={s.year} className="history-season">
+              <div className="sub-head">{seasonLabel(s.year)} — Şampiyon: {s.table[0]?.name}</div>
+              <div className="kv">
+                <span className="kv-label">{world.clubs.find((c) => c.id === s.userClubId)?.name ?? 'Kulübün'} sırası</span>
+                <span className={`kv-value ${s.userPosition <= s.targetPosition ? 'pos' : 'neg'}`}>
+                  {s.userPosition}. (hedef {s.targetPosition}.)
+                </span>
+              </div>
+              <div className="kv"><span className="kv-label">Küme düşenler</span><span className="kv-value neg">{s.relegatedNames.join(', ')}</span></div>
+              <div className="kv"><span className="kv-label">1. Lig'den çıkanlar</span><span className="kv-value">{s.promotedNames.join(', ')}</span></div>
+              {s.awards.map((a) => (
+                <div key={a.title} className="kv link" onClick={() => world.players[a.playerId] && openPlayer(a.playerId)}>
+                  <span className="kv-label">{a.title}</span>
+                  <span className="kv-value">{a.playerName} ({a.clubName}) · {a.value}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

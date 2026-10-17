@@ -1,5 +1,6 @@
 /** Maç motorunun oyun dünyasıyla bağlantısı: kurulum, arka plan maçları, sonucu işleme. */
 import { processMatchFinances } from '../finance/finance';
+import { boardAfterMatch } from '../season/board';
 import { processDiscipline } from '../squad/discipline';
 import { injurePlayer } from '../squad/injuries';
 import { applyMatchMorale } from '../squad/morale';
@@ -81,4 +82,5 @@ export function applyResult(world: GameWorld, fixture: Fixture, result: MatchRes
   }
   processDiscipline(world, fixture, result, rng);
   applyMatchMorale(world, fixture, result);
+  boardAfterMatch(world, fixture);
 }

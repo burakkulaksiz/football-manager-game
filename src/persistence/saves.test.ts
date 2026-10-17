@@ -11,7 +11,7 @@ const START = '2026-07-01';
 function playRounds(world: GameWorld, matchDays: number): void {
   let played = 0;
   while (played < matchDays) {
-    if (advance(world, { autoPlayUserMatch: true }).kind === 'played') played++;
+    if (advance(world, gameData, { autoPlayUserMatch: true }).kind === 'played') played++;
   }
 }
 

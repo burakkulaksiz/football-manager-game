@@ -191,6 +191,19 @@ export function negotiateTransfer(world: GameWorld, offerId: number, terms: Tran
   return result;
 }
 
+/** Serbest oyuncuyla sözleşme (bonservis yok; transfer dönemi şartı yok). */
+export function negotiateFreeAgent(world: GameWorld, playerId: number, terms: TransferTerms): NegotiationResult {
+  const player = world.players[playerId];
+  if (!player || player.clubId) return { outcome: 'error', message: 'Oyuncu serbest değil.' };
+  const budgetError = wageBudgetError(world, player, terms.wage);
+  if (budgetError) return { outcome: 'error', message: budgetError };
+  const fin = world.finances[world.playerClubId]!;
+  if (terms.signingBonus > fin.transferBudget) return { outcome: 'error', message: 'İmza bonusu için transfer bütçen yetersiz.' };
+  const result = respond(world, player, world.playerClubId, terms, Infinity);
+  if (result.outcome === 'signed') transferPlayer(world, player, world.playerClubId, 0, terms);
+  return result;
+}
+
 /** Kendi oyuncumuzla sözleşme yenileme (sabır sınırı yok; talep altında kabul etmez). */
 export function negotiateRenewal(world: GameWorld, playerId: number, terms: TransferTerms): NegotiationResult {
   const player = world.players[playerId];

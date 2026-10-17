@@ -1,15 +1,20 @@
 /**
  * Eski kayıtları güncel GameWorld biçimine dönüştürür.
- * Biçim sürümü: 1 = aşama 6 (finans/transfer yok), 2 = aşama 7, 3 = aşama 8 (ceza, gelişim, antrenman).
+ * Biçim sürümü: 1 = aşama 6 (finans/transfer yok), 2 = aşama 7, 3 = aşama 8 (ceza, gelişim, antrenman),
+ * 4 = aşama 9 (1. Lig, yönetim, sezon arşivi).
  */
-import { initFinances } from './finance/finance';
+import type { GameData } from './data';
+import { initFinance, initFinances, payMonthly } from './finance/finance';
+import { generateClubSquad } from './generation/worldGenerator';
+import { Rng } from './rng';
+import { initialBoard } from './season/expectation';
 import { DEFAULT_TRAINING } from './squad/training';
 import type { GameWorld } from './types';
 
-export const CURRENT_WORLD_VERSION = 3;
+export const CURRENT_WORLD_VERSION = 4;
 
 /** `raw` eski biçimdeki dünya; dönüştürülmüş dünya döner (yerinde değiştirir). */
-export function migrateWorld(raw: unknown, fromVersion: number): GameWorld {
+export function migrateWorld(raw: unknown, fromVersion: number, data: GameData): GameWorld {
   const world = raw as GameWorld;
   if (fromVersion < 2) {
     for (const p of Object.values(world.players)) p.loan ??= null;
@@ -28,6 +33,31 @@ export function migrateWorld(raw: unknown, fromVersion: number): GameWorld {
       p.lastComplaint ??= null;
     }
     world.training ??= { [world.playerClubId]: { ...DEFAULT_TRAINING } };
+  }
+  if (fromVersion < 4) {
+    for (const club of world.clubs) club.division ??= 1;
+    // 1. Lig kulüplerini kadrolarıyla ekle
+    const rng = new Rng((world.seed ^ 0x9e3779b9) >>> 0);
+    for (const source of data.lowerClubs) {
+      if (world.clubs.some((c) => c.id === source.id)) continue;
+      const club = { ...source, colors: { ...source.colors }, division: 2 as const };
+      world.clubs.push(club);
+      for (const player of generateClubSquad(rng, data, club, world.date, world.nextPlayerId)) {
+        world.players[player.id] = player;
+        world.nextPlayerId = Math.max(world.nextPlayerId, player.id + 1);
+      }
+      const fin = initFinance(club, world.date);
+      payMonthly(fin, Object.values(world.players), club.id);
+      world.finances[club.id] = fin;
+    }
+    for (const fin of Object.values(world.finances)) {
+      fin.current.income.prize ??= 0;
+      for (const r of fin.history) r.income.prize ??= 0;
+    }
+    world.board ??= initialBoard(world.clubs.find((c) => c.id === world.playerClubId)!);
+    world.history ??= [];
+    world.seasonState ??= world.season.fixtures.every((f) => f.result !== null) ? 'ended' : 'running';
+    world.gameOver ??= null;
   }
   return world;
 }

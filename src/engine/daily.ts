@@ -3,6 +3,7 @@
  * Sıra önemli: önce ay başı finansı, sonra transfer dönemi, kiralıklar, teklifler, yapay zekâ,
  * ardından oyuncu durumu (iyileşme, kondisyon, moral, antrenman sakatlığı; pazartesi gelişim).
  */
+import type { GameData } from './data';
 import { addDays, formatDateTR, weekday } from './date';
 import { startNewMonth } from './finance/finance';
 import { addNews } from './news';
@@ -11,6 +12,9 @@ import { aiTransferDay } from './transfer/ai';
 import { returnLoans } from './transfer/market';
 import { processOffers } from './transfer/offers';
 import { transferWindow } from './transfer/window';
+import { boardMonthly } from './season/board';
+import { contractWarnings, processExpiringContracts, startNewSeason } from './season/rollover';
+import { endSeason } from './season/seasonEnd';
 import { recoverCondition } from './squad/condition';
 import { weeklyDevelopment } from './squad/development';
 import { healInjuries, trainingInjuries } from './squad/injuries';
@@ -39,10 +43,19 @@ function windowNews(world: GameWorld): void {
 }
 
 /** Takvim yeni güne geçtikten sonra çağrılır. */
-export function processDay(world: GameWorld, rng: Rng): void {
-  if (world.date.endsWith('-01')) startNewMonth(world);
+export function processDay(world: GameWorld, rng: Rng, data: GameData): void {
+  if (world.date.endsWith('-01')) {
+    startNewMonth(world);
+    boardMonthly(world);
+  }
+  // Sezon döngüsü
+  if (world.seasonState === 'running' && world.season.fixtures.every((f) => f.result !== null)) endSeason(world, rng);
+  if (world.date.endsWith('-05-01')) contractWarnings(world);
+  if (world.seasonState === 'ended' && world.date.endsWith('-07-01')) startNewSeason(world, rng, data);
+
   windowNews(world);
   returnLoans(world);
+  if (world.date.endsWith('-06-30')) processExpiringContracts(world, rng);
   processOffers(world);
   aiTransferDay(world, rng);
 

@@ -6,6 +6,7 @@ import {
   loanFeeAsk,
   makeOffer,
   marketValue,
+  negotiateFreeAgent,
   negotiateRenewal,
   negotiateTransfer,
   NEGOTIATION_PATIENCE,
@@ -105,6 +106,7 @@ export function ContractDialog({ player, offer, onClose }: { player: Player; off
   const worldAction = useGameStore((s) => s.worldAction);
   const showNotice = useGameStore((s) => s.showNotice);
   const age = ageOn(player.birthDate, world.date);
+  const freeAgent = !offer && player.clubId === null;
   const [minYears, maxYears] = preferredYears(age);
   const [wage, setWage] = useState(player.contract.wage);
   const [years, setYears] = useState(minYears);
@@ -114,7 +116,9 @@ export function ContractDialog({ player, offer, onClose }: { player: Player; off
 
   const submit = () => {
     const terms = { wage, years, signingBonus: bonus };
-    const result = worldAction((w) => (offer ? negotiateTransfer(w, offer.id, terms) : negotiateRenewal(w, player.id, terms)));
+    const result = worldAction((w) =>
+      offer ? negotiateTransfer(w, offer.id, terms) : freeAgent ? negotiateFreeAgent(w, player.id, terms) : negotiateRenewal(w, player.id, terms),
+    );
     setResponse(result);
     if (result.demand) {
       // Talebi forma yansıt ki kullanıcı oradan pazarlık edebilsin.
@@ -127,7 +131,7 @@ export function ContractDialog({ player, offer, onClose }: { player: Player; off
 
   return (
     <Modal
-      title={offer ? 'Sözleşme Görüşmesi' : 'Sözleşme Yenileme'}
+      title={offer || freeAgent ? 'Sözleşme Görüşmesi' : 'Sözleşme Yenileme'}
       onClose={onClose}
       footer={
         done ? (
@@ -144,7 +148,7 @@ export function ContractDialog({ player, offer, onClose }: { player: Player; off
     >
       <p>
         <strong>{player.firstName} {player.lastName}</strong> ({age} yaşında) —{' '}
-        {offer ? `bonservis ${formatMoney(offer.fee)} üzerinde anlaşıldı.` : 'mevcut sözleşmesini yenile.'}
+        {offer ? `bonservis ${formatMoney(offer.fee)} üzerinde anlaşıldı.` : freeAgent ? 'serbest oyuncu, bonservis yok.' : 'mevcut sözleşmesini yenile.'}
       </p>
       <div className="kv"><span className="kv-label">Şu anki maaşı</span><span className="kv-value">{formatMoney(player.contract.wage)} / yıl</span></div>
       <div className="kv"><span className="kv-label">Tercih ettiği süre</span><span className="kv-value">{minYears}–{maxYears} yıl</span></div>

@@ -43,9 +43,11 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
                        ya da sonraki maç gününe ilerler (dünyayı yerinde değiştirir).
   testing.ts           Yalnızca testler: makeResult, playSeason.
   index.ts             Motorun dışa açık yüzü + SEASON_START_DATE (2026-07-01).
-src/store/gameStore.ts Zustand: phase (menu/newGame/game), screen + geçmiş, world, liveMatch (canlı maç) ve
-                       maç eylemleri (stepLiveMatch, liveSubstitute, liveSetMentality, liveInstantFinish, finishLiveMatch).
-src/persistence/db.ts  Dexie (IndexedDB) — 'fm-super-lig' veritabanı, `saves` tablosu.
+src/store/gameStore.ts Zustand: phase (menu/newGame/load/game), screen + geçmiş, world, liveMatch (canlı maç),
+                       maç eylemleri, taktik düzenleme (updateTactics), kayıt (saveCurrent, loadSave, otomatik kayıt),
+                       revision/savedRevision (kaydedilmemiş ilerleme), notice (bildirim).
+src/persistence/db.ts  Dexie (IndexedDB) — 'fm-super-lig' veritabanı: `saves` (liste bilgisi), `saveData` (oyun).
+src/persistence/saves.ts  saveGame, autosave, loadGame, listSaves, deleteSave (testler: fake-indexeddb).
 src/ui/                React. Motoru sadece çağırır, oyun mantığı içermez.
   labels.ts            Türkçe etiketler (özellik, mevki, beklenti), para/tarih biçimleri.
   layout/              GameShell, Header, NavBar, Sidebar, StatusBar, pageHeading (başlık hapı + konum yolu)
@@ -114,8 +116,19 @@ Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
 - `data/nations.json` — `[{ code, name, namePool, weight }]`. `TUR` zorunlu (weight 0: yerli ayrı seçilir).
   weight = yabancı oyuncu üretiminde seçilme ağırlığı.
 - `data/names/<havuz>.json` — `{ firstNames: [], lastNames: [] }`. Yeni dosya eklemek yeterli.
-- **SaveSlot** (`src/persistence/db.ts`): `{ id, name, clubName, gameDate, isAutosave, createdAt, updatedAt, data }`.
-  `data` = GameWorld (6. aşamada netleşecek).
+- **Kayıt** (IndexedDB, Dexie şema sürümü 2): `saves` = SaveSlot `{ id, name, careerId, clubId, clubName,
+  gameDate, season, isAutosave, createdAt, updatedAt, formatVersion }`; `saveData` = `{ id, world: GameWorld }`
+  (aynı id). GameWorld olduğu gibi yazılır (düz veri), kayıt anında `structuredClone` ile kopyalanır.
+  `SAVE_FORMAT_VERSION = 1`: GameWorld yapısı değişirse artır ve `loadGame`'e dönüştürme ekle (yoksa eski
+  kayıt "farklı sürüm" hatasıyla açılmaz). Sezon sonu kaydı ~1.7 MB.
+- **careerId** = `${seed}-${playerClubId}`. Otomatik kayıt kariyer başına tek slot; elle kayıt sınırsız.
+
+## Kayıt kuralları (kullanıcıyla kararlaştırıldı)
+- Canlı maç sürerken (başlama öncesi dahil) kayıt **yapılamaz**; liveMatch kaydedilmez.
+- **Otomatik kayıt** her maç gününden sonra (haftanın maçları oynanınca) arka planda alınır.
+- Maç ortasında çıkılırsa son kayıt yüklenince o maç baştan oynanır (aynı tohum → yine deterministik).
+- Ana menüye dönüşte kaydedilmemiş ilerleme varsa uyarı (Kaydet ve Çık / Kaydetmeden Çık); sekme
+  kapatılırken tarayıcı uyarısı (beforeunload). Ana menüde en son kayıttan "Devam Et" kısayolu.
 
 ## Görünüm
 FM 2005 ekranlarından esinlenen **modern tema** (kullanıcı CM 01/02 paletinden vazgeçti, FM 2005 görüntüleri
@@ -146,7 +159,8 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
 - [x] **5. Taktik** — taktik ekranı (kadro listesi, formalı saha, yedek kulübesi, iki tıkla yerleştirme/takas,
       uyum noktaları, uyarılar, otomatik seç), 6 diziliş, talimatlar, kaptan/penaltıcı/serbest vuruşçu,
       motora etkileri (istatistiksel testlerle), yapay zekâ diziliş seçimi, maç içi taktik paneli.
-- [ ] 6. Kayıt sistemi (yeni oyun, kaydet/yükle, otomatik kayıt)
+- [x] **6. Kayıt sistemi** — çoklu kayıt slotu, kaydet (yeni / üzerine), yükle, sil, kariyer başına otomatik
+      kayıt (maç günü sonrası), ana menüde Devam Et + Kayıt Yükle ekranı, çıkış uyarısı, bildirimler.
 - [ ] 7. Transfer, sözleşme, finans
 - [ ] 8. Moral, form, sakatlık, ceza, antrenman, gelişim
 - [ ] 9. Yönetim, gelen kutusu, sezon sonu, yeni sezon
@@ -157,11 +171,12 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
 - Duran top özellikleri (penaltı, korner) mevkiyle ilgisizse düşük çıkabiliyor — 10. aşamada denge.
 - Beraberlik %25.4 (hedef %27; Süper Lig gerçeği ~%25). Daha fazlası gol ortalamasını düşürüyor.
 - Sezon bitince yeni sezona geçiş yok (9. aşama).
-- Canlı maç store'da (`liveMatch`), dünyada değil: 6. aşamada maç ortasında kayıt engellenmeli ya da
-  liveMatch de kaydedilmeli.
 - 2D saha görünümü: kullanıcı "henüz gerekmez" dedi.
+- Belki ileride (kullanıcı "sonra ekleriz belki" dedi): maç ortasında kayıt (liveMatch'i de yazmak).
 
 ## Sıradaki adım
-6. aşama: Kayıt sistemi — yeni oyun, birden fazla kayıt slotu (Dexie `saves` tablosu), kaydet/yükle,
-otomatik kayıt (ör. her maç gününden sonra), ana menüde Kayıt Yükle. GameWorld düz veri; liveMatch
-sırasında kayıt ya engellenecek ya da maç durumu da yazılacak (karar verilmeli).
+7. aşama: Transfer, sözleşme, finans — oyuncu arama (mevki/yaş/değer/özellik filtresi), teklif / karşı teklif,
+kiralık (takas yok), sözleşme görüşmesi (maaş, süre, imza bonusu; oyuncu reddedebilir), transfer dönemleri
+(yaz + devre arası), yapay zekâ kulüpler arası transferler ve bize teklifler; finans: bütçe, maaş bütçesi,
+bilet/yayın/sponsor geliri, primler, transfer gelir/giderleri, aylık finans raporu. GameWorld'e yeni alanlar
+eklenecek → SAVE_FORMAT_VERSION artırılıp eski kayıt dönüşümü düşünülmeli.

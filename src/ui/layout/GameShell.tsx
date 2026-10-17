@@ -1,4 +1,5 @@
-import { useGameStore, type ScreenId } from '../../store/gameStore';
+import { useEffect } from 'react';
+import { hasUnsavedProgress, useGameStore, type ScreenId } from '../../store/gameStore';
 import { ClubInfoScreen } from '../screens/ClubInfoScreen';
 import { FixturesScreen } from '../screens/FixturesScreen';
 import { MatchScreen } from '../screens/MatchScreen';
@@ -31,6 +32,16 @@ function ScreenContent({ screen }: { screen: ScreenId }) {
 export function GameShell() {
   const screen = useGameStore((s) => s.screen);
   const playerId = useGameStore((s) => s.selectedPlayerId);
+  const unsaved = useGameStore(hasUnsavedProgress);
+
+  // Kaydedilmemiş ilerleme varken sekme kapatılır/yenilenirse tarayıcı uyarsın.
+  useEffect(() => {
+    if (!unsaved) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [unsaved]);
+
   return (
     <div className="shell">
       <Header />

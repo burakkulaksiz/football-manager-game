@@ -19,6 +19,7 @@ import {
   type TeamInstructions,
 } from '../engine';
 import { gameData } from '../gameData';
+import { autosave, loadGame, saveGame } from '../persistence/saves';
 
 /** Sol menüden açılan ekranlar + menü dışı ekranlar ('player'). */
 export type ScreenId =
@@ -40,10 +41,23 @@ export interface Route {
   playerId?: number;
 }
 
+export interface Notice {
+  id: number;
+  text: string;
+  kind: 'ok' | 'error';
+}
+
 interface GameState {
-  /** 'menu' = ana menü, 'newGame' = kulüp seçimi, 'game' = kariyer açık */
-  phase: 'menu' | 'newGame' | 'game';
+  /** 'menu' = ana menü, 'newGame' = kulüp seçimi, 'load' = kayıt yükleme, 'game' = kariyer açık */
+  phase: 'menu' | 'newGame' | 'load' | 'game';
   world: GameWorld | null;
+  /** Dünyadaki her değişiklikte artar; kayıt anındaki değer savedRevision'a yazılır. */
+  revision: number;
+  savedRevision: number;
+  /** Bu kariyerde en son elle kaydedilen/yüklenen slot (kayıt penceresinde öne çıkar). */
+  currentSaveId: number | null;
+  /** Kısa süreli bildirim (kayıt alındı, hata…). */
+  notice: Notice | null;
   /** Geçerli sayfa (history[historyIndex] ile aynı). */
   screen: ScreenId;
   selectedPlayerId: number | null;
@@ -58,7 +72,13 @@ interface GameState {
   liveMatch: MatchState | null;
 
   openNewGame: () => void;
+  openLoadGame: () => void;
   startNewGame: (clubId: string) => void;
+  /** Elle kayıt: yeni slot ya da `overwriteId` slotunun üzerine. Canlı maç sırasında yapılamaz. */
+  saveCurrent: (name: string, overwriteId?: number) => Promise<boolean>;
+  loadSave: (id: number) => Promise<boolean>;
+  showNotice: (text: string, kind?: Notice['kind']) => void;
+  clearNotice: () => void;
   quitToMenu: () => void;
   navigate: (route: Route) => void;
   setScreen: (screen: ScreenId) => void;
@@ -97,150 +117,216 @@ function routeState(route: Route) {
 
 const START_ROUTE: Route = { screen: 'squad' };
 
-export const useGameStore = create<GameState>()((set, get) => ({
-  phase: 'menu',
-  world: null,
-  screen: START_ROUTE.screen,
-  selectedPlayerId: null,
-  history: [START_ROUTE],
-  historyIndex: 0,
-  viewedClubId: null,
-  fixturesTab: 'club',
-  fixturesRound: 1,
-  liveMatch: null,
+/** Kariyere giriş (yeni oyun ya da kayıt yükleme) sonrası arayüz durumu. */
+function enterGame(world: GameWorld) {
+  return {
+    phase: 'game' as const,
+    world,
+    ...routeState(START_ROUTE),
+    history: [START_ROUTE],
+    historyIndex: 0,
+    viewedClubId: world.playerClubId,
+    fixturesTab: 'club' as const,
+    fixturesRound: 1,
+    liveMatch: null,
+    revision: 0,
+    savedRevision: 0,
+  };
+}
 
-  openNewGame: () => set({ phase: 'newGame' }),
+/** Kaydedilmemiş ilerleme var mı (çıkışta uyarı için). */
+export function hasUnsavedProgress(s: Pick<GameState, 'revision' | 'savedRevision'>): boolean {
+  return s.revision !== s.savedRevision;
+}
 
-  startNewGame: (clubId) => {
-    // Seed oyunun başında bir kez belirlenir; motor içinde Math.random kullanılmaz.
-    const seed = Date.now() >>> 0;
-    const world = createWorld(gameData, seed, clubId, SEASON_START_DATE);
-    set({
-      phase: 'game',
-      world,
-      ...routeState(START_ROUTE),
-      history: [START_ROUTE],
-      historyIndex: 0,
-      viewedClubId: clubId,
-      fixturesTab: 'club',
-      fixturesRound: 1,
-      liveMatch: null,
-    });
-  },
+let noticeCounter = 0;
 
-  quitToMenu: () => set({ phase: 'menu', world: null, liveMatch: null }),
+export const useGameStore = create<GameState>()((set, get) => {
+  /** Dünya değişti: yeni referans (React yeniden çizsin) + kaydedilmemiş ilerleme. */
+  const touch = (world: GameWorld) => set((s) => ({ world: { ...world }, revision: s.revision + 1 }));
 
-  navigate: (route) => {
-    const { history, historyIndex } = get();
-    const current = history[historyIndex];
-    if (current && current.screen === route.screen && current.playerId === route.playerId) return;
-    // İleri geçmişi silinir, yeni sayfa sona eklenir (tarayıcı gibi).
-    const next = [...history.slice(0, historyIndex + 1), route].slice(-50);
-    set({ history: next, historyIndex: next.length - 1, ...routeState(route) });
-  },
-
-  setScreen: (screen) => get().navigate({ screen }),
-
-  openPlayer: (playerId) => get().navigate({ screen: 'player', playerId }),
-
-  back: () => {
-    const { history, historyIndex } = get();
-    if (historyIndex === 0) return;
-    set({ historyIndex: historyIndex - 1, ...routeState(history[historyIndex - 1]!) });
-  },
-
-  forward: () => {
-    const { history, historyIndex } = get();
-    if (historyIndex >= history.length - 1) return;
-    set({ historyIndex: historyIndex + 1, ...routeState(history[historyIndex + 1]!) });
-  },
-
-  setViewedClub: (clubId) => set({ viewedClubId: clubId }),
-
-  setFixturesView: (tab, round) =>
-    set((s) => ({ fixturesTab: tab, fixturesRound: round ?? s.fixturesRound })),
-
-  advance: () => {
-    const { world, liveMatch } = get();
+  /** Maç günü sonrası otomatik kayıt (arka planda; hata olursa bildirim). */
+  const runAutosave = () => {
+    const { world, revision } = get();
     if (!world) return;
-    // Yarım kalan maç varsa önce ona dön.
-    if (liveMatch) {
-      get().navigate({ screen: 'match' });
-      return;
-    }
-    // Motor dünyayı yerinde değiştirir; yeni referans React'in yeniden çizmesi için.
-    const result = advance(world);
-    if (result.kind === 'userMatch') {
-      const state = startUserMatch(world);
-      set({ world: { ...world }, liveMatch: state });
-      get().navigate({ screen: 'match' });
-      return;
-    }
-    set({ world: { ...world } });
-    if (result.kind === 'played') {
-      set({ fixturesTab: 'round', fixturesRound: result.round });
+    autosave(world)
+      .then(() => set({ savedRevision: revision }))
+      .catch((e: unknown) => get().showNotice(`Otomatik kayıt başarısız: ${String(e)}`, 'error'));
+  };
+
+  return {
+    phase: 'menu',
+    world: null,
+    revision: 0,
+    savedRevision: 0,
+    currentSaveId: null,
+    notice: null,
+    screen: START_ROUTE.screen,
+    selectedPlayerId: null,
+    history: [START_ROUTE],
+    historyIndex: 0,
+    viewedClubId: null,
+    fixturesTab: 'club',
+    fixturesRound: 1,
+    liveMatch: null,
+
+    openNewGame: () => set({ phase: 'newGame' }),
+
+    openLoadGame: () => set({ phase: 'load' }),
+
+    startNewGame: (clubId) => {
+      // Seed oyunun başında bir kez belirlenir; motor içinde Math.random kullanılmaz.
+      const seed = Date.now() >>> 0;
+      const world = createWorld(gameData, seed, clubId, SEASON_START_DATE);
+      set({ ...enterGame(world), currentSaveId: null, revision: 1 });
+    },
+
+    saveCurrent: async (name, overwriteId) => {
+      const { world, liveMatch, revision } = get();
+      if (!world) return false;
+      if (liveMatch) {
+        get().showNotice('Maç sürerken kayıt yapılamaz.', 'error');
+        return false;
+      }
+      try {
+        const id = await saveGame(world, name, overwriteId);
+        set({ savedRevision: revision, currentSaveId: id });
+        get().showNotice(`Oyun kaydedildi: ${name}`);
+        return true;
+      } catch (e) {
+        get().showNotice(`Kayıt başarısız: ${String(e)}`, 'error');
+        return false;
+      }
+    },
+
+    loadSave: async (id) => {
+      try {
+        const world = await loadGame(id);
+        set({ ...enterGame(world), currentSaveId: id, notice: null });
+        return true;
+      } catch (e) {
+        get().showNotice(e instanceof Error ? e.message : String(e), 'error');
+        return false;
+      }
+    },
+
+    showNotice: (text, kind = 'ok') => set({ notice: { id: ++noticeCounter, text, kind } }),
+
+    clearNotice: () => set({ notice: null }),
+
+    quitToMenu: () => set({ phase: 'menu', world: null, liveMatch: null, currentSaveId: null }),
+
+    navigate: (route) => {
+      const { history, historyIndex } = get();
+      const current = history[historyIndex];
+      if (current && current.screen === route.screen && current.playerId === route.playerId) return;
+      // İleri geçmişi silinir, yeni sayfa sona eklenir (tarayıcı gibi).
+      const next = [...history.slice(0, historyIndex + 1), route].slice(-50);
+      set({ history: next, historyIndex: next.length - 1, ...routeState(route) });
+    },
+
+    setScreen: (screen) => get().navigate({ screen }),
+
+    openPlayer: (playerId) => get().navigate({ screen: 'player', playerId }),
+
+    back: () => {
+      const { history, historyIndex } = get();
+      if (historyIndex === 0) return;
+      set({ historyIndex: historyIndex - 1, ...routeState(history[historyIndex - 1]!) });
+    },
+
+    forward: () => {
+      const { history, historyIndex } = get();
+      if (historyIndex >= history.length - 1) return;
+      set({ historyIndex: historyIndex + 1, ...routeState(history[historyIndex + 1]!) });
+    },
+
+    setViewedClub: (clubId) => set({ viewedClubId: clubId }),
+
+    setFixturesView: (tab, round) =>
+      set((s) => ({ fixturesTab: tab, fixturesRound: round ?? s.fixturesRound })),
+
+    advance: () => {
+      const { world, liveMatch } = get();
+      if (!world) return;
+      // Yarım kalan maç varsa önce ona dön.
+      if (liveMatch) {
+        get().navigate({ screen: 'match' });
+        return;
+      }
+      // Motor dünyayı yerinde değiştirir; yeni referans React'in yeniden çizmesi için.
+      const result = advance(world);
+      if (result.kind === 'userMatch') {
+        const state = startUserMatch(world);
+        touch(world);
+        set({ liveMatch: state });
+        get().navigate({ screen: 'match' });
+        return;
+      }
+      touch(world);
+      if (result.kind === 'played') {
+        set({ fixturesTab: 'round', fixturesRound: result.round });
+        get().navigate({ screen: 'fixtures' });
+        runAutosave();
+      }
+    },
+
+    updateTactics: (fn) => {
+      const { world } = get();
+      if (!world) return;
+      const clubId = world.playerClubId;
+      const current = world.tactics[clubId];
+      if (!current) return;
+      const next = fn(current, clubPlayers(world, clubId));
+      touch({ ...world, tactics: { ...world.tactics, [clubId]: next } });
+    },
+
+    refreshPreMatch: () => {
+      const { world, liveMatch } = get();
+      if (!world || !liveMatch || liveMatch.period !== 'pre') return;
+      set({ liveMatch: startUserMatch(world, liveMatch.seed) });
+    },
+
+    liveChangeTactics: (change) => {
+      const { world, liveMatch } = get();
+      if (!world || !liveMatch) return;
+      changeTactics(liveMatch, world.players, userSide(liveMatch, world), change);
+      set({ liveMatch: { ...liveMatch } });
+    },
+
+    stepLiveMatch: () => {
+      const { world, liveMatch } = get();
+      if (!world || !liveMatch) return;
+      stepMatch(liveMatch, world.players);
+      set({ liveMatch: { ...liveMatch } });
+    },
+
+    liveSubstitute: (outId, inId) => {
+      const { world, liveMatch } = get();
+      if (!world || !liveMatch) return false;
+      const ok = substitute(liveMatch, world.players, userSide(liveMatch, world), outId, inId);
+      if (ok) set({ liveMatch: { ...liveMatch } });
+      return ok;
+    },
+
+    liveInstantFinish: () => {
+      const { world, liveMatch } = get();
+      if (!world || !liveMatch) return;
+      simulateToEnd(liveMatch, world.players);
+      set({ liveMatch: { ...liveMatch } });
+    },
+
+    finishLiveMatch: () => {
+      const { world, liveMatch } = get();
+      if (!world || !liveMatch || liveMatch.period !== 'full') return;
+      const round = finishUserMatch(world, liveMatch);
+      touch(world);
+      set({ liveMatch: null, fixturesTab: 'round', fixturesRound: round[0]?.round ?? 1 });
       get().navigate({ screen: 'fixtures' });
-    }
-  },
-
-  updateTactics: (fn) => {
-    const { world } = get();
-    if (!world) return;
-    const clubId = world.playerClubId;
-    const current = world.tactics[clubId];
-    if (!current) return;
-    const next = fn(current, clubPlayers(world, clubId));
-    set({ world: { ...world, tactics: { ...world.tactics, [clubId]: next } } });
-  },
-
-  refreshPreMatch: () => {
-    const { world, liveMatch } = get();
-    if (!world || !liveMatch || liveMatch.period !== 'pre') return;
-    set({ liveMatch: startUserMatch(world, liveMatch.seed) });
-  },
-
-  liveChangeTactics: (change) => {
-    const { world, liveMatch } = get();
-    if (!world || !liveMatch) return;
-    changeTactics(liveMatch, world.players, userSide(liveMatch, world), change);
-    set({ liveMatch: { ...liveMatch } });
-  },
-
-  stepLiveMatch: () => {
-    const { world, liveMatch } = get();
-    if (!world || !liveMatch) return;
-    stepMatch(liveMatch, world.players);
-    set({ liveMatch: { ...liveMatch } });
-  },
-
-  liveSubstitute: (outId, inId) => {
-    const { world, liveMatch } = get();
-    if (!world || !liveMatch) return false;
-    const ok = substitute(liveMatch, world.players, userSide(liveMatch, world), outId, inId);
-    if (ok) set({ liveMatch: { ...liveMatch } });
-    return ok;
-  },
-
-  liveInstantFinish: () => {
-    const { world, liveMatch } = get();
-    if (!world || !liveMatch) return;
-    simulateToEnd(liveMatch, world.players);
-    set({ liveMatch: { ...liveMatch } });
-  },
-
-  finishLiveMatch: () => {
-    const { world, liveMatch } = get();
-    if (!world || !liveMatch || liveMatch.period !== 'full') return;
-    const round = finishUserMatch(world, liveMatch);
-    set({
-      world: { ...world },
-      liveMatch: null,
-      fixturesTab: 'round',
-      fixturesRound: round[0]?.round ?? 1,
-    });
-    get().navigate({ screen: 'fixtures' });
-  },
-}));
+      runAutosave();
+    },
+  };
+});
 
 /** Kariyer açıkken dünyayı döndürür (GameShell içindeki bileşenler için). */
 export function useWorld(): GameWorld {

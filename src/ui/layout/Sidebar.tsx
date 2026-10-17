@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { getClub, nextFixtureFor } from '../../engine';
-import { useGameStore, useWorld } from '../../store/gameStore';
+import { hasUnsavedProgress, useGameStore, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
+import { QuitDialog, SaveDialog } from '../components/SaveDialogs';
 import { formatDayMonth } from '../labels';
 import { MENU } from '../screens';
 
@@ -32,7 +34,9 @@ function NextMatchCard() {
 export function Sidebar() {
   const screen = useGameStore((s) => s.screen);
   const setScreen = useGameStore((s) => s.setScreen);
-  const quitToMenu = useGameStore((s) => s.quitToMenu);
+  const liveMatch = useGameStore((s) => s.liveMatch);
+  const unsaved = useGameStore(hasUnsavedProgress);
+  const [dialog, setDialog] = useState<'save' | 'quit' | null>(null);
   // Oyuncu profili açıkken "Kadro" vurgulu kalsın.
   const isActive = (id: string) => id === screen || (screen === 'player' && id === 'squad');
 
@@ -56,10 +60,22 @@ export function Sidebar() {
       </nav>
       <div className="sidebar-actions">
         <NextMatchCard />
-        <button className="action-link" onClick={quitToMenu}>
-          Ana Menü
-        </button>
+        <div className="action-row">
+          <button
+            className="action-link"
+            onClick={() => setDialog('save')}
+            disabled={liveMatch !== null}
+            title={liveMatch ? 'Maç sürerken kayıt yapılamaz' : unsaved ? 'Kaydedilmemiş ilerleme var' : 'Tüm ilerleme kayıtlı'}
+          >
+            Kaydet{unsaved && !liveMatch && <i className="unsaved-dot" />}
+          </button>
+          <button className="action-link" onClick={() => setDialog('quit')}>
+            Ana Menü
+          </button>
+        </div>
       </div>
+      {dialog === 'save' && <SaveDialog onClose={() => setDialog(null)} />}
+      {dialog === 'quit' && <QuitDialog onClose={() => setDialog(null)} />}
     </aside>
   );
 }

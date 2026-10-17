@@ -22,6 +22,10 @@ export function NavBar() {
   const canBack = useGameStore((s) => s.historyIndex > 0);
   const canForward = useGameStore((s) => s.historyIndex < s.history.length - 1);
   const isMatchDay = world.season.fixtures.some((f) => f.date === world.date && f.result === null);
+  const liveMatch = useGameStore((s) => s.liveMatch);
+  const onMatchScreen = useGameStore((s) => s.screen === 'match');
+  // Canlı maç sürerken Devam maça döndürür; maç ekranındayken kontroller oradadır.
+  const label = liveMatch ? (onMatchScreen ? 'Maç Oynanıyor' : 'Maça Dön') : isMatchDay ? 'Maça Çık' : 'Devam';
 
   return (
     <nav className="navbar">
@@ -34,8 +38,8 @@ export function NavBar() {
         </button>
       </div>
       <div className={`nav-status${isMatchDay ? ' matchday' : ''}`}>{statusText(world)}</div>
-      <button className="btn-continue" onClick={advance}>
-        {isMatchDay ? 'Maçları Oyna' : 'Devam'}
+      <button className="btn-continue" onClick={advance} disabled={liveMatch !== null && onMatchScreen}>
+        {label}
         <span className="btn-continue-arrow">›</span>
       </button>
     </nav>

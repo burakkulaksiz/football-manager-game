@@ -11,7 +11,10 @@ export * from './generation/worldGenerator';
 export * from './league/schedule';
 export * from './league/standings';
 export * from './league/stats';
-export * from './match/quickSim';
+export * from './match/state';
+export * from './match/formation';
+export * from './match/engine';
+export * from './match/simulate';
 export * from './gameFlow';
 
 /** Yeni kariyer bu tarihte başlar (yaz transfer dönemi başı). */

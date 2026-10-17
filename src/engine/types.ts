@@ -71,10 +71,56 @@ export interface Player {
   contract: Contract;
 }
 
+export type GoalKind = 'normal' | 'header' | 'long' | 'freekick' | 'penalty';
+
 export interface GoalEvent {
+  /** Normal süre dakikası (en fazla 45 / 90). */
   minute: number;
+  /** Uzatma dakikası: 45+2 → minute 45, extra 2. */
+  extra?: number;
   clubId: string;
   playerId: number;
+  assistId?: number | null;
+  kind?: GoalKind;
+}
+
+export interface CardEvent {
+  minute: number;
+  extra?: number;
+  clubId: string;
+  playerId: number;
+  /** 'red' = direkt ya da ikinci sarıdan kırmızı. */
+  type: 'yellow' | 'red';
+}
+
+export interface InjuryEvent {
+  minute: number;
+  extra?: number;
+  clubId: string;
+  playerId: number;
+}
+
+export interface TeamMatchStats {
+  /** Topla oynama yüzdesi (0–100). */
+  possession: number;
+  shots: number;
+  shotsOnTarget: number;
+  corners: number;
+  fouls: number;
+  yellowCards: number;
+  redCards: number;
+}
+
+/** Bir oyuncunun maçtaki kaydı (ilk 11 ve oyuna girenler). */
+export interface PlayerMatchRecord {
+  playerId: number;
+  clubId: string;
+  started: boolean;
+  minutes: number;
+  /** 1–10, tek ondalık. */
+  rating: number;
+  goals: number;
+  assists: number;
 }
 
 export interface MatchResult {
@@ -82,6 +128,12 @@ export interface MatchResult {
   awayGoals: number;
   /** Dakika sırasına göre goller. */
   goals: GoalEvent[];
+  cards: CardEvent[];
+  injuries: InjuryEvent[];
+  stats: { home: TeamMatchStats; away: TeamMatchStats };
+  players: PlayerMatchRecord[];
+  /** Maçın adamı. */
+  manOfTheMatch: number | null;
 }
 
 export interface Fixture {

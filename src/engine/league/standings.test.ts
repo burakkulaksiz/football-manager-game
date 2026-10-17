@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { makeResult } from '../testing';
 import type { Fixture } from '../types';
 import { computeStandings, goalDifference } from './standings';
 
@@ -10,7 +11,7 @@ function match(homeId: string, awayId: string, hg: number | null, ag = 0, date =
     date,
     homeId,
     awayId,
-    result: hg === null ? null : { homeGoals: hg, awayGoals: ag, goals: [] },
+    result: hg === null ? null : makeResult(hg, ag),
   };
 }
 

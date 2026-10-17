@@ -29,17 +29,25 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
   generation/          playerGenerator (tek oyuncu), worldGenerator (tüm lig + fikstür, createWorld).
   league/schedule.ts   Çift devreli fikstür (çember yöntemi + açgözlü ev/dep), hafta tarihleri.
   league/standings.ts  Puan durumu + eşitlik kuralları.
-  league/stats.ts      Gol krallığı, gol yemeden biten maçlar (sonuçlardan türetilir).
-  match/quickSim.ts    Anında maç (Poisson), otomatik ilk 11, golcü seçimi.
-  gameFlow.ts          Devam: maç günüyse oynat, değilse sonraki maç gününe ilerle (dünyayı yerinde değiştirir).
+  league/stats.ts      Gol/asist/puan sıralamaları, oyuncu sezon istatistikleri (maç kayıtlarından türetilir).
+  match/state.ts       Canlı maç durumu tipleri (düz veri, serileştirilebilir), dakika gösterimi.
+  match/formation.ts   Varsayılan 4-2-3-1, mevki uyumu (slotFit = yanlış mevki cezası), otomatik ilk 11 + 9 yedek.
+  match/engine.ts      Dakika dakika motor: createMatch, stepMatch, substitute, setMentality, simulateToEnd,
+                       buildResult. Denge sabitleri TUNING içinde.
+  match/commentary.ts  Türkçe anlatım şablonları (isimden sonra ek gelmeyecek şekilde yazıldı).
+  match/simulate.ts    Dünya bağlantısı: fikstür kurulumu, arka plan maçı, sonucu işleme (form güncelleme).
+  gameFlow.ts          Devam: kendi maçımız varsa 'userMatch' döner (canlı), yoksa günün maçlarını oynatır
+                       ya da sonraki maç gününe ilerler (dünyayı yerinde değiştirir).
+  testing.ts           Yalnızca testler: makeResult, playSeason.
   index.ts             Motorun dışa açık yüzü + SEASON_START_DATE (2026-07-01).
-src/store/gameStore.ts Zustand: phase (menu/newGame/game), screen, world, seçili oyuncu.
+src/store/gameStore.ts Zustand: phase (menu/newGame/game), screen + geçmiş, world, liveMatch (canlı maç) ve
+                       maç eylemleri (stepLiveMatch, liveSubstitute, liveSetMentality, liveInstantFinish, finishLiveMatch).
 src/persistence/db.ts  Dexie (IndexedDB) — 'fm-super-lig' veritabanı, `saves` tablosu.
 src/ui/                React. Motoru sadece çağırır, oyun mantığı içermez.
   labels.ts            Türkçe etiketler (özellik, mevki, beklenti), para/tarih biçimleri.
   layout/              GameShell, Header, NavBar, Sidebar, StatusBar, pageHeading (başlık hapı + konum yolu)
   screens/             MainMenu, NewGameScreen, SquadScreen, PlayerProfile, ClubInfoScreen,
-                       FixturesScreen, TableScreen, StatsScreen, Placeholder
+                       FixturesScreen, TableScreen, StatsScreen, MatchScreen, Placeholder
   components/          ClubBadge, Shirt, OutcomeBox
   styles.css           Tema; renkler CSS değişkenleri olarak (bkz. "Görünüm")
 ```
@@ -61,12 +69,27 @@ Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
 - **Fikstür:** 2. devre 1. devrenin ev/deplasman tersi. Hiçbir takım üst üste 4 iç saha/deplasman yapmaz.
 - **Puan eşitliği:** eşit takımlar arası maçlar tamamen oynandıysa ikili puan → ikili averaj;
   sonra genel averaj → atılan gol → kulüp id.
-- **Anında maç:** gol ~ Poisson(taban × e^(±0.016 × ilk 11 ortalama CA farkı)), taban ev 1.38 / dep 1.07.
-  6000 maçta ölçülen: 2.58 gol/maç, %44 ev galibiyeti, %24 beraberlik. İlk 11 = en iyi GK + en iyi 10 saha
-  oyuncusu (taktik yok). Gol dakikaları rastgele.
+- **Maç motoru (dakika dakika):** her dakika orta saha gücüne göre top kimde → atak olasılığı →
+  (hücum / rakip savunma)^1.35 ile şut olasılığı → şutçu (mevki × bitiricilik), şut türü (normal/kafa/
+  uzaktan), engelleme, isabet, kaleciye karşı gol. Ayrıca faul (→ kart, penaltı, serbest vuruş), korner
+  (→ kafa şansı), sakatlık, yorgunluk. Verim = mevki uyumu × kondisyon × moral × form × günlük form.
+  Yapay zekâ: geride kalan 60'tan sonra yüklenir, önde olan 55'ten sonra skoru korur; 58'den sonra
+  yorgun/kötü oynayanı değiştirir (en fazla 4). 5 değişiklik hakkı. İç saha: hücum ×1.18, orta saha ×1.05.
+  ~4600 maçta ölçülen: **2.57 gol/maç, %44.8 ev galibiyeti, %25.4 beraberlik**, takım başına 13 şut /
+  4.8 isabet / 4.9 korner, maç başına 3.2 sarı / 0.2 kırmızı.
+- **Mentalite** (−2…+2) şimdilik tek taktik ayarı; 5. aşamada tam taktiğe genişleyecek.
+- **Herkes 4-2-3-1** oynuyor (taktik ekranı 5. aşamada). İlk 11 otomatik: mevki için CA × uyum.
+- **Puan (1–10):** 6.0'dan başlar; gol +1, asist +0.6, kurtarış +0.3, blok +0.15, sarı −0.3, kırmızı −1.5,
+  yenilen gol (kaleci −0.4, defans −0.15), maç sonu galibiyet ±0.3, gol yemeyen kaleci/defans bonus.
+  Maç sonrası puan oyuncunun `form` listesine eklenir (son 5).
 - **Devam akışı:** maç günü değilse sonraki maç gününe (gün gün; `advanceOneDay` ileride günlük işler için)
-  gider; maç günüyse tüm haftayı oynatır ve UI o haftanın sonuçlarını açar. Sezon bitince 1'er gün ilerler.
-- **GameWorld.season** = { year, fixtures[] }; Fixture.result = { homeGoals, awayGoals, goals[{minute, clubId, playerId}] }.
+  gider. Maç günü kendi maçımız canlı oynanır (maç ekranı), bitince günün diğer maçları arka planda
+  aynı motorla oynanır ve haftanın sonuçları açılır. Sezon bitince 1'er gün ilerler.
+- **GameWorld.season** = { year, fixtures[] }; Fixture.result = MatchResult { skor, goals[{minute, extra,
+  clubId, playerId, assistId, kind}], cards, injuries, stats {home, away}, players[{rating, minutes,
+  goals, assists, started}], manOfTheMatch }. Anlatım metni saklanmaz (yalnızca canlı maçta).
+- **Maç içi sakatlık ve kartlar** şimdilik sadece o maçı etkiler; kalıcı sakatlık/ceza 8. aşamada.
+  Sakatlanan oyuncu (kullanıcı takımında da) otomatik değiştirilir.
 
 ## Veri formatları
 - `data/clubs.json` — `[{ id, name, shortName, city, stadium, capacity, reputation (1–100),
@@ -101,7 +124,10 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
       anında maç sonucu + golcüler, Fikstür (Kulübüm/Haftalar), Puan Durumu, Lig İstatistikleri
       (gol krallığı, takım istatistikleri); üst barda sıradaki maç.
 - [x] **Tasarım yenilemesi** (3 ile 4 arası, kullanıcı isteği) — FM 2005 esinli modern tema, yeni profil düzeni.
-- [ ] 4. Maç motoru (dakika dakika, maç ekranı, istatistik doğrulama testleri)
+- [x] **4. Maç motoru** — dakika dakika motor, Türkçe anlatım, canlı maç ekranı (tabela, son 10 dk
+      baskı çubuğu, istatistikler, canlı puan/kondisyon, değişiklik, mentalite, 4 hız, anında sonuç,
+      maçın adamı), diğer maçlar arka planda; istatistik doğrulama testi; profil ve lig istatistikleri
+      (maç, gol, asist, kart, ortalama puan, asist krallığı, puan sıralaması). 2D saha istenmedi.
 - [ ] 5. Taktik ekranı ve motora etkisi
 - [ ] 6. Kayıt sistemi (yeni oyun, kaydet/yükle, otomatik kayıt)
 - [ ] 7. Transfer, sözleşme, finans
@@ -112,10 +138,14 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
 ## Açık konular / ileride
 - Elle gerçek kadro girişi (ör. `data/squads/<kulüpId>.json`) yok; kullanıcı "şimdilik gerek yok" dedi.
 - Duran top özellikleri (penaltı, korner) mevkiyle ilgisizse düşük çıkabiliyor — 10. aşamada denge.
-- Anında maç modelinde beraberlik ~%24 (hedef %27); 4. aşamadaki maç motoru hedefleyecek.
+- Beraberlik %25.4 (hedef %27; Süper Lig gerçeği ~%25). Daha fazlası gol ortalamasını düşürüyor.
 - Sezon bitince yeni sezona geçiş yok (9. aşama).
+- Canlı maç store'da (`liveMatch`), dünyada değil: 6. aşamada maç ortasında kayıt engellenmeli ya da
+  liveMatch de kaydedilmeli.
+- 2D saha görünümü: kullanıcı "henüz gerekmez" dedi.
 
 ## Sıradaki adım
-4. aşama: dakika dakika maç motoru (atak, şut, gol, kurtarış, faul, kart, sakatlık, değişiklik olayları),
-maç ekranı (canlı skor, istatistikler, oyuncu puanları, hızlandır/anında bitir), kendi maçımız bu
-motorla, diğer maçlar arka planda; binlerce maçlık istatistik doğrulama testi (2.6 gol, %45 ev, %27 beraberlik).
+5. aşama: Taktik ekranı — dizilişler (4-4-2, 4-3-3, 4-2-3-1, 3-5-2, 5-3-2, 4-5-1), mentalite, pas tarzı,
+tempo, pres, savunma hattı; ilk 11 / yedek / kaptan / penaltı ve serbest vuruşçu seçimi (Shirt bileşeni ile
+saha görünümü); taktiklerin motora etkisi (formation.ts + engine.ts TUNING/SLOT_WEIGHTS); yanlış mevki cezası
+zaten slotFit'te. Maç içinde de taktik değişikliği.

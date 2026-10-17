@@ -1,5 +1,19 @@
 import { create } from 'zustand';
-import { advance, createWorld, SEASON_START_DATE, type GameWorld } from '../engine';
+import {
+  advance,
+  createWorld,
+  finishUserMatch,
+  SEASON_START_DATE,
+  setMentality,
+  simulateToEnd,
+  startUserMatch,
+  stepMatch,
+  substitute,
+  type GameWorld,
+  type MatchState,
+  type Mentality,
+  type Side,
+} from '../engine';
 import { gameData } from '../gameData';
 
 /** Sol menüden açılan ekranlar + menü dışı ekranlar ('player'). */
@@ -13,7 +27,8 @@ export type ScreenId =
   | 'fixtures'
   | 'table'
   | 'stats'
-  | 'player';
+  | 'player'
+  | 'match';
 
 /** Gezinme geçmişindeki bir sayfa (FM'deki ◀ ▶ okları için). */
 export interface Route {
@@ -35,6 +50,8 @@ interface GameState {
   /** Fikstür ekranı: kendi maçlarımız mı, haftalık görünüm mü; seçili hafta. */
   fixturesTab: 'club' | 'round';
   fixturesRound: number;
+  /** Oynanmakta olan kendi maçımız (yoksa null). */
+  liveMatch: MatchState | null;
 
   openNewGame: () => void;
   startNewGame: (clubId: string) => void;
@@ -51,6 +68,19 @@ interface GameState {
    * Maçlar oynanınca o haftanın sonuçları gösterilir.
    */
   advance: () => void;
+  /** Canlı maç: bir adım (dakika) ilerlet. */
+  stepLiveMatch: () => void;
+  liveSubstitute: (outId: number, inId: number) => boolean;
+  liveSetMentality: (mentality: Mentality) => void;
+  /** Kalan dakikaları anında oynat (değişiklikleri yapay zekâ yapar). */
+  liveInstantFinish: () => void;
+  /** Biten maçı kaydet, günün diğer maçlarını oynat, sonuçları göster. */
+  finishLiveMatch: () => void;
+}
+
+/** Canlı maçta kullanıcının tarafı. */
+export function userSide(state: MatchState, world: GameWorld): Side {
+  return state.home.clubId === world.playerClubId ? 'home' : 'away';
 }
 
 function routeState(route: Route) {
@@ -69,6 +99,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
   viewedClubId: null,
   fixturesTab: 'club',
   fixturesRound: 1,
+  liveMatch: null,
 
   openNewGame: () => set({ phase: 'newGame' }),
 
@@ -85,10 +116,11 @@ export const useGameStore = create<GameState>()((set, get) => ({
       viewedClubId: clubId,
       fixturesTab: 'club',
       fixturesRound: 1,
+      liveMatch: null,
     });
   },
 
-  quitToMenu: () => set({ phase: 'menu', world: null }),
+  quitToMenu: () => set({ phase: 'menu', world: null, liveMatch: null }),
 
   navigate: (route) => {
     const { history, historyIndex } = get();
@@ -121,15 +153,68 @@ export const useGameStore = create<GameState>()((set, get) => ({
     set((s) => ({ fixturesTab: tab, fixturesRound: round ?? s.fixturesRound })),
 
   advance: () => {
-    const { world } = get();
+    const { world, liveMatch } = get();
     if (!world) return;
+    // Yarım kalan maç varsa önce ona dön.
+    if (liveMatch) {
+      get().navigate({ screen: 'match' });
+      return;
+    }
     // Motor dünyayı yerinde değiştirir; yeni referans React'in yeniden çizmesi için.
     const result = advance(world);
+    if (result.kind === 'userMatch') {
+      const state = startUserMatch(world);
+      set({ world: { ...world }, liveMatch: state });
+      get().navigate({ screen: 'match' });
+      return;
+    }
     set({ world: { ...world } });
     if (result.kind === 'played') {
       set({ fixturesTab: 'round', fixturesRound: result.round });
       get().navigate({ screen: 'fixtures' });
     }
+  },
+
+  stepLiveMatch: () => {
+    const { world, liveMatch } = get();
+    if (!world || !liveMatch) return;
+    stepMatch(liveMatch, world.players);
+    set({ liveMatch: { ...liveMatch } });
+  },
+
+  liveSubstitute: (outId, inId) => {
+    const { world, liveMatch } = get();
+    if (!world || !liveMatch) return false;
+    const ok = substitute(liveMatch, world.players, userSide(liveMatch, world), outId, inId);
+    if (ok) set({ liveMatch: { ...liveMatch } });
+    return ok;
+  },
+
+  liveSetMentality: (mentality) => {
+    const { world, liveMatch } = get();
+    if (!world || !liveMatch) return;
+    setMentality(liveMatch, userSide(liveMatch, world), mentality);
+    set({ liveMatch: { ...liveMatch } });
+  },
+
+  liveInstantFinish: () => {
+    const { world, liveMatch } = get();
+    if (!world || !liveMatch) return;
+    simulateToEnd(liveMatch, world.players);
+    set({ liveMatch: { ...liveMatch } });
+  },
+
+  finishLiveMatch: () => {
+    const { world, liveMatch } = get();
+    if (!world || !liveMatch || liveMatch.period !== 'full') return;
+    const round = finishUserMatch(world, liveMatch);
+    set({
+      world: { ...world },
+      liveMatch: null,
+      fixturesTab: 'round',
+      fixturesRound: round[0]?.round ?? 1,
+    });
+    get().navigate({ screen: 'fixtures' });
   },
 }));
 

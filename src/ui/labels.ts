@@ -172,3 +172,19 @@ export function splitDateTR(formatted: string): { day: string; date: string } {
   const [date = '', day = ''] = formatted.split(', ');
   return { day, date };
 }
+
+export const MENTALITY_LABELS: Record<-2 | -1 | 0 | 1 | 2, string> = {
+  [-2]: 'Çok Defansif',
+  [-1]: 'Defansif',
+  0: 'Dengeli',
+  1: 'Hücum',
+  2: 'Çok Hücum',
+};
+
+/** Maç puanı rengi: 7.5+ yeşil, 6.5+ sarı, 6 altı kırmızımsı. */
+export function ratingClass(rating: number): string {
+  if (rating >= 7.5) return 'rating rating-great';
+  if (rating >= 6.5) return 'rating rating-good';
+  if (rating < 6) return 'rating rating-poor';
+  return 'rating';
+}

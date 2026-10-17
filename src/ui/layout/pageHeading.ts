@@ -1,4 +1,4 @@
-import { getClub, primaryPosition, seasonLabel, type GameWorld } from '../../engine';
+import { getClub, nextFixtureFor, primaryPosition, seasonLabel, type GameWorld } from '../../engine';
 import type { ScreenId } from '../../store/gameStore';
 import { nationName, POSITION_NAMES } from '../labels';
 import { screenInfo } from '../screens';
@@ -39,6 +39,20 @@ export function pageHeading(
   if (screen === 'squad') {
     const club = getClub(world, viewedClubId ?? ownClub.id);
     return { title: club.name, subtitle: 'Kadro', colors: club.colors, breadcrumb: ['Süper Lig', club.name, 'Kadro'] };
+  }
+
+  if (screen === 'match') {
+    // Canlı maç sırasında kendi maçımız henüz sonuçlanmamış sıradaki maçtır.
+    const fixture = nextFixtureFor(world, ownClub.id);
+    const title = fixture
+      ? `${getClub(world, fixture.homeId).name} – ${getClub(world, fixture.awayId).name}`
+      : 'Maç';
+    return {
+      title,
+      subtitle: fixture ? `Süper Lig · ${fixture.round}. Hafta` : 'Süper Lig',
+      colors: LEAGUE_COLORS,
+      breadcrumb: ['Süper Lig', 'Maç Günü', title],
+    };
   }
 
   const info = screen === 'player' ? { label: 'Oyuncu' } : screenInfo(screen);

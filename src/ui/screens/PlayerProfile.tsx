@@ -4,6 +4,7 @@ import {
   getClub,
   GOALKEEPING_ATTRS,
   marketValue,
+  playerSeasonStats,
   MENTAL_ATTRS,
   PHYSICAL_ATTRS,
   POSITIONS,
@@ -24,6 +25,7 @@ import {
   moraleLabel,
   nationName,
   POSITION_NAMES,
+  ratingClass,
 } from '../labels';
 import { PositionBoxes } from './SquadScreen';
 
@@ -76,10 +78,8 @@ export function PlayerProfile() {
   const knownPositions = POSITIONS.filter((p) => player.positions[p] !== undefined).sort(
     (a, b) => (player.positions[b] ?? 0) - (player.positions[a] ?? 0),
   );
-  const leagueGoals = world.season.fixtures.reduce(
-    (sum, f) => sum + (f.result?.goals.filter((g) => g.playerId === player.id).length ?? 0),
-    0,
-  );
+  const stats = playerSeasonStats(world.season.fixtures, player.id);
+  const dash = (n: number) => (stats.apps === 0 ? '—' : n);
 
   return (
     <div className="screen">
@@ -150,6 +150,7 @@ export function PlayerProfile() {
                 <th className="num">Maç</th>
                 <th className="num">Gol</th>
                 <th className="num">Asist</th>
+                <th className="num">MA</th>
                 <th className="num">Sarı</th>
                 <th className="num">Kırmızı</th>
                 <th className="num">Ort. Puan</th>
@@ -158,16 +159,23 @@ export function PlayerProfile() {
             <tbody>
               <tr>
                 <td className="strong">Süper Lig</td>
-                <td className="num">—</td>
-                <td className="num">{leagueGoals}</td>
-                <td className="num">—</td>
-                <td className="num">—</td>
-                <td className="num">—</td>
-                <td className="num">—</td>
+                <td className="num">
+                  {stats.apps === 0 ? '—' : `${stats.starts}${stats.apps > stats.starts ? ` (${stats.apps - stats.starts})` : ''}`}
+                </td>
+                <td className="num">{dash(stats.goals)}</td>
+                <td className="num">{dash(stats.assists)}</td>
+                <td className="num">{dash(stats.manOfTheMatch)}</td>
+                <td className="num">{dash(stats.yellow)}</td>
+                <td className="num">{dash(stats.red)}</td>
+                <td className="num">
+                  {stats.avgRating === null ? '—' : (
+                    <span className={ratingClass(stats.avgRating)}>{stats.avgRating.toFixed(2)}</span>
+                  )}
+                </td>
               </tr>
             </tbody>
           </table>
-          <div className="panel-note">Maç, asist, kart ve puan istatistikleri maç motoruyla (4. aşama) dolacak.</div>
+          <div className="panel-note">Maç: ilk 11 (oyuna sonradan girdiği) · MA: maçın adamı</div>
         </section>
       </div>
     </div>

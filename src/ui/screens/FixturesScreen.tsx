@@ -1,4 +1,4 @@
-import { getClub, type Fixture, type GameWorld, type Outcome } from '../../engine';
+import { formatMinute, getClub, type Fixture, type GameWorld, type Outcome } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { OutcomeBox } from '../components/OutcomeBox';
@@ -15,13 +15,14 @@ function outcomeFor(f: Fixture, clubId: string): Outcome | null {
 
 /** "Ahmet Yılmaz 23', 67'" biçiminde golcü listesi. */
 function scorerText(world: GameWorld, f: Fixture, clubId: string): string {
-  const byPlayer = new Map<number, number[]>();
+  const byPlayer = new Map<number, string[]>();
   for (const g of f.result?.goals ?? []) {
     if (g.clubId !== clubId) continue;
-    byPlayer.set(g.playerId, [...(byPlayer.get(g.playerId) ?? []), g.minute]);
+    const label = formatMinute(g.minute, g.extra) + (g.kind === 'penalty' ? ' (P)' : '');
+    byPlayer.set(g.playerId, [...(byPlayer.get(g.playerId) ?? []), label]);
   }
   return [...byPlayer.entries()]
-    .map(([id, minutes]) => `${world.players[id]?.lastName ?? '?'} ${minutes.map((m) => `${m}'`).join(', ')}`)
+    .map(([id, minutes]) => `${world.players[id]?.lastName ?? '?'} ${minutes.join(', ')}`)
     .join('; ');
 }
 

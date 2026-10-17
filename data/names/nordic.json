@@ -1,0 +1,10 @@
+{
+  "firstNames": [
+    "Erik", "Lars", "Anders", "Johan", "Magnus", "Oscar", "Emil", "Viktor", "Mikkel", "Rasmus",
+    "Kristoffer", "Henrik", "Jonas", "Sander", "Mathias", "Gustav", "Andreas", "Simon", "Fredrik", "Nils"
+  ],
+  "lastNames": [
+    "Andersson", "Johansson", "Karlsson", "Nilsson", "Eriksson", "Larsson", "Olsen", "Hansen", "Pedersen", "Nielsen",
+    "Jensen", "Christensen", "Johansen", "Berg", "Lindqvist", "Strand", "Haugen", "Dahl", "Holm", "Lund"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "firstNames": [
+    "Ahmet", "Mehmet", "Mustafa", "Ali", "Hüseyin", "Hasan", "İbrahim", "İsmail", "Murat", "Emre",
+    "Burak", "Cenk", "Arda", "Kerem", "Barış", "Hakan", "Ozan", "Okan", "Oğuz", "Onur",
+    "Serdar", "Selçuk", "Volkan", "Yusuf", "Ömer", "Kaan", "Can", "Eren", "Efe", "Berk",
+    "Berkay", "Batuhan", "Doğukan", "Enes", "Furkan", "Gökhan", "Halil", "İrfan", "Kenan", "Mert",
+    "Metehan", "Oğuzhan", "Orkun", "Ramazan", "Salih", "Samet", "Semih", "Sinan", "Taylan", "Tolga",
+    "Uğur", "Umut", "Yunus", "Yasin", "Zeki", "Abdülkadir", "Abdullah", "Alper", "Altay", "Anıl",
+    "Arif", "Bahadır", "Baran", "Bertuğ", "Cengiz", "Deniz", "Dorukhan", "Ercan", "Erhan", "Ferdi",
+    "Fatih", "Gökay", "Hamza", "Kadir", "Kubilay", "Melih", "Mithat", "Necip", "Nazım", "Rıdvan",
+    "Sefa", "Serkan", "Tarık", "Tuncay", "Yiğit", "Zafer", "Emirhan", "Egehan", "Atakan", "Erkan",
+    "Koray", "Levent", "Recep", "Süleyman", "Tayfun", "Utku", "Yakup", "Eray", "Kağan", "Ensar"
+  ],
+  "lastNames": [
+    "Yılmaz", "Kaya", "Demir", "Şahin", "Çelik", "Yıldız", "Yıldırım", "Öztürk", "Aydın", "Özdemir",
+    "Arslan", "Doğan", "Kılıç", "Aslan", "Çetin", "Kara", "Koç", "Kurt", "Özkan", "Şimşek",
+    "Polat", "Özcan", "Korkmaz", "Çakır", "Erdoğan", "Yavuz", "Can", "Acar", "Şen", "Aktaş",
+    "Güler", "Yalçın", "Güneş", "Bozkurt", "Bulut", "Keskin", "Ünal", "Turan", "Gül", "Özer",
+    "Işık", "Kaplan", "Avcı", "Sarı", "Tekin", "Taş", "Köse", "Yüksel", "Ateş", "Aksoy",
+    "Ekinci", "Uysal", "Akın", "Erdem", "Karaca", "Tunç", "Altun", "Duman", "Bayram", "Uçar",
+    "Toprak", "Akgül", "Kocabaş", "Karakaya", "Sönmez", "Durmaz", "Tosun", "Ayhan", "Coşkun", "Bektaş",
+    "Kalkan", "Topal", "Kahveci", "Yazıcı", "Ergin", "Yücel", "Akbaş", "Akyol", "Çalışkan", "Demirtaş",
+    "Eroğlu", "Gündüz", "Kalaycı", "Karataş", "Kızıltepe", "Oral", "Özbek", "Sezer", "Soylu", "Tatlı",
+    "Türkmen", "Uzun", "Varol", "Yaman", "Yazgan", "Zengin", "Akdağ", "Bilgin", "Cömert", "Dinç",
+    "Ekici", "Göçer", "Hancı", "İnce", "Kocaman", "Metin", "Nalbant", "Okur", "Sağlam", "Tuna"
+  ]
+}

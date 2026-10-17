@@ -1,23 +1,37 @@
-/* FM 2005 havası: koyu lacivert/gri paneller, yoğun tablolar, küçük yazı. */
+/*
+ * Renkler: Tapani's CM 01/02 Color Adjuster paleti (kullanıcının seçimi).
+ * Numaralar o paletteki sırayı gösterir. "Türetilmiş" olanlar palette yok;
+ * kenarlık/zebra satır gibi ara tonlar için paletten açıp koyulaştırıldı.
+ */
 :root {
-  --bg: #0f1626;
-  --bg-panel: #1b2540;
-  --bg-panel-alt: #222e4d;
-  --bg-header: #2c3d66;
-  --bg-sidebar: #141d33;
-  --bg-topbar: linear-gradient(#34477a, #1f2c4f);
-  --border: #3a4a73;
-  --text: #dfe5f2;
-  --text-muted: #8c99b8;
-  --accent: #f2c14e;
-  --accent-text: #1a1a1a;
-  --row-hover: #2f3f68;
-  --active: #3f5a9e;
+  /* --- Palet --- */
+  --menu-bg: rgb(155, 170, 190);        /* 0. Menu background */
+  --big-btn: rgb(85, 100, 125);         /* 1. Big buttons (OK, Next), drop down menus */
+  --main-btn: rgb(50, 105, 25);         /* 2. Main buttons */
+  --tactic-btn: rgb(50, 105, 25);       /* 3. Main buttons - tactic screen */
+  --pos-box: rgb(50, 105, 25);          /* 4. Squad pos box, league pos box */
+  --pos-box-sub: rgb(40, 95, 15);       /* 5. Squad pos boxes - subs */
+  --pos-bar: rgb(85, 140, 65);          /* 6. Squad positions bar */
+  --misc-box: rgb(50, 105, 25);         /* 7. Misc box color (transfer sums) */
+  --text-1: rgb(155, 170, 190);         /* 8. Text color 1 (ratings, club names, buttons) */
+
+  /* --- Türetilmiş tonlar --- */
+  --text: rgb(12, 18, 30);              /* açık zemin üstündeki ana metin */
+  --text-muted: rgb(55, 65, 85);
+  --border: rgb(60, 70, 90);
+  --row-alt: rgb(143, 159, 181);
+  --row-hover: rgb(175, 188, 205);
+  --row-selected: rgb(190, 202, 217);
+  --big-btn-light: rgb(125, 140, 165);
+  --big-btn-dark: rgb(45, 55, 75);
+  --main-btn-light: rgb(85, 140, 65);
+  --main-btn-dark: rgb(25, 60, 10);
+  --attr-poor: rgb(125, 25, 25);
 
   font-family: Tahoma, Verdana, 'Segoe UI', sans-serif;
   font-size: 12px;
   color: var(--text);
-  background: var(--bg);
+  background: var(--menu-bg);
 }
 
 * {
@@ -32,22 +46,61 @@ body,
 }
 
 body {
-  background: var(--bg);
+  background: var(--menu-bg);
 }
 
 button {
   font: inherit;
-  color: inherit;
   cursor: pointer;
 }
 
 button:disabled {
   cursor: not-allowed;
-  opacity: 0.45;
+  opacity: 0.5;
 }
 
 .muted {
   color: var(--text-muted);
+}
+
+.strong {
+  font-weight: bold;
+}
+
+/* ---------- Butonlar (CM tarzı kabartma kenarlık) ---------- */
+.btn {
+  background: var(--big-btn);
+  color: var(--text-1);
+  font-weight: bold;
+  padding: 4px 14px;
+  border: 2px solid;
+  border-color: var(--big-btn-light) var(--big-btn-dark) var(--big-btn-dark) var(--big-btn-light);
+}
+
+.btn:active:not(:disabled) {
+  border-color: var(--big-btn-dark) var(--big-btn-light) var(--big-btn-light) var(--big-btn-dark);
+}
+
+.btn-large {
+  padding: 7px 22px;
+  font-size: 13px;
+}
+
+select {
+  font: inherit;
+  font-weight: bold;
+  background: var(--big-btn);
+  color: var(--text-1);
+  border: 2px solid;
+  border-color: var(--big-btn-light) var(--big-btn-dark) var(--big-btn-dark) var(--big-btn-light);
+  padding: 2px 4px;
+}
+
+.button-row {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 8px;
 }
 
 /* ---------- Ana yerleşim ---------- */
@@ -74,28 +127,23 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 16px;
-  height: 52px;
-  padding: 0 12px;
-  background: var(--bg-topbar);
-  border-bottom: 1px solid #000;
+  padding: 6px 10px;
+  background: var(--menu-bg);
+  border-bottom: 2px solid var(--border);
 }
 
 .topbar-club {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex: 1;
 }
 
-.club-badge {
-  width: 34px;
-  height: 34px;
-  border-radius: 4px;
-  display: grid;
-  place-items: center;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  font-weight: bold;
+.topbar-club-box {
+  background: var(--misc-box);
+  color: var(--text-1);
+  padding: 3px 12px;
+  border: 1px solid var(--main-btn-dark);
 }
 
 .topbar-club-name {
@@ -104,7 +152,6 @@ button:disabled {
 }
 
 .topbar-sub {
-  color: var(--text-muted);
   font-size: 11px;
 }
 
@@ -113,89 +160,100 @@ button:disabled {
   font-weight: bold;
 }
 
-.btn-continue {
-  background: var(--accent);
-  color: var(--accent-text);
-  border: 1px solid #a7801f;
+.club-badge {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: 2px solid;
   border-radius: 3px;
-  padding: 7px 22px;
   font-weight: bold;
-  font-size: 13px;
+  line-height: 1;
+  overflow: hidden;
 }
 
-.btn-continue:hover {
-  filter: brightness(1.1);
-}
-
-/* ---------- Sol menü ---------- */
+/* ---------- Sol menü (yeşil ana butonlar) ---------- */
 .sidebar {
-  width: 190px;
+  width: 180px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: var(--bg-sidebar);
-  border-right: 1px solid #000;
+  background: var(--menu-bg);
+  border-right: 2px solid var(--border);
   overflow-y: auto;
+  padding: 4px 0;
 }
 
 .menu-group {
-  padding: 6px 0;
+  padding: 4px 6px;
 }
 
 .menu-group-title {
-  padding: 4px 12px;
+  padding: 4px 4px 2px;
   font-size: 11px;
   font-weight: bold;
   text-transform: uppercase;
-  color: var(--accent);
-  letter-spacing: 0.5px;
 }
 
 .menu-item {
   display: block;
   width: 100%;
+  margin-bottom: 2px;
+  padding: 4px 8px;
   text-align: left;
-  padding: 5px 12px 5px 18px;
-  background: none;
-  border: none;
-}
-
-.menu-item:hover {
-  background: var(--row-hover);
+  font-weight: bold;
+  background: var(--main-btn);
+  color: var(--text-1);
+  border: 2px solid;
+  border-color: var(--main-btn-light) var(--main-btn-dark) var(--main-btn-dark) var(--main-btn-light);
 }
 
 .menu-item.active {
-  background: var(--active);
-  font-weight: bold;
+  background: var(--pos-bar);
+  color: var(--text);
 }
 
 .sidebar-footer {
   margin-top: auto;
-  border-top: 1px solid var(--border);
-  padding: 6px 0;
+  padding: 6px;
 }
 
 /* ---------- Paneller ---------- */
 .panel {
-  background: var(--bg-panel);
   border: 1px solid var(--border);
   margin-bottom: 8px;
 }
 
 .panel-title {
   margin: 0;
-  padding: 5px 10px;
+  padding: 4px 8px;
   font-size: 12px;
   font-weight: bold;
-  background: var(--bg-header);
-  border-bottom: 1px solid var(--border);
+  background: var(--misc-box);
+  color: var(--text-1);
+}
+
+.panel-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title-extra {
+  font-weight: normal;
 }
 
 .panel-body {
-  padding: 10px;
+  padding: 8px;
 }
 
-/* ---------- Yoğun tablolar (sonraki aşamalarda kullanılacak) ---------- */
+.two-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 8px;
+  align-items: start;
+}
+
+/* ---------- Yoğun tablolar ---------- */
 .data-table {
   width: 100%;
   border-collapse: collapse;
@@ -209,61 +267,185 @@ button:disabled {
 }
 
 .data-table th {
-  background: var(--bg-header);
+  background: var(--pos-bar);
   font-weight: bold;
   border-bottom: 1px solid var(--border);
 }
 
+.data-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.data-table .num {
+  text-align: right;
+}
+
 .data-table tbody tr:nth-child(even) {
-  background: var(--bg-panel-alt);
+  background: var(--row-alt);
+}
+
+.data-table.clickable tbody tr {
+  cursor: pointer;
 }
 
 .data-table tbody tr:hover {
   background: var(--row-hover);
 }
 
-/* ---------- Ana menü ---------- */
+.data-table tbody tr.selected {
+  background: var(--row-selected);
+  outline: 2px solid var(--main-btn);
+  outline-offset: -2px;
+}
+
+/* Mevki kutuları (palet 4 / 5) */
+.pos-boxes {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.pos-box {
+  display: inline-block;
+  min-width: 34px;
+  padding: 0 3px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: bold;
+  background: var(--pos-box);
+  color: var(--text-1);
+}
+
+.pos-box.sub {
+  background: var(--pos-box-sub);
+}
+
+/* Etiket–değer tabloları (oyuncu/kulüp bilgisi) */
+.info-table {
+  border-collapse: collapse;
+}
+
+.info-table th {
+  text-align: left;
+  font-weight: normal;
+  color: var(--text-muted);
+  padding: 2px 16px 2px 0;
+  white-space: nowrap;
+}
+
+.info-table td {
+  font-weight: bold;
+  padding: 2px 0;
+}
+
+/* ---------- Oyuncu profili ---------- */
+.profile-top {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.profile-positions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.attr-grid {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.attr-column {
+  min-width: 190px;
+}
+
+.attr-column-title {
+  font-weight: bold;
+  padding: 2px 4px;
+  margin-bottom: 4px;
+  background: var(--pos-bar);
+}
+
+.attr-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.attr-table td {
+  padding: 1px 4px;
+}
+
+.attr-table tr:nth-child(even) {
+  background: var(--row-alt);
+}
+
+.attr {
+  width: 28px;
+  text-align: center;
+}
+
+.attr-good {
+  font-weight: bold;
+}
+
+.attr-elite {
+  font-weight: bold;
+  background: var(--main-btn);
+  color: var(--text-1);
+}
+
+.attr-poor {
+  color: var(--attr-poor);
+}
+
+/* ---------- Kulüp bilgisi ---------- */
+.club-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.club-header-name {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+/* ---------- Ana menü / yeni oyun ---------- */
 .main-menu {
   height: 100%;
   display: grid;
   place-items: center;
-  background: radial-gradient(circle at top, #24345e, var(--bg));
 }
 
 .main-menu-box {
-  width: 320px;
-  padding: 24px;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  text-align: center;
+  width: 380px;
 }
 
 .main-menu-title {
-  margin: 0;
-  font-size: 22px;
+  font-size: 14px;
+  text-align: center;
+  padding: 8px;
 }
 
-.main-menu-sub {
-  color: var(--accent);
-  margin-bottom: 12px;
-}
-
-.menu-button {
-  padding: 9px;
-  background: var(--bg-header);
-  border: 1px solid var(--border);
-  font-weight: bold;
-}
-
-.menu-button:hover:not(:disabled) {
-  background: var(--active);
+.main-menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 24px 8px;
 }
 
 .main-menu-footer {
-  margin-top: 10px;
+  padding: 4px 8px 10px;
+  text-align: center;
   color: var(--text-muted);
   font-size: 11px;
+}
+
+.new-game {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px 8px;
 }

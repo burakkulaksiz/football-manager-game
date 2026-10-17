@@ -1,0 +1,14 @@
+{
+  "firstNames": [
+    "João", "Pedro", "Lucas", "Gabriel", "Rafael", "Bruno", "Diego", "Thiago", "Gustavo", "Felipe",
+    "André", "Rodrigo", "Vinícius", "Matheus", "Leandro", "Fábio", "Marcelo", "Renato", "Eduardo", "Rúben",
+    "Nuno", "Tiago", "Ricardo", "Gonçalo", "Miguel", "Fernando", "Wesley", "Willian", "Caio", "Douglas",
+    "Anderson", "Everton", "Paulo", "Danilo", "Alex", "Júnior", "Samuel", "Igor", "Luan", "Vitor"
+  ],
+  "lastNames": [
+    "Silva", "Santos", "Oliveira", "Souza", "Pereira", "Costa", "Rodrigues", "Almeida", "Nascimento", "Lima",
+    "Araújo", "Fernandes", "Carvalho", "Gomes", "Martins", "Rocha", "Ribeiro", "Alves", "Monteiro", "Mendes",
+    "Barbosa", "Cardoso", "Teixeira", "Moreira", "Correia", "Pinto", "Lopes", "Nunes", "Machado", "Ferreira",
+    "Freitas", "Batista", "Vieira", "Dias", "Moura", "Cavalcanti", "Sousa", "Campos", "Rezende", "Andrade"
+  ]
+}

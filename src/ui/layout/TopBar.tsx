@@ -1,21 +1,23 @@
 import { formatDateTR } from '../../engine';
-import { useGameStore } from '../../store/gameStore';
+import { useGameStore, useWorld } from '../../store/gameStore';
+import { ClubBadge } from '../components/ClubBadge';
 
 export function TopBar() {
-  const currentDate = useGameStore((s) => s.currentDate);
+  const world = useWorld();
   const advance = useGameStore((s) => s.advance);
+  const club = world.clubs.find((c) => c.id === world.playerClubId)!;
 
   return (
     <header className="topbar">
       <div className="topbar-club">
-        <div className="club-badge">?</div>
-        <div>
-          <div className="topbar-club-name">Kulüp seçilmedi</div>
+        <ClubBadge club={club} />
+        <div className="topbar-club-box">
+          <div className="topbar-club-name">{club.name}</div>
           <div className="topbar-sub">Türkiye Süper Ligi</div>
         </div>
       </div>
-      <div className="topbar-date">{formatDateTR(currentDate)}</div>
-      <button className="btn-continue" onClick={advance}>
+      <div className="topbar-date">{formatDateTR(world.date)}</div>
+      <button className="btn btn-large btn-continue" onClick={advance}>
         Devam ▶
       </button>
     </header>

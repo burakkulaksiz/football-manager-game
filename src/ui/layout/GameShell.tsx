@@ -1,7 +1,19 @@
-import { useGameStore } from '../../store/gameStore';
+import { useGameStore, type ScreenId } from '../../store/gameStore';
+import { ClubInfoScreen } from '../screens/ClubInfoScreen';
 import { PlaceholderScreen } from '../screens/PlaceholderScreen';
+import { PlayerProfile } from '../screens/PlayerProfile';
+import { SquadScreen } from '../screens/SquadScreen';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+
+function ScreenContent({ screen }: { screen: ScreenId }) {
+  switch (screen) {
+    case 'squad': return <SquadScreen />;
+    case 'player': return <PlayerProfile />;
+    case 'club': return <ClubInfoScreen />;
+    default: return <PlaceholderScreen screen={screen} />;
+  }
+}
 
 /** Kariyer açıkken ana yerleşim: üst bar + sol menü + içerik alanı. */
 export function GameShell() {
@@ -12,7 +24,7 @@ export function GameShell() {
       <div className="shell-body">
         <Sidebar />
         <main className="content">
-          <PlaceholderScreen screen={screen} />
+          <ScreenContent screen={screen} />
         </main>
       </div>
     </div>

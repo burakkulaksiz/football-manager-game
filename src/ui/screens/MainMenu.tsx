@@ -3,7 +3,7 @@ import { db } from '../../persistence/db';
 import { useGameStore } from '../../store/gameStore';
 
 export function MainMenu() {
-  const startNewGame = useGameStore((s) => s.startNewGame);
+  const openNewGame = useGameStore((s) => s.openNewGame);
   // Dexie bağlantısını doğrulamak için kayıt sayısını gösteriyoruz.
   const [saveCount, setSaveCount] = useState<number | null>(null);
 
@@ -16,15 +16,16 @@ export function MainMenu() {
 
   return (
     <div className="main-menu">
-      <div className="main-menu-box">
-        <h1 className="main-menu-title">Futbol Menajeri</h1>
-        <div className="main-menu-sub">Türkiye Süper Ligi</div>
-        <button className="menu-button" onClick={startNewGame}>
-          Yeni Oyun
-        </button>
-        <button className="menu-button" disabled title="6. aşamada eklenecek">
-          Kayıt Yükle
-        </button>
+      <div className="panel main-menu-box">
+        <h1 className="panel-title main-menu-title">Futbol Menajeri — Türkiye Süper Ligi</h1>
+        <div className="main-menu-buttons">
+          <button className="btn btn-large" onClick={openNewGame}>
+            Yeni Oyun
+          </button>
+          <button className="btn btn-large" disabled title="6. aşamada eklenecek">
+            Kayıt Yükle
+          </button>
+        </div>
         <div className="main-menu-footer">
           {saveCount === null && 'Kayıtlar okunuyor…'}
           {saveCount === -1 && 'Kayıt veritabanı açılamadı!'}

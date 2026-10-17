@@ -1,7 +1,13 @@
 # data/
 
-Düzenlenebilir oyun verileri (JSON) burada durur. Elle değiştirebilirsin.
+Düzenlenebilir oyun verileri (JSON). Elle değiştirebilirsin; oyun açılırken doğrulanır ve
+hatalı bir alan varsa Türkçe hata mesajıyla neyin yanlış olduğu söylenir.
 
-Planlanan dosyalar (2. aşama):
-- `clubs.json` — Süper Lig kulüpleri (isim, itibar, bütçe, stadyum, taraftar beklentisi)
-- `names/` — Türk ve yabancı isim havuzları
+- `clubs.json` — Süper Lig kulüpleri: itibar (1–100), transfer bütçesi (€), yıllık maaş bütçesi (€),
+  stadyum, kapasite, taraftar beklentisi (`title`, `europe`, `top_half`, `mid_table`, `avoid_relegation`),
+  renkler. İtibar kadro gücünü belirler.
+- `nations.json` — ülkeler; `weight` yabancı oyuncu üretiminde o ülkenin seçilme ağırlığıdır.
+- `names/*.json` — isim havuzları (`firstNames`, `lastNames`). Yeni bir dosya ekleyip
+  `nations.json`'da `namePool` ile ona işaret etmen yeterli.
+
+Not: Değişiklikler **yeni oyun** başlatıldığında etkili olur.

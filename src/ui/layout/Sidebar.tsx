@@ -5,6 +5,8 @@ export function Sidebar() {
   const screen = useGameStore((s) => s.screen);
   const setScreen = useGameStore((s) => s.setScreen);
   const quitToMenu = useGameStore((s) => s.quitToMenu);
+  // Oyuncu profili açıkken "Kadro" vurgulu kalsın.
+  const isActive = (id: string) => id === screen || (screen === 'player' && id === 'squad');
 
   return (
     <nav className="sidebar">
@@ -14,7 +16,7 @@ export function Sidebar() {
           {group.items.map((item) => (
             <button
               key={item.id}
-              className={`menu-item${item.id === screen ? ' active' : ''}`}
+              className={`menu-item${isActive(item.id) ? ' active' : ''}`}
               onClick={() => setScreen(item.id)}
             >
               {item.label}

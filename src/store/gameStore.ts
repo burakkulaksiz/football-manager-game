@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import { addDays, SEASON_START_DATE, type GameDate } from '../engine';
+import { addDays, createWorld, SEASON_START_DATE, type GameWorld } from '../engine';
+import { gameData } from '../gameData';
 
-/** Sol menüden açılan ekranlar. */
+/** Sol menüden açılan ekranlar + menü dışı ekranlar ('player'). */
 export type ScreenId =
   | 'inbox'
   | 'squad'
@@ -11,31 +12,73 @@ export type ScreenId =
   | 'transfers'
   | 'fixtures'
   | 'table'
-  | 'stats';
+  | 'stats'
+  | 'player';
 
 interface GameState {
-  /** 'menu' = ana menü, 'game' = kariyer açık */
-  phase: 'menu' | 'game';
+  /** 'menu' = ana menü, 'newGame' = kulüp seçimi, 'game' = kariyer açık */
+  phase: 'menu' | 'newGame' | 'game';
   screen: ScreenId;
-  currentDate: GameDate;
+  /** Oyuncu profilinden "Geri" ile dönülecek ekran. */
+  previousScreen: ScreenId;
+  world: GameWorld | null;
+  selectedPlayerId: number | null;
+  /** Kadro ekranında görüntülenen kulüp (varsayılan: kendi kulübümüz). */
+  viewedClubId: string | null;
 
-  startNewGame: () => void;
+  openNewGame: () => void;
+  startNewGame: (clubId: string) => void;
   quitToMenu: () => void;
   setScreen: (screen: ScreenId) => void;
+  openPlayer: (playerId: number) => void;
+  goBack: () => void;
+  setViewedClub: (clubId: string) => void;
   /**
    * "Devam": zamanı bir sonraki olaya kadar ilerletir.
-   * Aşama 1'de henüz olay yok; takvimi sadece bir gün ilerletir.
+   * Henüz olay sistemi yok (3. aşama); takvimi sadece bir gün ilerletir.
    */
   advance: () => void;
 }
 
 export const useGameStore = create<GameState>()((set) => ({
   phase: 'menu',
-  screen: 'inbox',
-  currentDate: SEASON_START_DATE,
+  screen: 'squad',
+  previousScreen: 'squad',
+  world: null,
+  selectedPlayerId: null,
+  viewedClubId: null,
 
-  startNewGame: () => set({ phase: 'game', screen: 'inbox', currentDate: SEASON_START_DATE }),
-  quitToMenu: () => set({ phase: 'menu' }),
+  openNewGame: () => set({ phase: 'newGame' }),
+
+  startNewGame: (clubId) => {
+    // Seed oyunun başında bir kez belirlenir; motor içinde Math.random kullanılmaz.
+    const seed = Date.now() >>> 0;
+    const world = createWorld(gameData, seed, clubId, SEASON_START_DATE);
+    set({ phase: 'game', screen: 'squad', world, viewedClubId: clubId, selectedPlayerId: null });
+  },
+
+  quitToMenu: () => set({ phase: 'menu', world: null }),
+
   setScreen: (screen) => set({ screen }),
-  advance: () => set((s) => ({ currentDate: addDays(s.currentDate, 1) })),
+
+  openPlayer: (playerId) =>
+    set((s) => ({
+      selectedPlayerId: playerId,
+      screen: 'player',
+      previousScreen: s.screen === 'player' ? s.previousScreen : s.screen,
+    })),
+
+  goBack: () => set((s) => ({ screen: s.previousScreen })),
+
+  setViewedClub: (clubId) => set({ viewedClubId: clubId }),
+
+  advance: () =>
+    set((s) => (s.world ? { world: { ...s.world, date: addDays(s.world.date, 1) } } : {})),
 }));
+
+/** Kariyer açıkken dünyayı döndürür (GameShell içindeki bileşenler için). */
+export function useWorld(): GameWorld {
+  const world = useGameStore((s) => s.world);
+  if (!world) throw new Error('Açık bir oyun yok');
+  return world;
+}

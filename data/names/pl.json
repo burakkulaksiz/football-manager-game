@@ -1,0 +1,10 @@
+{
+  "firstNames": [
+    "Jakub", "Kacper", "Mateusz", "Piotr", "Paweł", "Krzysztof", "Tomasz", "Łukasz", "Michał", "Bartosz",
+    "Kamil", "Marcin", "Adam", "Dawid", "Grzegorz", "Szymon", "Wojciech", "Przemysław", "Damian", "Karol"
+  ],
+  "lastNames": [
+    "Nowak", "Kowalski", "Wiśniewski", "Wójcik", "Kowalczyk", "Kamiński", "Lewandowski", "Zieliński", "Szymański", "Woźniak",
+    "Dąbrowski", "Kozłowski", "Jankowski", "Mazur", "Kwiatkowski", "Krawczyk", "Piotrowski", "Grabowski", "Nowakowski", "Pawłowski"
+  ]
+}

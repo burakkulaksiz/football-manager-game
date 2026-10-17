@@ -1,0 +1,12 @@
+{
+  "firstNames": [
+    "Lukas", "Leon", "Jonas", "Felix", "Maximilian", "Paul", "Niklas", "Tim", "Jan", "Florian",
+    "Julian", "Moritz", "Tobias", "Fabian", "Philipp", "Sebastian", "Marco", "Kevin", "Dominik", "Patrick",
+    "Stefan", "Christoph", "Marcel", "Nico", "Jannik", "Benedikt", "Lennart", "Robin", "Kai", "Matthias"
+  ],
+  "lastNames": [
+    "Müller", "Schmidt", "Schneider", "Fischer", "Weber", "Meyer", "Wagner", "Becker", "Schulz", "Hoffmann",
+    "Schäfer", "Koch", "Bauer", "Richter", "Klein", "Wolf", "Schröder", "Neumann", "Schwarz", "Zimmermann",
+    "Braun", "Krüger", "Hofmann", "Hartmann", "Lange", "Werner", "Krause", "Lehmann", "Köhler", "Huber"
+  ]
+}

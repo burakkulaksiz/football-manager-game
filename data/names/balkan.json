@@ -1,0 +1,12 @@
+{
+  "firstNames": [
+    "Nikola", "Marko", "Luka", "Stefan", "Filip", "Ivan", "Milan", "Aleksandar", "Dušan", "Nemanja",
+    "Mateo", "Josip", "Ante", "Mario", "Dario", "Edin", "Haris", "Amar", "Emir", "Kenan",
+    "Vladimir", "Dejan", "Srđan", "Bojan", "Mihailo", "Lovro", "Domagoj", "Tomislav", "Armin", "Adnan"
+  ],
+  "lastNames": [
+    "Jovanović", "Petrović", "Nikolić", "Marković", "Đorđević", "Stojanović", "Ilić", "Pavlović", "Milošević", "Kovačević",
+    "Horvat", "Kovač", "Babić", "Marić", "Jurić", "Novak", "Knežević", "Vuković", "Perić", "Matić",
+    "Hodžić", "Hadžić", "Begić", "Delić", "Mujić", "Salihović", "Tomić", "Radić", "Lukić", "Savić"
+  ]
+}

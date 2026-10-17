@@ -14,56 +14,64 @@ export function NewGameScreen() {
   const selectedClub = clubs.find((c) => c.id === selected);
 
   return (
-    <div className="new-game">
-      <section className="panel">
-        <h2 className="panel-title">Yeni Oyun — Kulüp Seçimi</h2>
-        <table className="data-table clickable">
-          <thead>
-            <tr>
-              <th></th>
-              <th>Kulüp</th>
-              <th>Şehir</th>
-              <th>Stadyum</th>
-              <th className="num">Kapasite</th>
-              <th className="num">İtibar</th>
-              <th className="num">Transfer Bütçesi</th>
-              <th className="num">Maaş Bütçesi (yıllık)</th>
-              <th>Beklenti</th>
-            </tr>
-          </thead>
-          <tbody>
-            {clubs.map((c) => (
-              <tr
-                key={c.id}
-                className={c.id === selected ? 'selected' : ''}
-                onClick={() => setSelected(c.id)}
-                onDoubleClick={() => startNewGame(c.id)}
-              >
-                <td><ClubBadge club={c} size={18} /></td>
-                <td className="strong">{c.name}</td>
-                <td>{c.city}</td>
-                <td>{c.stadium}</td>
-                <td className="num">{formatNumber(c.capacity)}</td>
-                <td className="num">{c.reputation}</td>
-                <td className="num">{formatMoney(c.budget)}</td>
-                <td className="num">{formatMoney(c.wageBudget)}</td>
-                <td>{EXPECTATION_LABELS[c.fanExpectation]}</td>
+    <div className="new-game pitch-bg">
+      <div className="new-game-inner">
+        <div className="splash-kicker">Yeni Oyun</div>
+        <h1 className="splash-title small">Kulübünü Seç</h1>
+        <section className="panel">
+          <h2 className="panel-title">Süper Lig Kulüpleri</h2>
+          <table className="data-table clickable">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Kulüp</th>
+                <th>Şehir</th>
+                <th>Stadyum</th>
+                <th className="num">Kapasite</th>
+                <th className="num">İtibar</th>
+                <th className="num">Transfer Bütçesi</th>
+                <th className="num">Maaş Bütçesi (yıllık)</th>
+                <th>Beklenti</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-      <div className="button-row">
-        <button className="btn" onClick={quitToMenu}>
-          ◀ Geri
-        </button>
-        <button
-          className="btn btn-large"
-          disabled={!selectedClub}
-          onClick={() => selectedClub && startNewGame(selectedClub.id)}
-        >
-          {selectedClub ? `${selectedClub.name} ile Başla ▶` : 'Bir kulüp seç'}
-        </button>
+            </thead>
+            <tbody>
+              {clubs.map((c) => (
+                <tr
+                  key={c.id}
+                  className={c.id === selected ? 'selected' : ''}
+                  onClick={() => setSelected(c.id)}
+                  onDoubleClick={() => startNewGame(c.id)}
+                >
+                  <td><ClubBadge club={c} size={18} /></td>
+                  <td className="strong">{c.name}</td>
+                  <td>{c.city}</td>
+                  <td>{c.stadium}</td>
+                  <td className="num">{formatNumber(c.capacity)}</td>
+                  <td className="num">
+                    <span className="rep-bar"><i style={{ width: `${c.reputation}%` }} /></span>
+                    {c.reputation}
+                  </td>
+                  <td className="num value">{formatMoney(c.budget)}</td>
+                  <td className="num value">{formatMoney(c.wageBudget)}</td>
+                  <td>{EXPECTATION_LABELS[c.fanExpectation]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+        <div className="button-row">
+          <button className="btn" onClick={quitToMenu}>
+            ‹ Ana Menü
+          </button>
+          <button
+            className="btn-continue"
+            disabled={!selectedClub}
+            onClick={() => selectedClub && startNewGame(selectedClub.id)}
+          >
+            {selectedClub ? `${selectedClub.name} ile Başla` : 'Bir kulüp seç'}
+            <span className="btn-continue-arrow">›</span>
+          </button>
+        </div>
       </div>
     </div>
   );

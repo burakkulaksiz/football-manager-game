@@ -9,7 +9,7 @@ import {
   type Player,
 } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
-import { formatDateShort, formatMoney, moraleLabel, nationName, POSITION_LABELS } from '../labels';
+import { formatDateShort, formatMoney, moraleLabel, nationName, POSITION_LABELS, positionGroup } from '../labels';
 
 type SortKey = 'number' | 'name' | 'position' | 'age' | 'nation' | 'condition' | 'morale' | 'value' | 'wage' | 'contract';
 
@@ -36,7 +36,7 @@ export function PositionBoxes({ player }: { player: Player }) {
   return (
     <span className="pos-boxes">
       {naturalPositions(player).map((p) => (
-        <span key={p} className="pos-box">
+        <span key={p} className={`pos-box pos-${positionGroup(p)}`}>
           {POSITION_LABELS[p]}
         </span>
       ))}
@@ -81,7 +81,7 @@ export function SquadScreen() {
   return (
     <section className="panel">
       <div className="panel-title panel-title-row">
-        <span>Kadro</span>
+        <span>Oyuncular</span>
         <select value={viewedClubId} onChange={(e) => setViewedClub(e.target.value)}>
           {world.clubs.map((c) => (
             <option key={c.id} value={c.id}>
@@ -115,8 +115,8 @@ export function SquadScreen() {
               <td>{nationName(p.nationality)}</td>
               <td className="num">%{p.condition}</td>
               <td>{moraleLabel(p.morale)}</td>
-              <td className="num">{formatMoney(marketValue(p, date))}</td>
-              <td className="num">{formatMoney(p.contract.wage)}</td>
+              <td className="num value">{formatMoney(marketValue(p, date))}</td>
+              <td className="num value">{formatMoney(p.contract.wage)}</td>
               <td>{formatDateShort(p.contract.expires)}</td>
             </tr>
           ))}

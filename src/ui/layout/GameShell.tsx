@@ -6,8 +6,10 @@ import { PlayerProfile } from '../screens/PlayerProfile';
 import { SquadScreen } from '../screens/SquadScreen';
 import { StatsScreen } from '../screens/StatsScreen';
 import { TableScreen } from '../screens/TableScreen';
+import { Header } from './Header';
+import { NavBar } from './NavBar';
 import { Sidebar } from './Sidebar';
-import { TopBar } from './TopBar';
+import { StatusBar } from './StatusBar';
 
 function ScreenContent({ screen }: { screen: ScreenId }) {
   switch (screen) {
@@ -21,18 +23,22 @@ function ScreenContent({ screen }: { screen: ScreenId }) {
   }
 }
 
-/** Kariyer açıkken ana yerleşim: üst bar + sol menü + içerik alanı. */
+/** Kariyer açıkken ana yerleşim: başlık + gezinme çubuğu + sol menü + çim zemin + alt çubuk. */
 export function GameShell() {
   const screen = useGameStore((s) => s.screen);
+  const playerId = useGameStore((s) => s.selectedPlayerId);
   return (
     <div className="shell">
-      <TopBar />
+      <Header />
+      <NavBar />
       <div className="shell-body">
         <Sidebar />
-        <main className="content">
+        {/* key: sayfa değişince içerik yeniden kurulur, kaydırma en üste döner */}
+        <main className="content pitch-bg" key={`${screen}-${playerId ?? ''}`}>
           <ScreenContent screen={screen} />
         </main>
       </div>
+      <StatusBar />
     </div>
   );
 }

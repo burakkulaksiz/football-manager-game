@@ -91,7 +91,7 @@ function RoundFixtures() {
           ))}
         </select>
         <button className="btn" disabled={round >= ROUNDS} onClick={() => go(round + 1)}>▶</button>
-        <span className="strong">{fixtures[0] && formatDayMonth(fixtures[0].date)}</span>
+        <span className="round-date">{fixtures[0] && formatDayMonth(fixtures[0].date)}</span>
       </div>
       <table className="data-table round-table">
         <tbody>

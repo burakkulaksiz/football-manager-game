@@ -57,7 +57,7 @@ export function TableScreen() {
                 <td className="num">{row.goalsFor}</td>
                 <td className="num">{row.goalsAgainst}</td>
                 <td className="num">{gd > 0 ? `+${gd}` : gd}</td>
-                <td className="num strong">{row.points}</td>
+                <td className="num value">{row.points}</td>
                 <td>
                   <span className="form-boxes">
                     {row.form.map((o, k) => <OutcomeBox key={k} outcome={o} />)}

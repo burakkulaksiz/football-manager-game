@@ -37,10 +37,11 @@ src/store/gameStore.ts Zustand: phase (menu/newGame/game), screen, world, seçil
 src/persistence/db.ts  Dexie (IndexedDB) — 'fm-super-lig' veritabanı, `saves` tablosu.
 src/ui/                React. Motoru sadece çağırır, oyun mantığı içermez.
   labels.ts            Türkçe etiketler (özellik, mevki, beklenti), para/tarih biçimleri.
-  layout/              GameShell, TopBar, Sidebar
+  layout/              GameShell, Header, NavBar, Sidebar, StatusBar, pageHeading (başlık hapı + konum yolu)
   screens/             MainMenu, NewGameScreen, SquadScreen, PlayerProfile, ClubInfoScreen,
                        FixturesScreen, TableScreen, StatsScreen, Placeholder
-  styles.css           Renk paleti CSS değişkenleri olarak (bkz. "Görünüm")
+  components/          ClubBadge, Shirt, OutcomeBox
+  styles.css           Tema; renkler CSS değişkenleri olarak (bkz. "Görünüm")
 ```
 Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
 
@@ -79,10 +80,16 @@ Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
   `data` = GameWorld (6. aşamada netleşecek).
 
 ## Görünüm
-Kullanıcının seçtiği **CM 01/02 renk paleti** (Tapani's Color Adjuster) kullanılıyor — `styles.css`
-başındaki değişkenler: menü zemini (155,170,190), büyük butonlar/açılır menüler (85,100,125),
-ana butonlar ve kutular yeşil (50,105,25), yedek mevki kutusu (40,95,15), mevki çubuğu/başlık
-(85,140,65), metin 1 (155,170,190). Ara tonlar (zebra satır, kenarlık) bunlardan türetildi.
+FM 2005 ekranlarından esinlenen **modern tema** (kullanıcı CM 01/02 paletinden vazgeçti, FM 2005 görüntüleri
+verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS değişkenlerinde.
+- Yerleşim: üstte başlık (solda tarih, ortada sayfanın kulüp renklerinde büyük **başlık hapı**, sağda kulüp),
+  altında gezinme çubuğu (◀ ▶ geçmiş, durum, sarı **Devam**), solda gri-mavi yuvarlak menü + yeşil
+  "sıradaki maç" kartı, ortada **çim şeritli** içerik alanı, altta konum yolu + son sonuçlar haber bandı.
+- Paneller yarı saydam koyu yeşil, başlıklar sarı (Barlow Condensed), alt başlıklar koyu yeşil şerit.
+- Değer renkleri: 16+ yeşil, 13–15 sarı, ≤5 kırmızımsı. Mevki kutuları: KL sarı, defans mavi, orta yeşil, hücum kırmızı.
+- Yazı tipleri npm ile (yerel): @fontsource-variable/inter (arayüz), @fontsource/barlow-condensed (başlıklar).
+- Bileşenler: ClubBadge (kalkan SVG), Shirt (forma SVG, numaralı — taktik sahasında da kullanılacak).
+- Gezinme geçmişi store'da (`history`, `navigate` / `back` / `forward`), en fazla 50 sayfa.
 
 ## Aşamalar
 - [x] **1. Kurulum ve iskelet** — proje, klasörler, Vitest, Zustand, Dexie; ana menü, sol menü,
@@ -93,6 +100,7 @@ ana butonlar ve kutular yeşil (50,105,25), yedek mevki kutusu (40,95,15), mevki
 - [x] **3. Lig ve takvim** — fikstür, puan durumu (bölgeler, form), Devam ile maç gününe ilerleme,
       anında maç sonucu + golcüler, Fikstür (Kulübüm/Haftalar), Puan Durumu, Lig İstatistikleri
       (gol krallığı, takım istatistikleri); üst barda sıradaki maç.
+- [x] **Tasarım yenilemesi** (3 ile 4 arası, kullanıcı isteği) — FM 2005 esinli modern tema, yeni profil düzeni.
 - [ ] 4. Maç motoru (dakika dakika, maç ekranı, istatistik doğrulama testleri)
 - [ ] 5. Taktik ekranı ve motora etkisi
 - [ ] 6. Kayıt sistemi (yeni oyun, kaydet/yükle, otomatik kayıt)

@@ -15,14 +15,21 @@ export type ScreenId =
   | 'stats'
   | 'player';
 
+/** Gezinme geçmişindeki bir sayfa (FM'deki ◀ ▶ okları için). */
+export interface Route {
+  screen: ScreenId;
+  playerId?: number;
+}
+
 interface GameState {
   /** 'menu' = ana menü, 'newGame' = kulüp seçimi, 'game' = kariyer açık */
   phase: 'menu' | 'newGame' | 'game';
-  screen: ScreenId;
-  /** Oyuncu profilinden "Geri" ile dönülecek ekran. */
-  previousScreen: ScreenId;
   world: GameWorld | null;
+  /** Geçerli sayfa (history[historyIndex] ile aynı). */
+  screen: ScreenId;
   selectedPlayerId: number | null;
+  history: Route[];
+  historyIndex: number;
   /** Kadro ekranında görüntülenen kulüp (varsayılan: kendi kulübümüz). */
   viewedClubId: string | null;
   /** Fikstür ekranı: kendi maçlarımız mı, haftalık görünüm mü; seçili hafta. */
@@ -32,9 +39,11 @@ interface GameState {
   openNewGame: () => void;
   startNewGame: (clubId: string) => void;
   quitToMenu: () => void;
+  navigate: (route: Route) => void;
   setScreen: (screen: ScreenId) => void;
   openPlayer: (playerId: number) => void;
-  goBack: () => void;
+  back: () => void;
+  forward: () => void;
   setViewedClub: (clubId: string) => void;
   setFixturesView: (tab: 'club' | 'round', round?: number) => void;
   /**
@@ -44,12 +53,19 @@ interface GameState {
   advance: () => void;
 }
 
+function routeState(route: Route) {
+  return { screen: route.screen, selectedPlayerId: route.playerId ?? null };
+}
+
+const START_ROUTE: Route = { screen: 'squad' };
+
 export const useGameStore = create<GameState>()((set, get) => ({
   phase: 'menu',
-  screen: 'squad',
-  previousScreen: 'squad',
   world: null,
+  screen: START_ROUTE.screen,
   selectedPlayerId: null,
+  history: [START_ROUTE],
+  historyIndex: 0,
   viewedClubId: null,
   fixturesTab: 'club',
   fixturesRound: 1,
@@ -62,10 +78,11 @@ export const useGameStore = create<GameState>()((set, get) => ({
     const world = createWorld(gameData, seed, clubId, SEASON_START_DATE);
     set({
       phase: 'game',
-      screen: 'squad',
       world,
+      ...routeState(START_ROUTE),
+      history: [START_ROUTE],
+      historyIndex: 0,
       viewedClubId: clubId,
-      selectedPlayerId: null,
       fixturesTab: 'club',
       fixturesRound: 1,
     });
@@ -73,16 +90,30 @@ export const useGameStore = create<GameState>()((set, get) => ({
 
   quitToMenu: () => set({ phase: 'menu', world: null }),
 
-  setScreen: (screen) => set({ screen }),
+  navigate: (route) => {
+    const { history, historyIndex } = get();
+    const current = history[historyIndex];
+    if (current && current.screen === route.screen && current.playerId === route.playerId) return;
+    // İleri geçmişi silinir, yeni sayfa sona eklenir (tarayıcı gibi).
+    const next = [...history.slice(0, historyIndex + 1), route].slice(-50);
+    set({ history: next, historyIndex: next.length - 1, ...routeState(route) });
+  },
 
-  openPlayer: (playerId) =>
-    set((s) => ({
-      selectedPlayerId: playerId,
-      screen: 'player',
-      previousScreen: s.screen === 'player' ? s.previousScreen : s.screen,
-    })),
+  setScreen: (screen) => get().navigate({ screen }),
 
-  goBack: () => set((s) => ({ screen: s.previousScreen })),
+  openPlayer: (playerId) => get().navigate({ screen: 'player', playerId }),
+
+  back: () => {
+    const { history, historyIndex } = get();
+    if (historyIndex === 0) return;
+    set({ historyIndex: historyIndex - 1, ...routeState(history[historyIndex - 1]!) });
+  },
+
+  forward: () => {
+    const { history, historyIndex } = get();
+    if (historyIndex >= history.length - 1) return;
+    set({ historyIndex: historyIndex + 1, ...routeState(history[historyIndex + 1]!) });
+  },
 
   setViewedClub: (clubId) => set({ viewedClubId: clubId }),
 
@@ -94,10 +125,10 @@ export const useGameStore = create<GameState>()((set, get) => ({
     if (!world) return;
     // Motor dünyayı yerinde değiştirir; yeni referans React'in yeniden çizmesi için.
     const result = advance(world);
+    set({ world: { ...world } });
     if (result.kind === 'played') {
-      set({ world: { ...world }, screen: 'fixtures', fixturesTab: 'round', fixturesRound: result.round });
-    } else {
-      set({ world: { ...world } });
+      set({ fixturesTab: 'round', fixturesRound: result.round });
+      get().navigate({ screen: 'fixtures' });
     }
   },
 }));

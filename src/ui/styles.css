@@ -1,37 +1,68 @@
 /*
- * Renkler: Tapani's CM 01/02 Color Adjuster paleti (kullanıcının seçimi).
- * Numaralar o paletteki sırayı gösterir. "Türetilmiş" olanlar palette yok;
- * kenarlık/zebra satır gibi ara tonlar için paletten açıp koyulaştırıldı.
+ * Tema: FM 2005'ten esinlenen modern görünüm.
+ *  - Kenar (başlık, menü, alt çubuk): koyu lacivert-gri, hafif parlak geçişler.
+ *  - İçerik: çim şeritli zemin üstünde yarı saydam koyu yeşil paneller.
+ *  - Vurgu: sarı başlıklar ve değerler (FM'deki gibi), Devam butonu sarı.
  */
 :root {
-  /* --- Palet --- */
-  --menu-bg: rgb(155, 170, 190);        /* 0. Menu background */
-  --big-btn: rgb(85, 100, 125);         /* 1. Big buttons (OK, Next), drop down menus */
-  --main-btn: rgb(50, 105, 25);         /* 2. Main buttons */
-  --tactic-btn: rgb(50, 105, 25);       /* 3. Main buttons - tactic screen */
-  --pos-box: rgb(50, 105, 25);          /* 4. Squad pos box, league pos box */
-  --pos-box-sub: rgb(40, 95, 15);       /* 5. Squad pos boxes - subs */
-  --pos-bar: rgb(85, 140, 65);          /* 6. Squad positions bar */
-  --misc-box: rgb(50, 105, 25);         /* 7. Misc box color (transfer sums) */
-  --text-1: rgb(155, 170, 190);         /* 8. Text color 1 (ratings, club names, buttons) */
+  --font-ui: 'Inter Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
 
-  /* --- Türetilmiş tonlar --- */
-  --text: rgb(12, 18, 30);              /* açık zemin üstündeki ana metin */
-  --text-muted: rgb(55, 65, 85);
-  --border: rgb(60, 70, 90);
-  --row-alt: rgb(143, 159, 181);
-  --row-hover: rgb(175, 188, 205);
-  --row-selected: rgb(190, 202, 217);
-  --big-btn-light: rgb(125, 140, 165);
-  --big-btn-dark: rgb(45, 55, 75);
-  --main-btn-light: rgb(85, 140, 65);
-  --main-btn-dark: rgb(25, 60, 10);
-  --attr-poor: rgb(125, 25, 25);
+  /* Kenar (chrome) */
+  --chrome-900: #121925;
+  --chrome-800: #182131;
+  --chrome-700: #212c40;
+  --slate-500: #4f6588;
+  --slate-400: #6c81a4;
+  --slate-300: #a3b3cd;
+  --slate-200: #cdd7e7;
 
-  font-family: Tahoma, Verdana, 'Segoe UI', sans-serif;
-  font-size: 12px;
+  /* Çim ve paneller */
+  --grass-1: #2a6326;
+  --grass-2: #275c23;
+  --panel: rgba(8, 27, 10, 0.74);
+  --panel-border: rgba(255, 255, 255, 0.09);
+  --panel-head-1: #2f7a2a;
+  --panel-head-2: #1c5219;
+  --row-line: rgba(255, 255, 255, 0.06);
+  --row-alt: rgba(255, 255, 255, 0.03);
+  --row-hover: rgba(255, 255, 255, 0.09);
+
+  /* Metin */
+  --text: #eef3ec;
+  --text-soft: #dbe5d8;
+  --text-muted: #9fb39c;
+  --text-dim: #74896f;
+
+  /* Vurgular */
+  --accent: #f6cf3c;
+  --accent-ink: #1d1a0b;
+  --good: #8fe877;
+  --low: #e9806f;
+
+  /* Mevki grupları */
+  --pos-gk: #e6a723;
+  --pos-def: #2f74d0;
+  --pos-mid: #17a06a;
+  --pos-att: #d9473f;
+
+  /* Puan durumu bölgeleri / sonuçlar */
+  --zone-cl: #3b82f6;
+  --zone-el: #f59e0b;
+  --zone-ecl: #22c55e;
+  --zone-rel: #ef4444;
+  --win: #22a35a;
+  --draw: #6b7686;
+  --loss: #d6453d;
+
+  --radius: 10px;
+
+  color-scheme: dark;
+  font-family: var(--font-ui);
+  font-size: 13px;
   color: var(--text);
-  background: var(--menu-bg);
+  background: var(--chrome-900);
+  -webkit-font-smoothing: antialiased;
 }
 
 * {
@@ -46,7 +77,7 @@ body,
 }
 
 body {
-  background: var(--menu-bg);
+  background: var(--chrome-900);
 }
 
 button {
@@ -56,7 +87,23 @@ button {
 
 button:disabled {
   cursor: not-allowed;
-  opacity: 0.5;
+  opacity: 0.45;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .muted {
@@ -64,212 +111,572 @@ button:disabled {
 }
 
 .strong {
-  font-weight: bold;
+  font-weight: 600;
 }
 
-/* ---------- Butonlar (CM tarzı kabartma kenarlık) ---------- */
+/* ================= Butonlar ================= */
 .btn {
-  background: var(--big-btn);
-  color: var(--text-1);
-  font-weight: bold;
-  padding: 4px 14px;
-  border: 2px solid;
-  border-color: var(--big-btn-light) var(--big-btn-dark) var(--big-btn-dark) var(--big-btn-light);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(180deg, #566d92, #3c4e6d);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.18), 0 2px 6px rgba(0, 0, 0, 0.25);
+  color: #fff;
+  font-weight: 600;
 }
 
-.btn:active:not(:disabled) {
-  border-color: var(--big-btn-dark) var(--big-btn-light) var(--big-btn-light) var(--big-btn-dark);
+.btn:hover:not(:disabled) {
+  filter: brightness(1.12);
 }
 
-.btn-large {
-  padding: 7px 22px;
-  font-size: 13px;
+.btn-wide {
+  width: 100%;
+  height: 42px;
+}
+
+/* Devam: sarı, yuvarlak, öne çıkan ana eylem */
+.btn-continue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 32px;
+  padding: 0 16px 0 22px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffe37d, #f2c230);
+  box-shadow: 0 2px 0 #b98d13, 0 6px 16px rgba(0, 0, 0, 0.35);
+  color: var(--accent-ink);
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.btn-continue:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.btn-continue:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 #b98d13, 0 3px 8px rgba(0, 0, 0, 0.35);
+}
+
+.btn-continue.btn-wide {
+  height: 46px;
+  font-size: 21px;
+}
+
+.btn-continue-arrow {
+  font-size: 24px;
+  line-height: 1;
+  margin-top: -2px;
+}
+
+.icon-btn {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--slate-200);
+  font-size: 11px;
+}
+
+.icon-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.13);
 }
 
 select {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #33445f;
+  color: #fff;
   font: inherit;
-  font-weight: bold;
-  background: var(--big-btn);
-  color: var(--text-1);
-  border: 2px solid;
-  border-color: var(--big-btn-light) var(--big-btn-dark) var(--big-btn-dark) var(--big-btn-light);
-  padding: 2px 4px;
+  font-weight: 600;
 }
 
 .button-row {
   display: flex;
-  gap: 8px;
   justify-content: space-between;
-  margin-bottom: 8px;
+  gap: 10px;
+  margin-top: 12px;
 }
 
-/* ---------- Ana yerleşim ---------- */
+/* ================= Ana yerleşim ================= */
 .shell {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-width: 1100px;
 }
 
 .shell-body {
   display: flex;
   flex: 1;
   min-height: 0;
+  background: var(--chrome-800);
 }
 
-.content {
-  flex: 1;
-  overflow: auto;
-  padding: 8px;
-}
-
-/* ---------- Üst bar ---------- */
-.topbar {
-  display: flex;
+/* --- Başlık --- */
+.header {
+  display: grid;
+  grid-template-columns: 230px 1fr 230px;
   align-items: center;
   gap: 16px;
-  padding: 6px 10px;
-  background: var(--menu-bg);
-  border-bottom: 2px solid var(--border);
+  padding: 10px 18px;
+  background: linear-gradient(180deg, #34456a 0%, #253250 55%, #1c2539 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.topbar-club {
+.header-day {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--slate-300);
+}
+
+.header-fulldate {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* FM'deki büyük başlık hapı; rengi sayfanın kulübünden gelir */
+.title-pill {
+  position: relative;
+  justify-self: center;
+  width: min(100%, 720px);
+  padding: 6px 40px 7px;
+  border-radius: 999px;
+  text-align: center;
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -12px 20px rgba(0, 0, 0, 0.18),
+    0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.title-pill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0) 55%);
+  pointer-events: none;
+}
+
+.title-pill-title {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.title-pill-sub {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.header-club {
+  justify-self: end;
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex: 1;
+  gap: 10px;
+  text-align: right;
 }
 
-.topbar-club-box {
-  background: var(--misc-box);
-  color: var(--text-1);
-  padding: 3px 12px;
-  border: 1px solid var(--main-btn-dark);
+.header-club-name {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
 }
 
-.topbar-club-name {
-  font-size: 15px;
-  font-weight: bold;
-}
-
-.topbar-sub {
+.header-club-season {
   font-size: 11px;
+  color: var(--slate-300);
 }
 
-.topbar-date {
+/* --- Gezinme çubuğu --- */
+.navbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 46px;
+  padding: 0 18px;
+  background: var(--chrome-800);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.nav-arrows {
+  display: flex;
+  gap: 4px;
+}
+
+.nav-status {
+  flex: 1;
+  text-align: right;
+  color: var(--slate-300);
   font-size: 13px;
-  font-weight: bold;
 }
 
-.club-badge {
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  border: 2px solid;
-  border-radius: 3px;
-  font-weight: bold;
-  line-height: 1;
-  overflow: hidden;
+.nav-status.matchday {
+  color: var(--accent);
+  font-weight: 600;
 }
 
-/* ---------- Sol menü (yeşil ana butonlar) ---------- */
+.nav-status.matchday::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* --- Sol menü --- */
 .sidebar {
-  width: 180px;
+  width: 214px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: var(--menu-bg);
-  border-right: 2px solid var(--border);
-  overflow-y: auto;
-  padding: 4px 0;
+  gap: 12px;
+  padding: 12px 0 12px 12px;
 }
 
-.menu-group {
-  padding: 4px 6px;
+.sidebar-menu {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #51678b 0%, #3a4c6b 100%);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.2), 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.menu-group + .menu-group {
+  margin-top: 6px;
 }
 
 .menu-group-title {
-  padding: 4px 4px 2px;
-  font-size: 11px;
-  font-weight: bold;
+  padding: 8px 10px 4px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .menu-item {
   display: block;
   width: 100%;
-  margin-bottom: 2px;
-  padding: 4px 8px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  color: #f2f5fa;
+  font-weight: 500;
   text-align: left;
-  font-weight: bold;
-  background: var(--main-btn);
-  color: var(--text-1);
-  border: 2px solid;
-  border-color: var(--main-btn-light) var(--main-btn-dark) var(--main-btn-dark) var(--main-btn-light);
+}
+
+.menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .menu-item.active {
-  background: var(--pos-bar);
-  color: var(--text);
+  background: rgba(0, 0, 0, 0.2);
+  box-shadow: inset 3px 0 var(--accent);
+  color: var(--accent);
+  font-weight: 700;
 }
 
-.sidebar-footer {
-  margin-top: auto;
+.sidebar-actions {
+  padding: 12px 10px 10px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #3f8a37, #23601e);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.2), 0 6px 18px rgba(0, 0, 0, 0.35);
+  color: #fff;
+}
+
+.next-card {
+  text-align: center;
+}
+
+.next-card-title {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.next-card-teams {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 2px;
+}
+
+.next-card-vs {
+  font-family: var(--font-display);
+  font-size: 16px;
+  opacity: 0.7;
+}
+
+.next-card-names {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.next-card-date {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.action-link {
+  width: 100%;
+  margin-top: 10px;
   padding: 6px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.2);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
 }
 
-/* ---------- Paneller ---------- */
+.action-link:hover {
+  background: rgba(0, 0, 0, 0.32);
+}
+
+/* --- İçerik: çim zemin --- */
+.content {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  margin: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), inset 0 0 80px rgba(0, 0, 0, 0.35);
+}
+
+.pitch-bg {
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(255, 255, 255, 0.08), transparent 60%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.35)),
+    repeating-linear-gradient(90deg, var(--grass-1) 0 90px, var(--grass-2) 90px 180px);
+}
+
+/* --- Alt çubuk --- */
+.statusbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 36px;
+  padding: 0 18px;
+  background: linear-gradient(180deg, #243049, #1a2333);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 12px;
+}
+
+.breadcrumb {
+  flex-shrink: 0;
+  color: var(--slate-300);
+}
+
+.breadcrumb span + span::before {
+  content: '›';
+  margin: 0 8px;
+  color: var(--slate-400);
+}
+
+.breadcrumb .current {
+  color: #fff;
+  font-weight: 600;
+}
+
+.ticker {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 22px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.3);
+  mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+}
+
+.ticker-track {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: ticker 45s linear infinite;
+}
+
+.ticker-track span {
+  padding-right: 48px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--slate-200);
+}
+
+@keyframes ticker {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track,
+  .nav-status.matchday::before {
+    animation: none;
+  }
+}
+
+/* ================= Paneller ================= */
 .panel {
-  border: 1px solid var(--border);
-  margin-bottom: 8px;
+  margin-bottom: 14px;
+  overflow: hidden;
+  border-radius: var(--radius);
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(3px);
 }
 
 .panel-title {
   margin: 0;
-  padding: 4px 8px;
-  font-size: 12px;
-  font-weight: bold;
-  background: var(--misc-box);
-  color: var(--text-1);
+  padding: 8px 14px;
+  background: linear-gradient(180deg, var(--panel-head-1), var(--panel-head-2));
+  border-bottom: 1px solid rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.12);
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
 .panel-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-.title-extra {
-  font-weight: normal;
+  gap: 12px;
 }
 
 .panel-body {
-  padding: 8px;
+  padding: 12px 14px;
+}
+
+.panel-note {
+  padding: 8px 14px 10px;
+  font-size: 11px;
+  color: var(--text-dim);
 }
 
 .two-columns {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 14px;
   align-items: start;
 }
 
-/* ---------- Yoğun tablolar ---------- */
+.two-columns > .panel {
+  margin-bottom: 0;
+}
+
+.screen > .two-columns {
+  margin-bottom: 14px;
+}
+
+/* Koyu yeşil alt başlık şeridi (FM'deki "Technical Attributes" gibi) */
+.sub-head {
+  margin-bottom: 4px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  background: linear-gradient(180deg, rgba(36, 96, 31, 0.95), rgba(22, 64, 19, 0.95));
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.sub-head-gap {
+  margin-top: 14px;
+}
+
+/* Etiket–değer satırı */
+.kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--row-line);
+}
+
+.kv-label {
+  color: var(--text-soft);
+}
+
+.kv-value {
+  color: var(--accent);
+  font-weight: 600;
+  text-align: right;
+}
+
+/* ================= Tablolar ================= */
 .data-table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.data-table th,
-.data-table td {
-  padding: 2px 6px;
+.data-table th {
+  padding: 7px 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e7efe4;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-align: left;
   white-space: nowrap;
-}
-
-.data-table th {
-  background: var(--pos-bar);
-  font-weight: bold;
-  border-bottom: 1px solid var(--border);
 }
 
 .data-table th.sortable {
@@ -277,309 +684,376 @@ select {
   user-select: none;
 }
 
-.data-table .num {
-  text-align: right;
+.data-table th.sortable:hover {
+  color: var(--accent);
+}
+
+.data-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--row-line);
+  white-space: nowrap;
 }
 
 .data-table tbody tr:nth-child(even) {
   background: var(--row-alt);
 }
 
-.data-table.clickable tbody tr {
-  cursor: pointer;
-}
-
 .data-table tbody tr:hover {
   background: var(--row-hover);
 }
 
+.data-table.clickable tbody tr {
+  cursor: pointer;
+}
+
 .data-table tbody tr.selected {
-  background: var(--row-selected);
-  outline: 2px solid var(--main-btn);
-  outline-offset: -2px;
-}
-
-/* Mevki kutuları (palet 4 / 5) */
-.pos-boxes {
-  display: inline-flex;
-  gap: 2px;
-}
-
-.pos-box {
-  display: inline-block;
-  min-width: 34px;
-  padding: 0 3px;
-  text-align: center;
-  font-size: 11px;
-  font-weight: bold;
-  background: var(--pos-box);
-  color: var(--text-1);
-}
-
-.pos-box.sub {
-  background: var(--pos-box-sub);
-}
-
-/* Etiket–değer tabloları (oyuncu/kulüp bilgisi) */
-.info-table {
-  border-collapse: collapse;
-}
-
-.info-table th {
-  text-align: left;
-  font-weight: normal;
-  color: var(--text-muted);
-  padding: 2px 16px 2px 0;
-  white-space: nowrap;
-}
-
-.info-table td {
-  font-weight: bold;
-  padding: 2px 0;
-}
-
-/* ---------- Oyuncu profili ---------- */
-.profile-top {
-  display: flex;
-  gap: 32px;
-  flex-wrap: wrap;
-}
-
-.profile-positions {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.attr-grid {
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
-}
-
-.attr-column {
-  min-width: 190px;
-}
-
-.attr-column-title {
-  font-weight: bold;
-  padding: 2px 4px;
-  margin-bottom: 4px;
-  background: var(--pos-bar);
-}
-
-.attr-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.attr-table td {
-  padding: 1px 4px;
-}
-
-.attr-table tr:nth-child(even) {
-  background: var(--row-alt);
-}
-
-.attr {
-  width: 28px;
-  text-align: center;
-}
-
-.attr-good {
-  font-weight: bold;
-}
-
-.attr-elite {
-  font-weight: bold;
-  background: var(--main-btn);
-  color: var(--text-1);
-}
-
-.attr-poor {
-  color: var(--attr-poor);
-}
-
-/* ---------- Kulüp bilgisi ---------- */
-.club-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.club-header-name {
-  font-size: 18px;
-  font-weight: bold;
-}
-
-/* ---------- Ana menü / yeni oyun ---------- */
-.main-menu {
-  height: 100%;
-  display: grid;
-  place-items: center;
-}
-
-.main-menu-box {
-  width: 380px;
-}
-
-.main-menu-title {
-  font-size: 14px;
-  text-align: center;
-  padding: 8px;
-}
-
-.main-menu-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px 24px 8px;
-}
-
-.main-menu-footer {
-  padding: 4px 8px 10px;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 11px;
-}
-
-.new-game {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 16px 8px;
-}
-
-/* ---------- Üst bar: tarih + sıradaki maç ---------- */
-.topbar-info {
-  text-align: right;
-}
-
-.topbar-next {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-/* ---------- Sekmeler (panel başlığında) ---------- */
-.tabs {
-  display: inline-flex;
-  gap: 2px;
-}
-
-.tab {
-  padding: 1px 10px;
-  font-weight: bold;
-  background: var(--big-btn);
-  color: var(--text-1);
-  border: 2px solid;
-  border-color: var(--big-btn-light) var(--big-btn-dark) var(--big-btn-dark) var(--big-btn-light);
-}
-
-.tab.active {
-  background: var(--pos-bar);
-  color: var(--text);
-}
-
-/* ---------- Tablo yardımcıları ---------- */
-.club-cell {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.club-cell .club-badge {
-  font-size: 0 !important; /* küçük boyutta kısaltma okunmuyor; sadece renkler */
-  border-width: 1px;
+  background: rgba(246, 207, 60, 0.16);
+  box-shadow: inset 3px 0 var(--accent);
 }
 
 .data-table tbody tr.own-row {
-  background: var(--row-selected);
-  font-weight: bold;
+  background: rgba(246, 207, 60, 0.12);
+  font-weight: 600;
+}
+
+.data-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table .value {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .right {
   text-align: right !important;
 }
 
+.club-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.club-badge {
+  display: block;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5));
+}
+
+/* Etiket–değer tablosu (kulüp bilgisi) */
+.info-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.info-table th,
+.info-table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--row-line);
+}
+
+.info-table th {
+  color: var(--text-soft);
+  font-weight: 400;
+  text-align: left;
+}
+
+.info-table td {
+  color: var(--accent);
+  font-weight: 600;
+  text-align: right;
+}
+
+/* Mevki kutuları */
+.pos-boxes {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.pos-box {
+  display: inline-block;
+  min-width: 38px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.pos-gk { background: var(--pos-gk); color: #261b00; }
+.pos-def { background: var(--pos-def); }
+.pos-mid { background: var(--pos-mid); }
+.pos-att { background: var(--pos-att); }
+
+.pos-box.league-pos {
+  min-width: 26px;
+}
+
 /* Sonuç / form kutuları */
 .outcome {
-  display: inline-block;
-  width: 16px;
-  text-align: center;
-  font-size: 11px;
-  font-weight: bold;
-  color: var(--text-1);
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
 }
 
-.outcome-W {
-  background: var(--main-btn);
-}
-
-.outcome-D {
-  background: var(--big-btn);
-}
-
-.outcome-L {
-  background: var(--attr-poor);
-}
+.outcome-W { background: var(--win); }
+.outcome-D { background: var(--draw); }
+.outcome-L { background: var(--loss); }
 
 .form-boxes {
   display: inline-flex;
-  gap: 2px;
+  gap: 3px;
 }
 
-/* ---------- Haftalık fikstür ---------- */
+/* Sekmeler */
+.tabs {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.tab {
+  padding: 3px 14px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.tab.active {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* ================= Oyuncu profili ================= */
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr 1fr;
+  gap: 14px;
+  padding: 12px 14px 14px;
+}
+
+.profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 4px 10px;
+}
+
+.profile-identity-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.profile-nation {
+  font-weight: 700;
+  color: #fff;
+}
+
+.shirt {
+  flex-shrink: 0;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
+}
+
+/* Özellik değerleri (1–20) */
+.attr {
+  min-width: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--text);
+}
+
+.attr-good {
+  color: var(--accent);
+}
+
+.attr-elite {
+  color: var(--good);
+}
+
+.attr-poor {
+  color: var(--low);
+}
+
+/* ================= Fikstür ================= */
 .round-nav {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
+  gap: 8px;
+  padding: 10px 14px;
+}
+
+.round-date {
+  margin-left: 6px;
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .round-table td {
   width: 45%;
-  padding: 4px 8px;
+  padding: 7px 12px;
   vertical-align: top;
 }
 
 .round-table td.score {
   width: 10%;
   text-align: center;
-  font-weight: bold;
-  font-size: 13px;
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
 }
 
 .scorers {
-  font-size: 11px;
+  margin-top: 2px;
+  font-size: 11.5px;
   color: var(--text-muted);
   white-space: normal;
 }
 
-/* ---------- Puan durumu bölgeleri ---------- */
-.league-pos {
-  min-width: 22px;
-}
-
-.data-table tr.zone-cl td:first-child { box-shadow: inset 4px 0 var(--main-btn); }
-.data-table tr.zone-el td:first-child { box-shadow: inset 4px 0 var(--pos-bar); }
-.data-table tr.zone-ecl td:first-child { box-shadow: inset 4px 0 var(--big-btn); }
-.data-table tr.zone-rel td:first-child { box-shadow: inset 4px 0 var(--attr-poor); }
+/* ================= Puan durumu ================= */
+.data-table tr.zone-cl td:first-child { box-shadow: inset 4px 0 var(--zone-cl); }
+.data-table tr.zone-el td:first-child { box-shadow: inset 4px 0 var(--zone-el); }
+.data-table tr.zone-ecl td:first-child { box-shadow: inset 4px 0 var(--zone-ecl); }
+.data-table tr.zone-rel td:first-child { box-shadow: inset 4px 0 var(--zone-rel); }
 
 .legend {
   display: flex;
-  gap: 16px;
-  padding: 6px 8px;
-  font-size: 11px;
+  gap: 18px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .zone-mark {
   display: inline-block;
   width: 10px;
   height: 10px;
+  margin-right: 4px;
+  border-radius: 3px;
+  vertical-align: -1px;
+}
+
+.zone-mark.zone-cl { background: var(--zone-cl); }
+.zone-mark.zone-el { background: var(--zone-el); }
+.zone-mark.zone-ecl { background: var(--zone-ecl); }
+.zone-mark.zone-rel { background: var(--zone-rel); }
+
+/* ================= Kulüp bilgisi ================= */
+.club-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.club-header-name {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+/* ================= Ana menü / yeni oyun ================= */
+.splash {
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.splash-card {
+  width: 420px;
+  padding: 36px 36px 24px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, rgba(38, 51, 78, 0.94), rgba(21, 29, 45, 0.96));
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+
+.splash-kicker {
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.splash-title {
+  margin: 4px 0 26px;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 54px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.splash-title.small {
+  margin-bottom: 18px;
+  font-size: 42px;
+  text-align: left;
+}
+
+.new-game .splash-kicker {
+  text-align: left;
+}
+
+.splash-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.splash-footer {
+  margin-top: 18px;
+  font-size: 12px;
+  color: var(--slate-300);
+}
+
+.new-game {
+  height: 100%;
+  overflow: auto;
+  padding: 32px 24px;
+}
+
+.new-game-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.rep-bar {
+  display: inline-block;
+  width: 54px;
+  height: 6px;
+  margin-right: 8px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
   vertical-align: middle;
 }
 
-.zone-mark.zone-cl { background: var(--main-btn); }
-.zone-mark.zone-el { background: var(--pos-bar); }
-.zone-mark.zone-ecl { background: var(--big-btn); }
-.zone-mark.zone-rel { background: var(--attr-poor); }
+.rep-bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}

@@ -156,3 +156,19 @@ export function formatDayMonth(date: GameDate): string {
 
 /** Maç sonucu harfi (Türkçe): G = galibiyet, B = beraberlik, M = mağlubiyet. */
 export const OUTCOME_LABELS: Record<'W' | 'D' | 'L', string> = { W: 'G', D: 'B', L: 'M' };
+
+export type PositionGroup = 'gk' | 'def' | 'mid' | 'att';
+
+/** Mevki kutusu rengi için grup. */
+export function positionGroup(position: Position): PositionGroup {
+  if (position === 'GK') return 'gk';
+  if (position === 'DR' || position === 'DC' || position === 'DL' || position === 'WBR' || position === 'WBL') return 'def';
+  if (position === 'AMR' || position === 'AMC' || position === 'AML' || position === 'ST') return 'att';
+  return 'mid';
+}
+
+/** "1 Temmuz 2026, Çarşamba" → { day: 'Çarşamba', date: '1 Temmuz 2026' } */
+export function splitDateTR(formatted: string): { day: string; date: string } {
+  const [date = '', day = ''] = formatted.split(', ');
+  return { day, date };
+}

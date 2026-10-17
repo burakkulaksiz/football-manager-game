@@ -18,6 +18,7 @@ import {
   type Tactics,
   type TeamInstructions,
 } from '../engine';
+import { DEFAULT_SQUAD_FILTERS, type SquadFilters, type SquadView } from '../ui/squadFilters';
 import { gameData } from '../gameData';
 import { autosave, loadGame, saveGame } from '../persistence/saves';
 
@@ -66,6 +67,11 @@ interface GameState {
   historyIndex: number;
   /** Kadro ekranında görüntülenen kulüp (varsayılan: kendi kulübümüz). */
   viewedClubId: string | null;
+  /** Kadro ekranı: görünüm ve filtreler (profil sayfasından dönünce korunur). */
+  squadView: SquadView;
+  squadFilters: SquadFilters;
+  /** Karşılaştırma için seçilen oyuncular (en fazla 2). */
+  compareIds: number[];
   /** Fikstür ekranı: kendi maçlarımız mı, haftalık görünüm mü; seçili hafta. */
   fixturesTab: 'club' | 'round';
   fixturesRound: number;
@@ -87,6 +93,10 @@ interface GameState {
   back: () => void;
   forward: () => void;
   setViewedClub: (clubId: string) => void;
+  setSquadView: (view: SquadView) => void;
+  setSquadFilters: (change: Partial<SquadFilters>) => void;
+  toggleCompare: (playerId: number) => void;
+  clearCompare: () => void;
   setFixturesView: (tab: 'club' | 'round', round?: number) => void;
   /**
    * "Devam": maç günüyse maçları oynatır, değilse bir sonraki maç gününe ilerler.
@@ -132,6 +142,7 @@ function enterGame(world: GameWorld) {
     history: [START_ROUTE],
     historyIndex: 0,
     viewedClubId: world.playerClubId,
+    compareIds: [] as number[],
     fixturesTab: 'club' as const,
     fixturesRound: 1,
     liveMatch: null,
@@ -173,6 +184,9 @@ export const useGameStore = create<GameState>()((set, get) => {
     history: [START_ROUTE],
     historyIndex: 0,
     viewedClubId: null,
+    squadView: 'general',
+    squadFilters: { ...DEFAULT_SQUAD_FILTERS },
+    compareIds: [],
     fixturesTab: 'club',
     fixturesRound: 1,
     liveMatch: null,
@@ -249,6 +263,19 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
 
     setViewedClub: (clubId) => set({ viewedClubId: clubId }),
+
+    setSquadView: (view) => set({ squadView: view }),
+
+    setSquadFilters: (change) => set((s) => ({ squadFilters: { ...s.squadFilters, ...change } })),
+
+    toggleCompare: (playerId) =>
+      set((s) => ({
+        compareIds: s.compareIds.includes(playerId)
+          ? s.compareIds.filter((id) => id !== playerId)
+          : [...s.compareIds, playerId].slice(-2),
+      })),
+
+    clearCompare: () => set({ compareIds: [] }),
 
     setFixturesView: (tab, round) =>
       set((s) => ({ fixturesTab: tab, fixturesRound: round ?? s.fixturesRound })),

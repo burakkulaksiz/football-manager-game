@@ -73,6 +73,7 @@ src/persistence/db.ts  Dexie (IndexedDB) — 'fm-super-lig' veritabanı: `saves`
 src/persistence/saves.ts  saveGame, autosave, loadGame, listSaves, deleteSave (testler: fake-indexeddb).
 src/ui/                React. Motoru sadece çağırır, oyun mantığı içermez.
   labels.ts            Türkçe etiketler (özellik, mevki, beklenti), para/tarih biçimleri.
+  squadFilters.ts      Kadro ekranı filtreleri/görünümleri (saf, testli: squadFilters.test.ts).
   layout/              GameShell, Header, NavBar, Sidebar, StatusBar, pageHeading (başlık hapı + konum yolu)
   screens/             MainMenu, NewGameScreen, SquadScreen, PlayerProfile, ClubInfoScreen,
                        FixturesScreen, TableScreen, StatsScreen, MatchScreen, TacticsScreen, TransferScreen
@@ -267,7 +268,11 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
 - [x] **9. Yönetim ve sezon döngüsü** — yönetim güveni ve görevden alma, Gelen Kutusu (filtreler, okundu, bağlantılar),
       sezon sonu (ödüller, primler, küme düşme/çıkma, arşiv), sözleşme bitişleri ve serbest oyuncular, emeklilik,
       altyapı, yeni sezon; kurgusal 1. Lig (data/lower_league.json); eski kayıt dönüşümü (biçim 3 → 4).
-- [ ] 10. Cila
+- [ ] **10. Cila** (kullanıcı parça parça seçiyor)
+  - [x] Kadro ekranı: hızlı filtreler (mevki grubu; sakat/cezalı, sözleşmesi bitiyor, kiralık, gençler, ilk 11),
+        isim arama, 4 görünüm (Genel, İstatistik, Sözleşme, Antrenör Raporu), sıralanabilir sütunlar, özet şeridi,
+        2 oyuncu karşılaştırma (başka kulüpten de; seçim ve tercihler store'da korunur).
+  - [ ] Diğer adaylar: denge (gol kralı ~35), maç sonrası rapor, menajer adı, performans.
 
 ## Açık konular / ileride
 - Elle gerçek kadro girişi (ör. `data/squads/<kulüpId>.json`) yok; kullanıcı "şimdilik gerek yok" dedi.
@@ -279,6 +284,5 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
 - Oyuncu "transfer listesine koyma" yok; yapay zekâ ilgisi kendiliğinden geliyor.
 
 ## Sıradaki adım
-10. aşama: Cila — denge (gol kralı ~35 gol, fazla olabilir; duran top özellikleri; transfer sayıları; finans uzun
-vadede), performans (650 oyuncu, günlük döngüler, büyük kayıtlar), arayüz detayları (kadro ekranında hızlı
-filtreler, maç sonrası rapor, menajer adı vb. kullanıcıyla konuşulacak).
+10. aşama devam: kullanıcıya sıradaki cila maddesini sor (denge, maç sonrası rapor, menajer adı, performans
+ya da oynarken fark ettikleri).

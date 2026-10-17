@@ -146,3 +146,13 @@ export function attrClass(value: number): string {
   if (value <= 5) return 'attr attr-poor';
   return 'attr';
 }
+
+const MONTHS_SHORT = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+
+/** '2026-08-15' → '15 Ağu' */
+export function formatDayMonth(date: GameDate): string {
+  return `${Number(date.slice(8, 10))} ${MONTHS_SHORT[Number(date.slice(5, 7)) - 1]}`;
+}
+
+/** Maç sonucu harfi (Türkçe): G = galibiyet, B = beraberlik, M = mağlubiyet. */
+export const OUTCOME_LABELS: Record<'W' | 'D' | 'L', string> = { W: 'G', D: 'B', L: 'M' };

@@ -1,8 +1,11 @@
 import { useGameStore, type ScreenId } from '../../store/gameStore';
 import { ClubInfoScreen } from '../screens/ClubInfoScreen';
+import { FixturesScreen } from '../screens/FixturesScreen';
 import { PlaceholderScreen } from '../screens/PlaceholderScreen';
 import { PlayerProfile } from '../screens/PlayerProfile';
 import { SquadScreen } from '../screens/SquadScreen';
+import { StatsScreen } from '../screens/StatsScreen';
+import { TableScreen } from '../screens/TableScreen';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 
@@ -11,6 +14,9 @@ function ScreenContent({ screen }: { screen: ScreenId }) {
     case 'squad': return <SquadScreen />;
     case 'player': return <PlayerProfile />;
     case 'club': return <ClubInfoScreen />;
+    case 'fixtures': return <FixturesScreen />;
+    case 'table': return <TableScreen />;
+    case 'stats': return <StatsScreen />;
     default: return <PlaceholderScreen screen={screen} />;
   }
 }

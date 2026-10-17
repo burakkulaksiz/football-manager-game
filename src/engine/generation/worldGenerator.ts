@@ -3,6 +3,7 @@ import type { GameDate } from '../date';
 import { roundNice } from '../player';
 import { Rng } from '../rng';
 import type { Club, GameWorld, Player, Position } from '../types';
+import { generateSeason } from '../league/schedule';
 import { generatePlayer } from './playerGenerator';
 
 type Role = 'starter' | 'backup' | 'youth';
@@ -131,6 +132,8 @@ export function createWorld(
     for (const { player } of squad) players[player.id] = player;
   }
 
+  const season = generateSeason(rng, data.clubs.map((c) => c.id), Number(startDate.slice(0, 4)));
+
   return {
     seed,
     rngState: rng.getState(),
@@ -140,10 +143,17 @@ export function createWorld(
     clubs: data.clubs.map((c) => ({ ...c, colors: { ...c.colors } })),
     players,
     nextPlayerId: nextId,
+    season,
   };
 }
 
 /** Bir kulübün oyuncuları. */
 export function clubPlayers(world: GameWorld, clubId: string): Player[] {
   return Object.values(world.players).filter((p) => p.clubId === clubId);
+}
+
+export function getClub(world: GameWorld, clubId: string): Club {
+  const club = world.clubs.find((c) => c.id === clubId);
+  if (!club) throw new Error(`Bilinmeyen kulüp: ${clubId}`);
+  return club;
 }

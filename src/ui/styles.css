@@ -449,3 +449,137 @@ select {
   margin: 0 auto;
   padding: 16px 8px;
 }
+
+/* ---------- Üst bar: tarih + sıradaki maç ---------- */
+.topbar-info {
+  text-align: right;
+}
+
+.topbar-next {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ---------- Sekmeler (panel başlığında) ---------- */
+.tabs {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.tab {
+  padding: 1px 10px;
+  font-weight: bold;
+  background: var(--big-btn);
+  color: var(--text-1);
+  border: 2px solid;
+  border-color: var(--big-btn-light) var(--big-btn-dark) var(--big-btn-dark) var(--big-btn-light);
+}
+
+.tab.active {
+  background: var(--pos-bar);
+  color: var(--text);
+}
+
+/* ---------- Tablo yardımcıları ---------- */
+.club-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.club-cell .club-badge {
+  font-size: 0 !important; /* küçük boyutta kısaltma okunmuyor; sadece renkler */
+  border-width: 1px;
+}
+
+.data-table tbody tr.own-row {
+  background: var(--row-selected);
+  font-weight: bold;
+}
+
+.right {
+  text-align: right !important;
+}
+
+/* Sonuç / form kutuları */
+.outcome {
+  display: inline-block;
+  width: 16px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--text-1);
+}
+
+.outcome-W {
+  background: var(--main-btn);
+}
+
+.outcome-D {
+  background: var(--big-btn);
+}
+
+.outcome-L {
+  background: var(--attr-poor);
+}
+
+.form-boxes {
+  display: inline-flex;
+  gap: 2px;
+}
+
+/* ---------- Haftalık fikstür ---------- */
+.round-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+}
+
+.round-table td {
+  width: 45%;
+  padding: 4px 8px;
+  vertical-align: top;
+}
+
+.round-table td.score {
+  width: 10%;
+  text-align: center;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.scorers {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: normal;
+}
+
+/* ---------- Puan durumu bölgeleri ---------- */
+.league-pos {
+  min-width: 22px;
+}
+
+.data-table tr.zone-cl td:first-child { box-shadow: inset 4px 0 var(--main-btn); }
+.data-table tr.zone-el td:first-child { box-shadow: inset 4px 0 var(--pos-bar); }
+.data-table tr.zone-ecl td:first-child { box-shadow: inset 4px 0 var(--big-btn); }
+.data-table tr.zone-rel td:first-child { box-shadow: inset 4px 0 var(--attr-poor); }
+
+.legend {
+  display: flex;
+  gap: 16px;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.zone-mark {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  vertical-align: middle;
+}
+
+.zone-mark.zone-cl { background: var(--main-btn); }
+.zone-mark.zone-el { background: var(--pos-bar); }
+.zone-mark.zone-ecl { background: var(--big-btn); }
+.zone-mark.zone-rel { background: var(--attr-poor); }

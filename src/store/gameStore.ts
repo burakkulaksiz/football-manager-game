@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { addDays, createWorld, SEASON_START_DATE, type GameWorld } from '../engine';
+import { advance, createWorld, SEASON_START_DATE, type GameWorld } from '../engine';
 import { gameData } from '../gameData';
 
 /** Sol menüden açılan ekranlar + menü dışı ekranlar ('player'). */
@@ -25,6 +25,9 @@ interface GameState {
   selectedPlayerId: number | null;
   /** Kadro ekranında görüntülenen kulüp (varsayılan: kendi kulübümüz). */
   viewedClubId: string | null;
+  /** Fikstür ekranı: kendi maçlarımız mı, haftalık görünüm mü; seçili hafta. */
+  fixturesTab: 'club' | 'round';
+  fixturesRound: number;
 
   openNewGame: () => void;
   startNewGame: (clubId: string) => void;
@@ -33,20 +36,23 @@ interface GameState {
   openPlayer: (playerId: number) => void;
   goBack: () => void;
   setViewedClub: (clubId: string) => void;
+  setFixturesView: (tab: 'club' | 'round', round?: number) => void;
   /**
-   * "Devam": zamanı bir sonraki olaya kadar ilerletir.
-   * Henüz olay sistemi yok (3. aşama); takvimi sadece bir gün ilerletir.
+   * "Devam": maç günüyse maçları oynatır, değilse bir sonraki maç gününe ilerler.
+   * Maçlar oynanınca o haftanın sonuçları gösterilir.
    */
   advance: () => void;
 }
 
-export const useGameStore = create<GameState>()((set) => ({
+export const useGameStore = create<GameState>()((set, get) => ({
   phase: 'menu',
   screen: 'squad',
   previousScreen: 'squad',
   world: null,
   selectedPlayerId: null,
   viewedClubId: null,
+  fixturesTab: 'club',
+  fixturesRound: 1,
 
   openNewGame: () => set({ phase: 'newGame' }),
 
@@ -54,7 +60,15 @@ export const useGameStore = create<GameState>()((set) => ({
     // Seed oyunun başında bir kez belirlenir; motor içinde Math.random kullanılmaz.
     const seed = Date.now() >>> 0;
     const world = createWorld(gameData, seed, clubId, SEASON_START_DATE);
-    set({ phase: 'game', screen: 'squad', world, viewedClubId: clubId, selectedPlayerId: null });
+    set({
+      phase: 'game',
+      screen: 'squad',
+      world,
+      viewedClubId: clubId,
+      selectedPlayerId: null,
+      fixturesTab: 'club',
+      fixturesRound: 1,
+    });
   },
 
   quitToMenu: () => set({ phase: 'menu', world: null }),
@@ -72,8 +86,20 @@ export const useGameStore = create<GameState>()((set) => ({
 
   setViewedClub: (clubId) => set({ viewedClubId: clubId }),
 
-  advance: () =>
-    set((s) => (s.world ? { world: { ...s.world, date: addDays(s.world.date, 1) } } : {})),
+  setFixturesView: (tab, round) =>
+    set((s) => ({ fixturesTab: tab, fixturesRound: round ?? s.fixturesRound })),
+
+  advance: () => {
+    const { world } = get();
+    if (!world) return;
+    // Motor dünyayı yerinde değiştirir; yeni referans React'in yeniden çizmesi için.
+    const result = advance(world);
+    if (result.kind === 'played') {
+      set({ world: { ...world }, screen: 'fixtures', fixturesTab: 'round', fixturesRound: result.round });
+    } else {
+      set({ world: { ...world } });
+    }
+  },
 }));
 
 /** Kariyer açıkken dünyayı döndürür (GameShell içindeki bileşenler için). */

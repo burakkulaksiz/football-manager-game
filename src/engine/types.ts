@@ -71,6 +71,36 @@ export interface Player {
   contract: Contract;
 }
 
+export interface GoalEvent {
+  minute: number;
+  clubId: string;
+  playerId: number;
+}
+
+export interface MatchResult {
+  homeGoals: number;
+  awayGoals: number;
+  /** Dakika sırasına göre goller. */
+  goals: GoalEvent[];
+}
+
+export interface Fixture {
+  id: number;
+  /** 1–34 */
+  round: number;
+  date: GameDate;
+  homeId: string;
+  awayId: string;
+  /** Oynanmadıysa null. */
+  result: MatchResult | null;
+}
+
+export interface Season {
+  /** Sezonun başladığı yıl: 2026 → "2026/27" */
+  year: number;
+  fixtures: Fixture[];
+}
+
 /** Oyunun tüm durumu — ileride kayıt dosyasına bu yazılacak. */
 export interface GameWorld {
   seed: number;
@@ -81,4 +111,5 @@ export interface GameWorld {
   clubs: Club[];
   players: Record<number, Player>;
   nextPlayerId: number;
+  season: Season;
 }

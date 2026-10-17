@@ -10,6 +10,7 @@ import { SquadScreen } from '../screens/SquadScreen';
 import { StatsScreen } from '../screens/StatsScreen';
 import { TableScreen } from '../screens/TableScreen';
 import { TacticsScreen } from '../screens/TacticsScreen';
+import { TrainingScreen } from '../screens/TrainingScreen';
 import { TransferScreen } from '../screens/TransferScreen';
 import { Header } from './Header';
 import { NavBar } from './NavBar';
@@ -26,6 +27,7 @@ function ScreenContent({ screen }: { screen: ScreenId }) {
     case 'stats': return <StatsScreen />;
     case 'match': return <MatchScreen />;
     case 'tactics': return <TacticsScreen />;
+    case 'training': return <TrainingScreen />;
     case 'transfers': return <TransferScreen />;
     case 'finance': return <FinanceScreen />;
     default: return <PlaceholderScreen screen={screen} />;

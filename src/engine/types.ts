@@ -70,7 +70,7 @@ export interface Player {
   potentialAbility: number;
   /** 0–100 */
   morale: number;
-  /** Son maç puanları (en yeni sonda). 8. aşamada dolacak. */
+  /** Son maç puanları (en yeni sonda). */
   form: number[];
   /** Kondisyon 0–100 (%). */
   condition: number;
@@ -78,6 +78,16 @@ export interface Player {
   contract: Contract;
   /** Kiralıksa dönüş bilgisi; değilse null. */
   loan: Loan | null;
+  /** Ceza için biriken sarı kart (4'te bir maç ceza, sonra sıfırlanır). */
+  yellowCards: number;
+  /** Kalan ceza (maç sayısı). */
+  suspension: number;
+  /** Gelişim birikimi (özellik puanı cinsinden); ±1'e ulaşınca bir özellik değişir. */
+  progress: number;
+  /** Son haftaların gelişim eğilimi (UI'da ▲/▼). */
+  trend: number;
+  /** Son şikâyet tarihi (forma şansı); tekrar tekrar şikâyet etmesin. */
+  lastComplaint: GameDate | null;
 }
 
 export type GoalKind = 'normal' | 'header' | 'long' | 'freekick' | 'penalty';
@@ -100,6 +110,8 @@ export interface CardEvent {
   playerId: number;
   /** 'red' = direkt ya da ikinci sarıdan kırmızı. */
   type: 'yellow' | 'red';
+  /** Kırmızı ikinci sarıdan mı geldi (ceza süresi farklı). */
+  secondYellow?: boolean;
 }
 
 export interface InjuryEvent {
@@ -130,6 +142,8 @@ export interface PlayerMatchRecord {
   rating: number;
   goals: number;
   assists: number;
+  /** Maç sonu kondisyonu (oyuncuya geri yazılır). */
+  condition?: number;
 }
 
 export interface MatchResult {
@@ -215,7 +229,29 @@ export interface TransferOffer {
   note: string;
 }
 
-export type NewsCategory = 'transfer' | 'offer' | 'finance' | 'window' | 'contract' | 'loan';
+export type NewsCategory =
+  | 'transfer'
+  | 'offer'
+  | 'finance'
+  | 'window'
+  | 'contract'
+  | 'loan'
+  | 'injury'
+  | 'discipline'
+  | 'player'
+  | 'training';
+
+/* ------------------------------------------------------------------ */
+/* Antrenman                                                           */
+/* ------------------------------------------------------------------ */
+
+export type TrainingFocus = 'balanced' | 'physical' | 'technical' | 'tactical' | 'attacking' | 'defending';
+export type TrainingIntensity = 'light' | 'normal' | 'hard';
+
+export interface Training {
+  focus: TrainingFocus;
+  intensity: TrainingIntensity;
+}
 
 export interface NewsItem {
   id: number;
@@ -260,6 +296,8 @@ export interface GameWorld {
   season: Season;
   /** Kulüp id → kayıtlı taktik (şimdilik yalnızca kullanıcının kulübü; yapay zekâ her maçta seçer). */
   tactics: Record<string, Tactics>;
+  /** Kulüp id → antrenman ayarı (yapay zekâ kulüpleri için yoksa dengeli/normal). */
+  training: Record<string, Training>;
   finances: Record<string, ClubFinance>;
   offers: TransferOffer[];
   nextOfferId: number;

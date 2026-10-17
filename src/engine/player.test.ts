@@ -14,6 +14,7 @@ function testPlayer(overrides: Partial<Player>): Player {
     attributes: uniformAttrs(12), hidden: { consistency: 10, injuryProneness: 10, professionalism: 10 },
     currentAbility: 120, potentialAbility: 120, morale: 70, form: [], condition: 100, injury: null,
     contract: { wage: 500_000, expires: '2029-06-30' }, loan: null,
+    yellowCards: 0, suspension: 0, progress: 0, trend: 0, lastComplaint: null,
     ...overrides,
   };
 }

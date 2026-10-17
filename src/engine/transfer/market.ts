@@ -136,6 +136,8 @@ export function transferPlayer(world: GameWorld, player: Player, buyerId: string
 
   player.clubId = buyerId;
   player.loan = null;
+  // Yeni kulüp, yeni heyecan
+  player.morale = Math.max(player.morale, 72);
   player.contract = { wage: terms.wage, expires: contractExpiry(world.date, terms.years) };
   player.squadNumber = freeSquadNumber(world, player, buyerId);
   cancelOffersFor(world, player.id);

@@ -245,6 +245,10 @@ export const NEWS_CATEGORY_LABELS: Record<import('../engine').NewsCategory, stri
   window: 'Transfer Dönemi',
   contract: 'Sözleşme',
   loan: 'Kiralık',
+  injury: 'Sakatlık',
+  discipline: 'Disiplin',
+  player: 'Oyuncu',
+  training: 'Antrenman',
 };
 
 export const INCOME_LABELS: Record<import('../engine').IncomeCategory, string> = {
@@ -271,4 +275,33 @@ export function formatMonth(month: string): string {
 /** Negatif tutarları da gösteren para biçimi: −€1,2 Mn */
 export function formatSignedMoney(amount: number): string {
   return amount < 0 ? `−${formatMoney(-amount)}` : formatMoney(amount);
+}
+
+export const TRAINING_FOCUS_OPTIONS: { value: import('../engine').TrainingFocus; label: string; hint: string }[] = [
+  { value: 'balanced', label: 'Dengeli', hint: 'Tüm özellikler mevkiye göre gelişir.' },
+  { value: 'physical', label: 'Fiziksel', hint: 'Hız, dayanıklılık, güç, çeviklik öne çıkar.' },
+  { value: 'technical', label: 'Teknik', hint: 'Pas, top sürme, bitiricilik, ilk kontrol gibi teknik özellikler.' },
+  { value: 'tactical', label: 'Taktik', hint: 'Karar verme, pozisyon alma, önsezi gibi zihinsel özellikler.' },
+  { value: 'attacking', label: 'Hücum', hint: 'Bitiricilik, topsuz oyun, yaratıcılık, orta, uzaktan şut.' },
+  { value: 'defending', label: 'Savunma', hint: 'Markaj, top kapma, pozisyon alma, kafa, konsantrasyon.' },
+];
+
+export const TRAINING_INTENSITY_OPTIONS: { value: import('../engine').TrainingIntensity; label: string; hint: string }[] = [
+  { value: 'light', label: 'Hafif', hint: 'Gelişim %20 yavaş; oyuncular tam dinlenik (%100), sakatlık riski düşük.' },
+  { value: 'normal', label: 'Normal', hint: 'Dengeli program; kondisyon %98\'e kadar toparlanır.' },
+  { value: 'hard', label: 'Yoğun', hint: 'Gelişim %25 hızlı; kondisyon en fazla %94, sakatlık riski yüksek.' },
+];
+
+/** Gelişim eğilimi oku. */
+export function trendSymbol(trend: number): { text: string; className: string } {
+  if (trend >= 1.5) return { text: '▲▲', className: 'trend-up' };
+  if (trend >= 0.5) return { text: '▲', className: 'trend-up' };
+  if (trend <= -1.5) return { text: '▼▼', className: 'trend-down' };
+  if (trend <= -0.5) return { text: '▼', className: 'trend-down' };
+  return { text: '–', className: 'muted' };
+}
+
+/** Antrenör raporu: yetenek (CA/PA) → 0.5–5 yıldız (lig ölçeğinde: 170+ = 5 yıldız). */
+export function abilityStars(ability: number): number {
+  return Math.max(0.5, Math.min(5, Math.round(((ability - 45) / 25) * 2) / 2));
 }

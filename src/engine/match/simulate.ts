@@ -1,5 +1,8 @@
 /** Maç motorunun oyun dünyasıyla bağlantısı: kurulum, arka plan maçları, sonucu işleme. */
 import { processMatchFinances } from '../finance/finance';
+import { processDiscipline } from '../squad/discipline';
+import { injurePlayer } from '../squad/injuries';
+import { applyMatchMorale } from '../squad/morale';
 import { clubPlayers, getClub } from '../generation/worldGenerator';
 import type { Rng } from '../rng';
 import type { Fixture, GameWorld, MatchResult } from '../types';
@@ -59,13 +62,23 @@ export function playFixture(world: GameWorld, fixture: Fixture, rng: Rng): Match
   return buildResult(state);
 }
 
-/** Sonucu fikstüre yazar; seyirci geliri ve primler işlenir, oyuncuların formu güncellenir. */
-export function applyResult(world: GameWorld, fixture: Fixture, result: MatchResult): void {
+/**
+ * Sonucu fikstüre yazar ve maçın kalıcı etkilerini işler: finans (bilet, prim), form,
+ * maç sonu kondisyonu, sakatlıklar, kart cezaları ve moral.
+ */
+export function applyResult(world: GameWorld, fixture: Fixture, result: MatchResult, rng: Rng): void {
   fixture.result = result;
   processMatchFinances(world, fixture);
   for (const record of result.players) {
     const player = world.players[record.playerId];
     if (!player) continue;
     player.form = [...player.form, record.rating].slice(-FORM_LENGTH);
+    if (record.condition !== undefined) player.condition = record.condition;
   }
+  for (const injury of result.injuries) {
+    const player = world.players[injury.playerId];
+    if (player) injurePlayer(world, player, rng, 'match');
+  }
+  processDiscipline(world, fixture, result, rng);
+  applyMatchMorale(world, fixture, result);
 }

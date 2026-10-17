@@ -26,6 +26,7 @@ export type ScreenId =
   | 'inbox'
   | 'squad'
   | 'tactics'
+  | 'training'
   | 'club'
   | 'finance'
   | 'transfers'

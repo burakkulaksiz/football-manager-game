@@ -23,6 +23,12 @@ export * from './transfer/window';
 export * from './transfer/market';
 export * from './transfer/offers';
 export * from './migrate';
+export * from './squad/training';
+export * from './squad/injuries';
+export * from './squad/discipline';
+export * from './squad/morale';
+export * from './squad/development';
+export * from './squad/condition';
 
 /** Yeni kariyer bu tarihte başlar (yaz transfer dönemi başı). */
 export const SEASON_START_DATE = '2026-07-01';

@@ -1,6 +1,7 @@
 /**
  * Taktikler: takım talimatları, bunların motora etkisi ve kullanıcının kadro düzeni.
  */
+import { isAvailable } from '../player';
 import type { Player } from '../types';
 import {
   assignToFormation,
@@ -161,7 +162,7 @@ export function instructionEffects(i: TeamInstructions, own: TeamProfile, opp: T
 /* ------------------------------------------------------------------ */
 
 export function defaultTactics(squad: readonly Player[], formation: FormationId = DEFAULT_FORMATION_ID): Tactics {
-  const available = squad.filter((p) => p.injury === null);
+  const available = squad.filter(isAvailable);
   const lineup = assignToFormation(available, FORMATIONS[formation]);
   const xi = lineup.filter((id): id is number => id !== null);
   const xiPlayers = available.filter((p) => xi.includes(p.id));
@@ -247,7 +248,7 @@ export function lineupFits(t: Tactics, squad: readonly Player[]): (number | null
  */
 export function resolveLineup(t: Tactics, squad: readonly Player[]): Lineup {
   const formation = FORMATIONS[t.formation];
-  const available = squad.filter((p) => p.injury === null);
+  const available = squad.filter(isAvailable);
   const ok = new Set(available.map((p) => p.id));
   const lineup = t.lineup.map((id) => (id !== null && ok.has(id) ? id : null));
 

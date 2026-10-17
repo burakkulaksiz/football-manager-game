@@ -66,7 +66,7 @@ function advanceOneDay(world: GameWorld): NewsItem[] {
 export function playTodaysMatches(world: GameWorld): Fixture[] {
   const fixtures = todaysFixtures(world);
   const rng = Rng.fromState(world.rngState);
-  for (const f of fixtures) applyResult(world, f, playFixture(world, f, rng));
+  for (const f of fixtures) applyResult(world, f, playFixture(world, f, rng), rng);
   world.rngState = rng.getState();
   return fixtures;
 }
@@ -89,7 +89,9 @@ export function startUserMatch(world: GameWorld, seed?: number): MatchState | nu
 export function finishUserMatch(world: GameWorld, state: MatchState): Fixture[] {
   const fixture = world.season.fixtures.find((f) => f.id === state.fixtureId);
   if (!fixture) throw new Error(`Fikstür bulunamadı: ${state.fixtureId}`);
-  applyResult(world, fixture, buildResult(state));
+  const rng = Rng.fromState(world.rngState);
+  applyResult(world, fixture, buildResult(state), rng);
+  world.rngState = rng.getState();
   playTodaysMatches(world);
   return world.season.fixtures.filter((f) => f.round === fixture.round);
 }

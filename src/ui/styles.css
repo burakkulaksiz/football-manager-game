@@ -2282,3 +2282,99 @@ select {
 .finance-table th {
   font-size: 12.5px;
 }
+
+/* ================= Antrenman, durum etiketleri ================= */
+.stars {
+  position: relative;
+  display: inline-block;
+  font-size: 13px;
+  letter-spacing: 1px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.stars-empty {
+  color: rgba(255, 255, 255, 0.18);
+}
+
+.stars-full {
+  position: absolute;
+  inset: 0 auto 0 0;
+  overflow: hidden;
+  color: var(--accent);
+}
+
+.status-tags {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: 6px;
+  vertical-align: 1px;
+}
+
+.st {
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 16px;
+  color: #fff;
+}
+
+.st-injury { background: var(--loss); }
+.st-ban { background: #9b1c1c; }
+.st-warn { background: #b7791f; }
+
+.trend-up { color: var(--good); font-weight: 700; }
+.trend-down { color: var(--low); font-weight: 700; }
+
+.focus-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.focus-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text);
+  text-align: left;
+}
+
+.focus-card:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.focus-card.active {
+  border-color: var(--accent);
+  background: rgba(246, 207, 60, 0.12);
+  box-shadow: inset 3px 0 var(--accent);
+}
+
+.focus-title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.focus-card.active .focus-title {
+  color: var(--accent);
+}
+
+.focus-hint {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.intensity-tabs {
+  margin-bottom: 6px;
+}
+
+.health-list .kv {
+  cursor: pointer;
+}

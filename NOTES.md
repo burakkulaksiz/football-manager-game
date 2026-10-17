@@ -51,7 +51,13 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
   transfer/offers.ts   Kullanıcı teklifleri, karşı teklif, sözleşme görüşmesi (negotiateTransfer/Renewal),
                        gelen tekliflere yanıt, günlük teklif işleme (processOffers).
   transfer/ai.ts       Yapay zekâ alımları ve kullanıcıya teklifler (aiTransferDay).
-  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 2).
+  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 3).
+  squad/training.ts    Antrenman odağı/yoğunluğu ve etkileri (INTENSITY_EFFECTS, FOCUS_ATTRS).
+  squad/injuries.ts    Sakatlık türleri, maç/antrenman sakatlığı, günlük iyileşme.
+  squad/discipline.ts  Kart cezaları (maç sonrası).
+  squad/morale.ts      Maç sonrası moral, günlük ortalamaya dönüş, şikâyetler.
+  squad/development.ts Haftalık gelişim/gerileme (pazartesi).
+  squad/condition.ts   Günlük kondisyon toparlanması.
   testing.ts           Yalnızca testler: makeResult, playSeason.
   index.ts             Motorun dışa açık yüzü + SEASON_START_DATE (2026-07-01).
 src/store/gameStore.ts Zustand: phase (menu/newGame/load/game), screen + geçmiş, world, liveMatch (canlı maç),
@@ -65,10 +71,10 @@ src/ui/                React. Motoru sadece çağırır, oyun mantığı içerme
   layout/              GameShell, Header, NavBar, Sidebar, StatusBar, pageHeading (başlık hapı + konum yolu)
   screens/             MainMenu, NewGameScreen, SquadScreen, PlayerProfile, ClubInfoScreen,
                        FixturesScreen, TableScreen, StatsScreen, MatchScreen, TacticsScreen, TransferScreen
-                       (ara / teklifler / haberler), FinanceScreen, LoadGameScreen, Placeholder
+                       (ara / teklifler / haberler), FinanceScreen, TrainingScreen, LoadGameScreen, Placeholder
   components/          ClubBadge, Shirt, OutcomeBox, InstructionsPanel (FormationPicker + talimatlar; taktik
                        ekranı ve maç içinde ortak), Modal (portal ile body'ye), NoticeToast, SaveDialogs,
-                       TransferDialogs (OfferDialog, ContractDialog, CounterDialog)
+                       TransferDialogs (OfferDialog, ContractDialog, CounterDialog), Stars, StatusTags
   styles.css           Tema; renkler CSS değişkenleri olarak (bkz. "Görünüm")
 ```
 Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
@@ -159,6 +165,26 @@ Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
   maaş bütçesinin %0.3'ü (beraberlik 1/3). Satışın %50'si transfer bütçesine eklenir.
 - Lig sıralaması ödülü / yayın payının performansa bağlanması 9. aşamada (sezon sonu).
 
+## Oyuncu durumu kuralları (aşama 8)
+- **Uygunluk:** `isAvailable(p)` = sakat değil ve cezalı değil. Otomatik kadro, taktik çözümü (resolveLineup)
+  ve yapay zekâ bunu kullanır. Otomatik kadro yorgun oyuncuyu cezalandırır (kondisyon < 85 → puan düşer).
+- **Sakatlık:** maç içi sakatlık kalıcı olur (10 tür, 2 gün – 8 ay, ağırlar nadir); antrenmanda günlük
+  0.0005 × (sakatlık eğilimi/10) × yoğunluk çarpanı. Gün gün iyileşir; dönüşte kondisyon ≥ 70.
+  Sezonda kulüp başına ~5–15 maç sakatlığı + antrenman sakatlıkları.
+- **Ceza:** 4 sarı → 1 maç (sayaç 4 düşer); ikinci sarıdan kırmızı → 1 maç (o maçın sarısı sayılmaz);
+  direkt kırmızı → 1 (%60) / 2 (%30) / 3 (%10) maç. Ceza, kulübün sonraki lig maçlarında çekilir.
+- **Kondisyon:** maç sonu kondisyonu oyuncuya yazılır; günlük +6 + doğal kondisyon × 0.25; tavan yoğunluğa
+  göre (hafif 100, normal 98, yoğun 94). Sakat oyuncu 60'ı geçmez.
+- **Moral:** galibiyet +5, yenilgi −5, puan ≥ 7.5 +3, ≤ 5.5 −3, ilk 11 +1; kadro sırası ilk 14'te olup
+  oynamayan sağlam oyuncu −3; diğerleri sonucun yarısı. Günlük ortalamaya (60) dönüş (%3, en az 1 puan).
+  Kullanıcının oyuncusu < 30 ise haftalık şikâyet haberi (45 gün arayla). Transfer → en az 72, yenileme +8.
+- **Gelişim (pazartesi):** yaşa göre haftalık özellik puanı (≤18: 0.5 … 28–29: 0 … 34+: −0.28).
+  Artı: × (PA − CA)/25 (0–1) × (0.6 + profesyonellik × 0.8) × yoğunluk; sakat gelişemez.
+  Eksi: × (1.2 − prof × 0.4) × (1.15 − doğal kondisyon × 0.3). Birikim ±1 → bir özellik ±1, CA yeniden
+  hesaplanır. Artışta özellik seçimi: mevki ağırlığı × odak (×3) × (20 − değer)/10; düşüşte fiziksel ×3.
+  `trend` gelişim eğilimi (UI ▲/▼). Antrenör raporu yıldızları = (yetenek − 45) / 25, 0.5–5.
+- Denge (aşama 8 sonrası, ~4600 maç): 2.55 gol, %44.9 ev, %25.0 beraberlik (goalBase 0.27, homeAttack 1.2).
+
 ## Kayıt kuralları (kullanıcıyla kararlaştırıldı)
 - Canlı maç sürerken (başlama öncesi dahil) kayıt **yapılamaz**; liveMatch kaydedilmez.
 - **Otomatik kayıt** her maç gününden sonra (haftanın maçları oynanınca) arka planda alınır.
@@ -201,7 +227,9 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
       teklif / karşı teklif / kiralık, sözleşme görüşmesi ve yenileme, gelen teklifler, yapay zekâ transferleri,
       transfer dönemleri, finans (kasa, bütçeler, aylık raporlar, bilet/yayın/sponsor/prim), Devam haberlerde
       durur, menüde bekleyen teklif rozeti, eski kayıt dönüşümü (biçim 1 → 2).
-- [ ] 8. Moral, form, sakatlık, ceza, antrenman, gelişim
+- [x] **8. Oyuncu durumu** — kalıcı sakatlıklar, kart cezaları, kondisyon toparlanması, moral (sonuç, forma şansı,
+      şikâyet), antrenman (6 odak, 3 yoğunluk), haftalık gelişim/gerileme, antrenör raporu yıldızları, Antrenman
+      ekranı, durum etiketleri (kadro/taktik/profil), eski kayıt dönüşümü (biçim 2 → 3).
 - [ ] 9. Yönetim, gelen kutusu, sezon sonu, yeni sezon
 - [ ] 10. Cila
 
@@ -217,8 +245,9 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
 - Oyuncu "transfer listesine koyma" yok; yapay zekâ ilgisi kendiliğinden geliyor.
 
 ## Sıradaki adım
-8. aşama: Moral (forma şansı, sözleşme, takım başarısı), form (zaten maç puanlarından), kalıcı sakatlıklar
-(maç içi sakatlık → gün sayısı, iyileşme günlük), cezalar (sarı kart birikimi, kırmızı kart → maç cezası),
-antrenman (genel odak seçimi), oyuncu gelişimi/gerilemesi (yaş, PA, profesyonellik, antrenman; günlük ya
-da haftalık), kondisyonun maçlar arası toparlanması. Günlük işler `daily.ts`'e eklenecek. GameWorld'e alan
-eklenirse CURRENT_WORLD_VERSION = 3 + migrate.
+9. aşama: Yönetim ve sezon döngüsü — yönetim beklentisi (fanExpectation) ve güven seviyesi, kötü giderse
+kovulma; Gelen Kutusu (world.news üzerine: okunmamış sayısı, kategoriler, mesaj detayı; transfer/sakatlık/
+yönetim/oyuncu şikâyeti mesajları); sezon sonu: ödüller (şampiyon, gol kralı, sezonun oyuncusu), küme düşme
+(son 3) → kurgusal 1. Lig takımları gelir, sıralama/yayın ödülleri, sözleşmesi bitenler (serbest/yenileme),
+emeklilik, altyapıdan genç oyuncu üretimi, yeni sezon fikstürü, sarı kart sayaçlarının sıfırlanması.
+CURRENT_WORLD_VERSION = 4 gerekirse.

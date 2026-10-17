@@ -6,6 +6,7 @@ import type { Club, GameWorld, Player, Position } from '../types';
 import { generateSeason } from '../league/schedule';
 import { initFinances } from '../finance/finance';
 import { defaultTactics } from '../match/tactics';
+import { DEFAULT_TRAINING } from '../squad/training';
 import { generatePlayer } from './playerGenerator';
 
 type Role = 'starter' | 'backup' | 'youth';
@@ -147,6 +148,7 @@ export function createWorld(
     nextPlayerId: nextId,
     season,
     tactics: { [playerClubId]: defaultTactics(Object.values(players).filter((p) => p.clubId === playerClubId)) },
+    training: { [playerClubId]: { ...DEFAULT_TRAINING } },
     finances: initFinances(data.clubs, startDate, players),
     offers: [],
     nextOfferId: 1,

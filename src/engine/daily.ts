@@ -1,8 +1,9 @@
 /**
  * Günlük işlemler: takvim her gün ilerlediğinde çalışır.
- * Sıra önemli: önce ay başı finansı, sonra transfer dönemi, kiralıklar, teklifler, yapay zekâ.
+ * Sıra önemli: önce ay başı finansı, sonra transfer dönemi, kiralıklar, teklifler, yapay zekâ,
+ * ardından oyuncu durumu (iyileşme, kondisyon, moral, antrenman sakatlığı; pazartesi gelişim).
  */
-import { addDays, formatDateTR } from './date';
+import { addDays, formatDateTR, weekday } from './date';
 import { startNewMonth } from './finance/finance';
 import { addNews } from './news';
 import type { Rng } from './rng';
@@ -10,6 +11,10 @@ import { aiTransferDay } from './transfer/ai';
 import { returnLoans } from './transfer/market';
 import { processOffers } from './transfer/offers';
 import { transferWindow } from './transfer/window';
+import { recoverCondition } from './squad/condition';
+import { weeklyDevelopment } from './squad/development';
+import { healInjuries, trainingInjuries } from './squad/injuries';
+import { moraleDrift, playerComplaints } from './squad/morale';
 import type { GameWorld } from './types';
 
 /** Transfer dönemi açılış/kapanış haberi. */
@@ -40,4 +45,13 @@ export function processDay(world: GameWorld, rng: Rng): void {
   returnLoans(world);
   processOffers(world);
   aiTransferDay(world, rng);
+
+  healInjuries(world);
+  recoverCondition(world);
+  moraleDrift(world);
+  trainingInjuries(world, rng);
+  if (weekday(world.date) === 1) {
+    weeklyDevelopment(world, rng);
+    playerComplaints(world);
+  }
 }

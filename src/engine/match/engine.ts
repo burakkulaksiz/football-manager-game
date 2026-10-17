@@ -58,9 +58,9 @@ export const TUNING = {
   /** Şutun rakip oyuncuya çarpma olasılığı. */
   blockChance: 0.22,
   onTargetBase: 0.5,
-  goalBase: 0.28,
+  goalBase: 0.27,
   /** İç saha avantajı: hücum ve orta saha çarpanları. */
-  homeAttack: 1.18,
+  homeAttack: 1.2,
   homeMidfield: 1.05,
   /** Dakika başına faul olasılığı (iki takım toplam). */
   foulChance: 0.24,
@@ -589,7 +589,7 @@ function resolveFoul(ctx: Ctx, attackingSide: Side): void {
   } else if (rng.chance((0.09 + aggression / 180) * (fouler.yellow ? 0.45 : 1))) {
     // Sarı kartı olan oyuncu daha temkinli oynar.
     if (fouler.yellow) {
-      state.cards.push({ ...displayMinute(state), clubId: team.clubId, playerId: foulerId, type: 'red' });
+      state.cards.push({ ...displayMinute(state), clubId: team.clubId, playerId: foulerId, type: 'red', secondYellow: true });
       emit(ctx, 'red', foulSide, 'secondYellow', { player: nameOf(ctx, foulerId), team: team.name });
       sendOff(ctx, foulerId);
     } else {
@@ -916,6 +916,7 @@ export function buildResult(state: MatchState): MatchResult {
       rating: Math.round(ps.rating * 10) / 10,
       goals: ps.goals,
       assists: ps.assists,
+      condition: Math.round(ps.condition),
     }));
   const best = [...players].sort((a, b) => b.rating - a.rating)[0];
   const stats = { home: teamStats(state, 'home'), away: teamStats(state, 'away') };

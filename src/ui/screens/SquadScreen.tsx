@@ -9,6 +9,7 @@ import {
   type Player,
 } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
+import { StatusTags } from '../components/StatusTags';
 import { formatDateShort, formatMoney, moraleLabel, nationName, POSITION_LABELS, positionGroup } from '../labels';
 
 type SortKey = 'number' | 'name' | 'position' | 'age' | 'nation' | 'condition' | 'morale' | 'value' | 'wage' | 'contract';
@@ -112,6 +113,7 @@ export function SquadScreen() {
               <td className="strong">
                 {p.firstName} {p.lastName}
                 {p.loan && <span className="tag" title={"Kiralık, dönüş " + formatDateShort(p.loan.until)}>Kiralık</span>}
+                <StatusTags player={p} />
               </td>
               <td><PositionBoxes player={p} /></td>
               <td className="num">{ageOn(p.birthDate, date)}</td>

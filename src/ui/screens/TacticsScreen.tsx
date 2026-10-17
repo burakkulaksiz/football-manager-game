@@ -21,6 +21,7 @@ import {
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { FormationPicker, InstructionsPanel } from '../components/InstructionsPanel';
 import { Shirt } from '../components/Shirt';
+import { StatusTags } from '../components/StatusTags';
 import { fitClass, POSITION_LABELS, POSITION_NAMES, positionGroup, ratingClass } from '../labels';
 
 /** Seçili öğe: listeden bir oyuncu ya da sahadaki/yedekteki bir yer. */
@@ -100,7 +101,9 @@ export function TacticsScreen() {
   tactics.lineup.forEach((id, i) => {
     const p = id === null ? undefined : byId.get(id);
     if (!p) return;
-    if (p.injury) warnings.push(`${p.firstName} ${p.lastName} sakat.`);
+    if (p.injury) warnings.push(`${p.firstName} ${p.lastName} sakat; maçta yerine otomatik biri oynar.`);
+    if (p.suspension > 0) warnings.push(`${p.firstName} ${p.lastName} cezalı; maçta yerine otomatik biri oynar.`);
+    else if (p.condition < 75) warnings.push(`${p.firstName} ${p.lastName} yorgun (kondisyon %${p.condition}).`);
     const fit = fits[i];
     if (fit !== null && fit !== undefined && fit < 0.82) {
       warnings.push(`${p.lastName} ${POSITION_NAMES[formation[i]!].toLocaleLowerCase('tr')} mevkisinde verimsiz (%${Math.round(fit * 100)}).`);
@@ -202,7 +205,7 @@ export function TacticsScreen() {
                     <td className="num">{p.squadNumber}</td>
                     <td className="strong">
                       {p.firstName} {p.lastName}
-                      {p.injury && <span className="ico-injury" title="Sakat"> ✚</span>}
+                      <StatusTags player={p} />
                     </td>
                     <td>
                       <span className="pos-boxes">

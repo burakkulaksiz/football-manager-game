@@ -1,7 +1,7 @@
 /**
  * Dizilişler ve otomatik kadro seçimi.
  */
-import { primaryPosition } from '../player';
+import { isAvailable, primaryPosition } from '../player';
 import type { Player, Position } from '../types';
 
 /** 11 mevkilik diziliş (kaleci ilk sırada). */
@@ -67,7 +67,7 @@ const FILL_ORDER: readonly Position[] = [
  * Sakatlar seçilmez. Yedekler: bir kaleci + kalan en iyi oyuncular.
  */
 export function autoSelectLineup(squad: readonly Player[], formation: Formation = DEFAULT_FORMATION): Lineup {
-  const available = squad.filter((p) => p.injury === null);
+  const available = squad.filter(isAvailable);
   const assigned = assignToFormation(available, formation);
   const starters = assigned.flatMap((playerId, i) => (playerId === null ? [] : [{ playerId, slot: formation[i]! }]));
   const used = new Set(starters.map((s) => s.playerId));
@@ -85,6 +85,11 @@ export function autoBench(available: readonly Player[], used: ReadonlySet<number
     if (p !== backupKeeper) bench.push(p.id);
   }
   return bench;
+}
+
+/** Kadro seçiminde yorgun oyuncuya ceza: 85+ kondisyon tam puan, altı orantılı düşer. */
+function conditionFactor(condition: number): number {
+  return condition >= 85 ? 1 : 0.7 + 0.3 * (condition / 85);
 }
 
 /** Kadronun bir dizilişe uygunluğu: ilk 11'in (CA × mevki verimi) toplamı. */
@@ -125,7 +130,7 @@ export function assignToFormation(players: readonly Player[], formation: Formati
     let bestScore = -1;
     for (const p of players) {
       if (used.has(p.id)) continue;
-      const score = p.currentAbility * slotFit(p, pos);
+      const score = p.currentAbility * slotFit(p, pos) * conditionFactor(p.condition);
       if (score > bestScore) {
         best = p;
         bestScore = score;

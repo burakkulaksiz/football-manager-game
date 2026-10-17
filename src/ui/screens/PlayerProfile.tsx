@@ -6,6 +6,7 @@ import {
   isActive,
   offerBlocker,
   type Player,
+  YELLOW_LIMIT,
   GOALKEEPING_ATTRS,
   marketValue,
   playerSeasonStats,
@@ -19,6 +20,7 @@ import {
 } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { Shirt } from '../components/Shirt';
+import { Stars } from '../components/Stars';
 import { ContractDialog, OfferDialog } from '../components/TransferDialogs';
 import {
   attrClass,
@@ -29,8 +31,10 @@ import {
   formatMoney,
   moraleLabel,
   nationName,
+  abilityStars,
   POSITION_NAMES,
   ratingClass,
+  trendSymbol,
 } from '../labels';
 import { PositionBoxes } from './SquadScreen';
 
@@ -175,6 +179,10 @@ export function PlayerProfile() {
             <Row label="Kondisyon">%{player.condition}</Row>
             <Row label="Form">{player.form.length > 0 ? player.form.join(' ') : '—'}</Row>
             <Row label="Moral">{moraleLabel(player.morale)}</Row>
+            <Row label="Gelişim"><span className={trendSymbol(player.trend).className}>{trendSymbol(player.trend).text}</span></Row>
+            <div className="sub-head sub-head-gap">Antrenör Raporu</div>
+            <Row label="Yetenek"><Stars value={abilityStars(player.currentAbility)} /></Row>
+            <Row label="Potansiyel"><Stars value={abilityStars(player.potentialAbility)} /></Row>
           </div>
         </div>
       </section>
@@ -186,7 +194,8 @@ export function PlayerProfile() {
             <Row label="Sakatlık">
               {player.injury ? `${player.injury.name} (${player.injury.daysOut} gün)` : 'Yok'}
             </Row>
-            <Row label="Ceza">Yok</Row>
+            <Row label="Ceza">{player.suspension > 0 ? player.suspension + ' maç' : 'Yok'}</Row>
+            <Row label="Sarı kart birikimi">{player.yellowCards} / {YELLOW_LIMIT}</Row>
             <Row label="Kondisyon">{conditionLabel(player.condition)}</Row>
             <div className="sub-head sub-head-gap">Mevkiler</div>
             {knownPositions.map((p) => (

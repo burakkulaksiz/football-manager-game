@@ -159,5 +159,10 @@ export function generatePlayer(
       expires: makeDate(startYear + contractYears, 6, 30),
     },
     loan: null,
+    yellowCards: 0,
+    suspension: 0,
+    progress: 0,
+    trend: 0,
+    lastComplaint: null,
   };
 }

@@ -206,6 +206,7 @@ export function negotiateRenewal(world: GameWorld, playerId: number, terms: Tran
   if (result.outcome !== 'signed') return result;
   // Yenilemede süre bu sezonun sonundan itibaren sayılır.
   player.contract = { wage: terms.wage, expires: contractExpiry(world.date, terms.years) };
+  player.morale = Math.min(100, player.morale + 8);
   if (terms.signingBonus > 0) addExpense(fin, 'signingBonuses', terms.signingBonus);
   addNews(world, {
     category: 'contract',

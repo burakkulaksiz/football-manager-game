@@ -81,3 +81,8 @@ export function marketValue(player: Player, date: GameDate): number {
 
   return Math.max(10_000, roundNice(value));
 }
+
+/** Maç kadrosuna girebilir mi (sakat ya da cezalı değil)? */
+export function isAvailable(player: Player): boolean {
+  return player.injury === null && player.suspension === 0;
+}

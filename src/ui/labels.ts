@@ -188,3 +188,42 @@ export function ratingClass(rating: number): string {
   if (rating < 6) return 'rating rating-poor';
   return 'rating';
 }
+
+/** Takım talimatı seçenekleri: etiket + kısa açıklama (taktik ekranında ipucu olarak). */
+export const INSTRUCTION_OPTIONS = {
+  passing: [
+    { value: 'short', label: 'Kısa', hint: 'Topu elde tutar; iyi pasörlerle daha etkili, daha az ama daha net pozisyon.' },
+    { value: 'mixed', label: 'Karışık', hint: 'Dengeli oyun.' },
+    { value: 'direct', label: 'Uzun', hint: 'Hızlı hücum, daha çok atak ve kafa topu; top daha çabuk kaybedilir.' },
+  ],
+  tempo: [
+    { value: 'slow', label: 'Yavaş', hint: 'Sabırlı oyun, daha kaliteli pozisyonlar, daha az yorgunluk.' },
+    { value: 'normal', label: 'Normal', hint: 'Dengeli tempo.' },
+    { value: 'fast', label: 'Hızlı', hint: 'Daha çok atak ama aceleci şutlar; oyuncular daha çok yorulur.' },
+  ],
+  pressing: [
+    { value: 'low', label: 'Az', hint: 'Kompakt, az faul, az yorgunluk; rakip topu rahat tutar.' },
+    { value: 'normal', label: 'Normal', hint: 'Dengeli pres.' },
+    { value: 'high', label: 'Yoğun', hint: 'Rakibin top hakimiyetini düşürür; çok yorar, faul ve kart riski artar.' },
+  ],
+  defensiveLine: [
+    { value: 'deep', label: 'Derin', hint: 'Arkaya alan bırakmaz, rakip şut bulur ama zor pozisyonlardan.' },
+    { value: 'normal', label: 'Normal', hint: 'Dengeli savunma hattı.' },
+    { value: 'high', label: 'Yüksek', hint: 'Takımı ileri taşır; hızlı rakip forvetlere karşı arkada tehlike.' },
+  ],
+} as const;
+
+export const MENTALITY_HINTS: Record<-2 | -1 | 0 | 1 | 2, string> = {
+  [-2]: 'Kapan ve skoru koru: az atak, rakibe az alan.',
+  [-1]: 'Önce savunma, kontra fırsatlarını kolla.',
+  0: 'Dengeli oyun.',
+  1: 'Daha çok atak, rakibe daha çok alan.',
+  2: 'Her şeyiyle hücum: çok şut ama arkada büyük boşluklar.',
+};
+
+/** Mevki uyumu (0–1) → uyarı sınıfı. */
+export function fitClass(fit: number): 'fit-good' | 'fit-ok' | 'fit-bad' {
+  if (fit >= 0.95) return 'fit-good';
+  if (fit >= 0.82) return 'fit-ok';
+  return 'fit-bad';
+}

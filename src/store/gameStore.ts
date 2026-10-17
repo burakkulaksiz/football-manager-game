@@ -1,18 +1,22 @@
 import { create } from 'zustand';
 import {
   advance,
+  changeTactics,
+  clubPlayers,
   createWorld,
   finishUserMatch,
   SEASON_START_DATE,
-  setMentality,
   simulateToEnd,
   startUserMatch,
   stepMatch,
   substitute,
+  type FormationId,
   type GameWorld,
   type MatchState,
-  type Mentality,
+  type Player,
   type Side,
+  type Tactics,
+  type TeamInstructions,
 } from '../engine';
 import { gameData } from '../gameData';
 
@@ -68,10 +72,14 @@ interface GameState {
    * Maçlar oynanınca o haftanın sonuçları gösterilir.
    */
   advance: () => void;
+  /** Kendi kulübümüzün taktiğini günceller (motorun saf yardımcılarıyla). */
+  updateTactics: (fn: (tactics: Tactics, squad: Player[]) => Tactics) => void;
+  /** Canlı maç başlamadan taktik değiştiyse maçı aynı tohumla yeniden kurar. */
+  refreshPreMatch: () => void;
+  liveChangeTactics: (change: { formation?: FormationId; instructions?: Partial<TeamInstructions> }) => void;
   /** Canlı maç: bir adım (dakika) ilerlet. */
   stepLiveMatch: () => void;
   liveSubstitute: (outId: number, inId: number) => boolean;
-  liveSetMentality: (mentality: Mentality) => void;
   /** Kalan dakikaları anında oynat (değişiklikleri yapay zekâ yapar). */
   liveInstantFinish: () => void;
   /** Biten maçı kaydet, günün diğer maçlarını oynat, sonuçları göster. */
@@ -175,6 +183,29 @@ export const useGameStore = create<GameState>()((set, get) => ({
     }
   },
 
+  updateTactics: (fn) => {
+    const { world } = get();
+    if (!world) return;
+    const clubId = world.playerClubId;
+    const current = world.tactics[clubId];
+    if (!current) return;
+    const next = fn(current, clubPlayers(world, clubId));
+    set({ world: { ...world, tactics: { ...world.tactics, [clubId]: next } } });
+  },
+
+  refreshPreMatch: () => {
+    const { world, liveMatch } = get();
+    if (!world || !liveMatch || liveMatch.period !== 'pre') return;
+    set({ liveMatch: startUserMatch(world, liveMatch.seed) });
+  },
+
+  liveChangeTactics: (change) => {
+    const { world, liveMatch } = get();
+    if (!world || !liveMatch) return;
+    changeTactics(liveMatch, world.players, userSide(liveMatch, world), change);
+    set({ liveMatch: { ...liveMatch } });
+  },
+
   stepLiveMatch: () => {
     const { world, liveMatch } = get();
     if (!world || !liveMatch) return;
@@ -188,13 +219,6 @@ export const useGameStore = create<GameState>()((set, get) => ({
     const ok = substitute(liveMatch, world.players, userSide(liveMatch, world), outId, inId);
     if (ok) set({ liveMatch: { ...liveMatch } });
     return ok;
-  },
-
-  liveSetMentality: (mentality) => {
-    const { world, liveMatch } = get();
-    if (!world || !liveMatch) return;
-    setMentality(liveMatch, userSide(liveMatch, world), mentality);
-    set({ liveMatch: { ...liveMatch } });
   },
 
   liveInstantFinish: () => {

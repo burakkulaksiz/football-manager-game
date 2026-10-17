@@ -31,7 +31,10 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
   league/standings.ts  Puan durumu + eşitlik kuralları.
   league/stats.ts      Gol/asist/puan sıralamaları, oyuncu sezon istatistikleri (maç kayıtlarından türetilir).
   match/state.ts       Canlı maç durumu tipleri (düz veri, serileştirilebilir), dakika gösterimi.
-  match/formation.ts   Varsayılan 4-2-3-1, mevki uyumu (slotFit = yanlış mevki cezası), otomatik ilk 11 + 9 yedek.
+  match/formation.ts   6 diziliş + saha yerleşimi (FORMATION_LAYOUT), mevki uyumu (slotFit = yanlış mevki cezası),
+                       otomatik ilk 11 + 9 yedek, chooseFormation (yapay zekâ), assignToFormation.
+  match/tactics.ts     Takım talimatları + motora etkileri (instructionEffects), kullanıcı taktiği (Tactics),
+                       kadro düzenleme yardımcıları (placePlayer, removePlayer, changeFormation, resolveLineup).
   match/engine.ts      Dakika dakika motor: createMatch, stepMatch, substitute, setMentality, simulateToEnd,
                        buildResult. Denge sabitleri TUNING içinde.
   match/commentary.ts  Türkçe anlatım şablonları (isimden sonra ek gelmeyecek şekilde yazıldı).
@@ -47,8 +50,9 @@ src/ui/                React. Motoru sadece çağırır, oyun mantığı içerme
   labels.ts            Türkçe etiketler (özellik, mevki, beklenti), para/tarih biçimleri.
   layout/              GameShell, Header, NavBar, Sidebar, StatusBar, pageHeading (başlık hapı + konum yolu)
   screens/             MainMenu, NewGameScreen, SquadScreen, PlayerProfile, ClubInfoScreen,
-                       FixturesScreen, TableScreen, StatsScreen, MatchScreen, Placeholder
-  components/          ClubBadge, Shirt, OutcomeBox
+                       FixturesScreen, TableScreen, StatsScreen, MatchScreen, TacticsScreen, Placeholder
+  components/          ClubBadge, Shirt, OutcomeBox, InstructionsPanel (FormationPicker + talimatlar; taktik
+                       ekranı ve maç içinde ortak)
   styles.css           Tema; renkler CSS değişkenleri olarak (bkz. "Görünüm")
 ```
 Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
@@ -75,10 +79,21 @@ Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
   (→ kafa şansı), sakatlık, yorgunluk. Verim = mevki uyumu × kondisyon × moral × form × günlük form.
   Yapay zekâ: geride kalan 60'tan sonra yüklenir, önde olan 55'ten sonra skoru korur; 58'den sonra
   yorgun/kötü oynayanı değiştirir (en fazla 4). 5 değişiklik hakkı. İç saha: hücum ×1.18, orta saha ×1.05.
-  ~4600 maçta ölçülen: **2.57 gol/maç, %44.8 ev galibiyeti, %25.4 beraberlik**, takım başına 13 şut /
-  4.8 isabet / 4.9 korner, maç başına 3.2 sarı / 0.2 kırmızı.
-- **Mentalite** (−2…+2) şimdilik tek taktik ayarı; 5. aşamada tam taktiğe genişleyecek.
-- **Herkes 4-2-3-1** oynuyor (taktik ekranı 5. aşamada). İlk 11 otomatik: mevki için CA × uyum.
+  ~4600 maçta ölçülen (5. aşama sonrası): **2.56 gol/maç, %44.6 ev galibiyeti, %25.0 beraberlik**,
+  takım başına 13.1 şut / 4.9 isabet / 4.8 korner, maç başına 3.3 sarı / 0.2 kırmızı.
+- **Taktik:** 6 diziliş (4-4-2, 4-3-3, 4-2-3-1, 3-5-2, 5-3-2, 4-5-1) + talimatlar: mentalite (−2…+2),
+  pas (kısa/karışık/uzun), tempo, pres, savunma hattı. Etkiler çarpan olarak (`instructionEffects`):
+  hücum → atak/şut ↑ ama rakibe açık; kısa pas → top hakimiyeti (pas kalitesine bağlı) + kaliteli şut;
+  uzun → atak ↑, kafa payı ↑, top kaybı; hızlı tempo → atak ↑, yorgunluk ↑; yoğun pres → rakip
+  top hakimiyeti ↓, faul ve yorgunluk ↑; yüksek hat → rakip forvetler hızlıysa gol riski ↑; derin hat →
+  rakip daha çok ama daha kötü şut. Varsayılan talimatlar etkisiz (denge testleri bununla).
+- **Kaptan:** sahadaysa liderliğine göre takıma ±%3. Penaltı/serbest vuruşçu seçiliyse ve sahadaysa o kullanır.
+- **Kullanıcı taktiği** `world.tactics[clubId]` içinde (yalnızca kendi kulübümüz). Maçta `resolveLineup`
+  sakat/ayrılmış oyuncuyu çıkarır, boş mevkiyi otomatik doldurur, yedek boşsa otomatik seçer.
+- **Yapay zekâ** her maçta kadrosuna en uygun dizilişi seçer (`chooseFormation`), talimatları varsayılan,
+  mentaliteyi skora göre değiştirir.
+- **Maç içi taktik:** diziliş değişince sahadakiler yeni mevkilere dağıtılır (kaleci kalede). Başlama
+  öncesi Taktik ekranında yapılan değişiklik maç ekranına dönünce aynı tohumla maça yansır (`refreshPreMatch`).
 - **Puan (1–10):** 6.0'dan başlar; gol +1, asist +0.6, kurtarış +0.3, blok +0.15, sarı −0.3, kırmızı −1.5,
   yenilen gol (kaleci −0.4, defans −0.15), maç sonu galibiyet ±0.3, gol yemeyen kaleci/defans bonus.
   Maç sonrası puan oyuncunun `form` listesine eklenir (son 5).
@@ -128,7 +143,9 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
       baskı çubuğu, istatistikler, canlı puan/kondisyon, değişiklik, mentalite, 4 hız, anında sonuç,
       maçın adamı), diğer maçlar arka planda; istatistik doğrulama testi; profil ve lig istatistikleri
       (maç, gol, asist, kart, ortalama puan, asist krallığı, puan sıralaması). 2D saha istenmedi.
-- [ ] 5. Taktik ekranı ve motora etkisi
+- [x] **5. Taktik** — taktik ekranı (kadro listesi, formalı saha, yedek kulübesi, iki tıkla yerleştirme/takas,
+      uyum noktaları, uyarılar, otomatik seç), 6 diziliş, talimatlar, kaptan/penaltıcı/serbest vuruşçu,
+      motora etkileri (istatistiksel testlerle), yapay zekâ diziliş seçimi, maç içi taktik paneli.
 - [ ] 6. Kayıt sistemi (yeni oyun, kaydet/yükle, otomatik kayıt)
 - [ ] 7. Transfer, sözleşme, finans
 - [ ] 8. Moral, form, sakatlık, ceza, antrenman, gelişim
@@ -145,7 +162,6 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
 - 2D saha görünümü: kullanıcı "henüz gerekmez" dedi.
 
 ## Sıradaki adım
-5. aşama: Taktik ekranı — dizilişler (4-4-2, 4-3-3, 4-2-3-1, 3-5-2, 5-3-2, 4-5-1), mentalite, pas tarzı,
-tempo, pres, savunma hattı; ilk 11 / yedek / kaptan / penaltı ve serbest vuruşçu seçimi (Shirt bileşeni ile
-saha görünümü); taktiklerin motora etkisi (formation.ts + engine.ts TUNING/SLOT_WEIGHTS); yanlış mevki cezası
-zaten slotFit'te. Maç içinde de taktik değişikliği.
+6. aşama: Kayıt sistemi — yeni oyun, birden fazla kayıt slotu (Dexie `saves` tablosu), kaydet/yükle,
+otomatik kayıt (ör. her maç gününden sonra), ana menüde Kayıt Yükle. GameWorld düz veri; liveMatch
+sırasında kayıt ya engellenecek ya da maç durumu da yazılacak (karar verilmeli).

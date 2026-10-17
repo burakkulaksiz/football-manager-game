@@ -13,6 +13,7 @@ export * from './league/standings';
 export * from './league/stats';
 export * from './match/state';
 export * from './match/formation';
+export * from './match/tactics';
 export * from './match/engine';
 export * from './match/simulate';
 export * from './gameFlow';

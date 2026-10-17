@@ -1,5 +1,6 @@
 import type { Attributes, HiddenAttributes } from './attributes';
 import type { GameDate } from './date';
+import type { Tactics } from './match/tactics';
 
 export type Position =
   | 'GK'
@@ -164,4 +165,6 @@ export interface GameWorld {
   players: Record<number, Player>;
   nextPlayerId: number;
   season: Season;
+  /** Kulüp id → kayıtlı taktik (şimdilik yalnızca kullanıcının kulübü; yapay zekâ her maçta seçer). */
+  tactics: Record<string, Tactics>;
 }

@@ -4,6 +4,7 @@ import { roundNice } from '../player';
 import { Rng } from '../rng';
 import type { Club, GameWorld, Player, Position } from '../types';
 import { generateSeason } from '../league/schedule';
+import { defaultTactics } from '../match/tactics';
 import { generatePlayer } from './playerGenerator';
 
 type Role = 'starter' | 'backup' | 'youth';
@@ -144,6 +145,7 @@ export function createWorld(
     players,
     nextPlayerId: nextId,
     season,
+    tactics: { [playerClubId]: defaultTactics(Object.values(players).filter((p) => p.clubId === playerClubId)) },
   };
 }
 

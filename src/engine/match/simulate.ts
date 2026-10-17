@@ -2,36 +2,58 @@
 import { clubPlayers, getClub } from '../generation/worldGenerator';
 import type { Rng } from '../rng';
 import type { Fixture, GameWorld, MatchResult } from '../types';
-import { buildResult, createMatch, simulateToEnd, type MatchSetup } from './engine';
-import { autoSelectLineup } from './formation';
+import { buildResult, createMatch, simulateToEnd, type MatchSetup, type TeamSetup } from './engine';
+import { autoSelectLineup, chooseFormation, FORMATIONS } from './formation';
 import type { MatchState } from './state';
+import { resolveLineup } from './tactics';
 
 /** Son kaç maç puanı form olarak tutulur. */
 const FORM_LENGTH = 5;
 
-/** Fikstür için maç kurulumu. Maç tohumu dünya RNG'sinden çekilir (tekrarlanabilirlik). */
-export function setupFixture(world: GameWorld, fixture: Fixture, rng: Rng): MatchSetup {
-  const team = (clubId: string) => ({
-    clubId,
-    name: getClub(world, clubId).name,
-    lineup: autoSelectLineup(clubPlayers(world, clubId)),
-    userControlled: clubId === world.playerClubId,
-  });
+/** Kulübün maç kadrosu: kayıtlı taktiği varsa o, yoksa yapay zekâ kadrosuna en uygun dizilişi seçer. */
+function teamSetup(world: GameWorld, clubId: string): TeamSetup {
+  const squad = clubPlayers(world, clubId);
+  const name = getClub(world, clubId).name;
+  const tactics = world.tactics[clubId];
+  if (tactics) {
+    return {
+      clubId,
+      name,
+      lineup: resolveLineup(tactics, squad),
+      userControlled: clubId === world.playerClubId,
+      formation: tactics.formation,
+      instructions: tactics.instructions,
+      captainId: tactics.captainId,
+      penaltyTakerId: tactics.penaltyTakerId,
+      freeKickTakerId: tactics.freeKickTakerId,
+    };
+  }
+  const formation = chooseFormation(squad);
+  return { clubId, name, lineup: autoSelectLineup(squad, FORMATIONS[formation]), formation };
+}
+
+/** Fikstür için maç kurulumu. */
+export function setupFixture(world: GameWorld, fixture: Fixture, seed: number): MatchSetup {
   return {
     fixtureId: fixture.id,
-    home: team(fixture.homeId),
-    away: team(fixture.awayId),
-    seed: rng.int(0, 0xffffffff),
+    home: teamSetup(world, fixture.homeId),
+    away: teamSetup(world, fixture.awayId),
+    seed,
   };
 }
 
-export function startFixture(world: GameWorld, fixture: Fixture, rng: Rng): MatchState {
-  return createMatch(setupFixture(world, fixture, rng), world.players);
+/** Maç tohumu dünya RNG'sinden çekilir (tekrarlanabilirlik). */
+export function drawMatchSeed(rng: Rng): number {
+  return rng.int(0, 0xffffffff);
+}
+
+export function startFixture(world: GameWorld, fixture: Fixture, seed: number): MatchState {
+  return createMatch(setupFixture(world, fixture, seed), world.players);
 }
 
 /** Maçı arka planda baştan sona oynatır. */
 export function playFixture(world: GameWorld, fixture: Fixture, rng: Rng): MatchResult {
-  const state = startFixture(world, fixture, rng);
+  const state = startFixture(world, fixture, drawMatchSeed(rng));
   simulateToEnd(state, world.players);
   return buildResult(state);
 }

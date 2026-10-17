@@ -1,9 +1,11 @@
 /** Canlı maç durumunun tipleri. Hepsi düz veri (serileştirilebilir). */
 import type { CardEvent, GoalEvent, InjuryEvent, Position } from '../types';
+import type { FormationId } from './formation';
+import type { TeamInstructions } from './tactics';
 
 export type Side = 'home' | 'away';
 
-/** Çok defansif (-2) … çok hücum (+2). 5. aşamada tam taktik sistemine genişleyecek. */
+/** Çok defansif (-2) … çok hücum (+2). */
 export type Mentality = -2 | -1 | 0 | 1 | 2;
 
 export type Period = 'pre' | 'first' | 'half' | 'second' | 'full';
@@ -78,8 +80,13 @@ export interface TeamState {
   /** Henüz oyuna girmemiş yedekler. */
   bench: number[];
   subsUsed: number;
-  mentality: Mentality;
-  /** true: değişiklik ve mentaliteyi kullanıcı yönetir (sakatlık değişikliği yine otomatik). */
+  formation: FormationId;
+  /** Mentalite dahil takım talimatları (yapay zekâ takımında mentalite skora göre değişir). */
+  instructions: TeamInstructions;
+  captainId: number | null;
+  penaltyTakerId: number | null;
+  freeKickTakerId: number | null;
+  /** true: değişiklik ve taktiği kullanıcı yönetir (sakatlık değişikliği yine otomatik). */
   userControlled: boolean;
   counters: TeamCounters;
   /** Başlangıçtaki 11'in birim ağırlık toplamları; eksik oyuncu takımı zayıflatsın diye sabit. */
@@ -88,6 +95,8 @@ export interface TeamState {
 
 export interface MatchState {
   fixtureId: number;
+  /** Maçın RNG tohumu (başlama öncesi kadro değişirse maç aynı tohumla yeniden kurulur). */
+  seed: number;
   period: Period;
   /** Geçen dakika (uzatmalar dahil): ilk yarı 1–45+a, ikinci yarı 46–90+b. */
   minute: number;

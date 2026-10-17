@@ -7,11 +7,11 @@ import {
   primaryPosition,
   type GameWorld,
   type MatchState,
-  type Mentality,
   type Side,
 } from '../../engine';
 import { useGameStore, userSide, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
+import { FormationPicker, InstructionsPanel } from '../components/InstructionsPanel';
 import { MENTALITY_LABELS, POSITION_LABELS, positionGroup, ratingClass } from '../labels';
 
 /** Dakika başına bekleme süresi (ms). */
@@ -253,19 +253,21 @@ function TeamPanel({ match, side }: { match: MatchState; side: Side }) {
   );
 }
 
-function Controls({ match, running, setRunning, speed, setSpeed }: {
+function Controls({ match, running, setRunning, speed, setSpeed, showTactics, setShowTactics }: {
   match: MatchState;
   running: boolean;
   setRunning: (r: boolean) => void;
   speed: number;
   setSpeed: (s: number) => void;
+  showTactics: boolean;
+  setShowTactics: (v: boolean) => void;
 }) {
   const world = useWorld();
   const step = useGameStore((s) => s.stepLiveMatch);
   const instant = useGameStore((s) => s.liveInstantFinish);
   const finish = useGameStore((s) => s.finishLiveMatch);
-  const setMentality = useGameStore((s) => s.liveSetMentality);
   const mySide = userSide(match, world);
+  const myTeam = match[mySide];
 
   const start = () => {
     // Başlama ve devre arası bir adımla geçilir, sonra dakikalar akar.
@@ -296,18 +298,14 @@ function Controls({ match, running, setRunning, speed, setSpeed }: {
         ))}
       </div>
 
-      <label className="mentality">
-        <span>Mentalite</span>
-        <select
-          value={match[mySide].mentality}
-          disabled={match.period === 'full'}
-          onChange={(e) => setMentality(Number(e.target.value) as Mentality)}
-        >
-          {([-2, -1, 0, 1, 2] as const).map((m) => (
-            <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>
-          ))}
-        </select>
-      </label>
+      <button
+        className={`btn tactics-toggle${showTactics ? ' active' : ''}`}
+        disabled={match.period === 'full'}
+        onClick={() => setShowTactics(!showTactics)}
+        title="Diziliş ve takım talimatları"
+      >
+        Taktik: {myTeam.formation} · {MENTALITY_LABELS[myTeam.instructions.mentality]} {showTactics ? '▴' : '▾'}
+      </button>
 
       <button
         className="btn"
@@ -324,13 +322,41 @@ function Controls({ match, running, setRunning, speed, setSpeed }: {
   );
 }
 
+/** Maç içi taktik paneli: diziliş ve talimatlar anında uygulanır. */
+function LiveTactics({ match }: { match: MatchState }) {
+  const world = useWorld();
+  const change = useGameStore((s) => s.liveChangeTactics);
+  const team = match[userSide(match, world)];
+  return (
+    <section className="panel">
+      <div className="panel-title panel-title-row">
+        <span>Taktik Değişikliği</span>
+        <FormationPicker value={team.formation} onChange={(formation) => change({ formation })} />
+      </div>
+      <div className="panel-body">
+        <InstructionsPanel instructions={team.instructions} onChange={(instructions) => change({ instructions })} />
+        <div className="panel-note">
+          Diziliş değişince sahadaki oyuncular yeni mevkilere en uygun şekilde dağıtılır. Değişiklikler hemen etkili olur.
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function MatchScreen() {
   const match = useGameStore((s) => s.liveMatch);
   const step = useGameStore((s) => s.stepLiveMatch);
+  const refreshPreMatch = useGameStore((s) => s.refreshPreMatch);
   const world = useWorld();
   const [running, setRunning] = useState(false);
   const [speed, setSpeed] = useState(1);
+  const [showTactics, setShowTactics] = useState(false);
   const period = match?.period;
+
+  // Başlama öncesi Taktik ekranına gidilip dönüldüyse maçı güncel kadroyla yeniden kur.
+  useEffect(() => {
+    refreshPreMatch();
+  }, [refreshPreMatch]);
 
   // Saat: çalışırken her tikte bir dakika. Devre arası ve maç sonunda kendiliğinden durur.
   useEffect(() => {
@@ -361,14 +387,28 @@ export function MatchScreen() {
     <div className="match-screen">
       <Scoreboard match={match} />
       <MomentumBar match={match} />
-      <Controls match={match} running={running} setRunning={setRunning} speed={speed} setSpeed={setSpeed} />
+      <Controls
+        match={match}
+        running={running}
+        setRunning={setRunning}
+        speed={speed}
+        setSpeed={setSpeed}
+        showTactics={showTactics}
+        setShowTactics={setShowTactics}
+      />
+      {showTactics && match.period !== 'full' && <LiveTactics match={match} />}
+      {match.period === 'pre' && (
+        <div className="motm">
+          Kadro ve taktik, Taktik ekranındaki ayarlarından geliyor. Değiştirmek için sol menüden Taktik&apos;e gidip geri dönebilirsin.
+        </div>
+      )}
       {motm && (
         <div className="motm">
           Maçın Adamı: <strong>{world.players[motm.playerId]!.firstName} {world.players[motm.playerId]!.lastName}</strong>{' '}
           <span className={ratingClass(motm.rating)}>{motm.rating.toFixed(1)}</span>
         </div>
       )}
-      {match.period === 'half' && <div className="motm">Devre arası — değişiklik yapabilir, mentaliteyi değiştirebilirsin.</div>}
+      {match.period === 'half' && <div className="motm">Devre arası — oyuncu değişikliği ve taktik değişikliği yapabilirsin.</div>}
       <div className="match-grid">
         <TeamPanel match={match} side="home" />
         <div className="match-center">

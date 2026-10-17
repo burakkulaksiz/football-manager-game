@@ -17,7 +17,14 @@ import type { Attributes } from '../attributes';
 import { Rng } from '../rng';
 import type { GoalKind, MatchResult, Player, PlayerMatchRecord, Position, TeamMatchStats } from '../types';
 import { commentary, type CommentaryKey } from './commentary';
-import { slotFit, type Lineup } from './formation';
+import {
+  assignToFormation,
+  DEFAULT_FORMATION_ID,
+  FORMATIONS,
+  slotFit,
+  type FormationId,
+  type Lineup,
+} from './formation';
 import {
   displayMinute,
   MAX_SUBS,
@@ -29,6 +36,14 @@ import {
   type Side,
   type TeamState,
 } from './state';
+import {
+  DEFAULT_INSTRUCTIONS,
+  instructionEffects,
+  NEUTRAL_EFFECTS,
+  type InstructionEffects,
+  type TeamInstructions,
+  type TeamProfile,
+} from './tactics';
 
 export type PlayerLookup = Record<number, Player>;
 
@@ -43,7 +58,7 @@ export const TUNING = {
   /** Şutun rakip oyuncuya çarpma olasılığı. */
   blockChance: 0.22,
   onTargetBase: 0.5,
-  goalBase: 0.29,
+  goalBase: 0.28,
   /** İç saha avantajı: hücum ve orta saha çarpanları. */
   homeAttack: 1.18,
   homeMidfield: 1.05,
@@ -120,6 +135,20 @@ interface Units {
   mid: number;
   def: number;
   gk: number;
+  /** Talimat etkileri için takım profili. */
+  profile: TeamProfile;
+}
+
+const DEFENSIVE_SLOTS: ReadonlySet<Position> = new Set(['DR', 'DC', 'DL', 'WBR', 'WBL']);
+const ATTACKING_SLOTS: ReadonlySet<Position> = new Set(['AMR', 'AMC', 'AML', 'ST']);
+
+const average = (xs: number[], fallback: number) => (xs.length === 0 ? fallback : xs.reduce((a, b) => a + b, 0) / xs.length);
+
+/** Kaptan sahadaysa liderliğine göre takıma küçük bir çarpan (±%3). */
+function captainBonus(team: TeamState, lookup: PlayerLookup): number {
+  const id = team.captainId;
+  if (id === null || !team.onPitch.includes(id)) return 1;
+  return 1 + (lookup[id]!.attributes.leadership - 10) * 0.003;
 }
 
 function teamUnits(state: MatchState, team: TeamState, lookup: PlayerLookup): Units {
@@ -127,6 +156,9 @@ function teamUnits(state: MatchState, team: TeamState, lookup: PlayerLookup): Un
   let mid = 0;
   let def = 0;
   let gk = 4; // kalede kaleci yoksa (kırmızı kart, değişiklik hakkı bitti) çok zayıf
+  const passing: number[] = [];
+  const defencePace: number[] = [];
+  const attackPace: number[] = [];
   for (const id of team.onPitch) {
     const ps = state.players[id]!;
     const p = lookup[id]!;
@@ -139,9 +171,35 @@ function teamUnits(state: MatchState, team: TeamState, lookup: PlayerLookup): Un
     att += w.att * eff * attackScore(p.attributes);
     mid += w.mid * eff * midfieldScore(p.attributes);
     def += w.def * eff * defenceScore(p.attributes);
+    passing.push((p.attributes.passing + p.attributes.technique) / 2);
+    if (DEFENSIVE_SLOTS.has(ps.slot!)) defencePace.push(p.attributes.pace);
+    if (ATTACKING_SLOTS.has(ps.slot!)) attackPace.push(p.attributes.pace);
   }
   const fw = team.fullWeights;
-  return { att: att / fw.att, mid: mid / fw.mid, def: def / fw.def, gk };
+  const cap = captainBonus(team, lookup);
+  return {
+    att: (att / fw.att) * cap,
+    mid: (mid / fw.mid) * cap,
+    def: (def / fw.def) * cap,
+    gk,
+    profile: {
+      passing: average(passing, 10),
+      defencePace: average(defencePace, 10),
+      attackPace: average(attackPace, 10),
+    },
+  };
+}
+
+/** Birim ağırlık toplamları: eksik oyuncu takımı zayıflatsın diye 11 kişilik dizilişten hesaplanır. */
+function formationWeights(slots: readonly Position[]): TeamState['fullWeights'] {
+  const fw = { att: 0, mid: 0, def: 0 };
+  for (const slot of slots) {
+    const w = SLOT_WEIGHTS[slot];
+    fw.att += w.att;
+    fw.mid += w.mid;
+    fw.def += w.def;
+  }
+  return { att: Math.max(fw.att, 0.1), mid: Math.max(fw.mid, 0.1), def: Math.max(fw.def, 0.1) };
 }
 
 /* ------------------------------------------------------------------ */
@@ -153,6 +211,11 @@ export interface TeamSetup {
   name: string;
   lineup: Lineup;
   userControlled?: boolean;
+  formation?: FormationId;
+  instructions?: TeamInstructions;
+  captainId?: number | null;
+  penaltyTakerId?: number | null;
+  freeKickTakerId?: number | null;
 }
 
 export interface MatchSetup {
@@ -186,15 +249,11 @@ function newPlayerState(rng: Rng, p: Player, side: Side, slot: Position | null):
 }
 
 function newTeam(rng: Rng, setup: TeamSetup, side: Side, lookup: PlayerLookup, players: MatchState['players']): TeamState {
-  const fullWeights = { att: 0, mid: 0, def: 0 };
   for (const { playerId, slot } of setup.lineup.starters) {
     players[playerId] = newPlayerState(rng, lookup[playerId]!, side, slot);
-    const w = SLOT_WEIGHTS[slot];
-    fullWeights.att += w.att;
-    fullWeights.mid += w.mid;
-    fullWeights.def += w.def;
   }
   for (const id of setup.lineup.bench) players[id] = newPlayerState(rng, lookup[id]!, side, null);
+  const formation = setup.formation ?? DEFAULT_FORMATION_ID;
   return {
     clubId: setup.clubId,
     name: setup.name,
@@ -202,14 +261,14 @@ function newTeam(rng: Rng, setup: TeamSetup, side: Side, lookup: PlayerLookup, p
     onPitch: setup.lineup.starters.map((s) => s.playerId),
     bench: [...setup.lineup.bench],
     subsUsed: 0,
-    mentality: 0,
+    formation,
+    instructions: { ...(setup.instructions ?? DEFAULT_INSTRUCTIONS) },
+    captainId: setup.captainId ?? null,
+    penaltyTakerId: setup.penaltyTakerId ?? null,
+    freeKickTakerId: setup.freeKickTakerId ?? null,
     userControlled: setup.userControlled ?? false,
     counters: { shots: 0, shotsOnTarget: 0, corners: 0, fouls: 0, yellowCards: 0, redCards: 0 },
-    fullWeights: {
-      att: Math.max(fullWeights.att, 0.1),
-      mid: Math.max(fullWeights.mid, 0.1),
-      def: Math.max(fullWeights.def, 0.1),
-    },
+    fullWeights: formationWeights(FORMATIONS[formation]),
   };
 }
 
@@ -220,6 +279,7 @@ export function createMatch(setup: MatchSetup, lookup: PlayerLookup): MatchState
   const away = newTeam(rng, setup.away, 'away', lookup, players);
   return {
     fixtureId: setup.fixtureId,
+    seed: setup.seed,
     period: 'pre',
     minute: 0,
     addedTime: [rng.int(0, 3), rng.int(2, 6)],
@@ -246,6 +306,12 @@ interface Ctx {
   state: MatchState;
   lookup: PlayerLookup;
   rng: Rng;
+  /** Bu dakikanın taktik etkileri (dakika dışı işlemlerde etkisiz). */
+  effects: Record<Side, InstructionEffects>;
+}
+
+function makeCtx(state: MatchState, lookup: PlayerLookup): Ctx {
+  return { state, lookup, rng: Rng.fromState(state.rngState), effects: { home: NEUTRAL_EFFECTS, away: NEUTRAL_EFFECTS } };
 }
 
 const other = (side: Side): Side => (side === 'home' ? 'away' : 'home');
@@ -293,13 +359,17 @@ const CREATOR_WEIGHT: Record<Position, number> = {
   AMC: 3, AMR: 2.6, AML: 2.6, ST: 1.4,
 };
 
-/** Mevkiye göre şut türü olasılıkları [kafa, uzaktan]; kalanı normal şut. */
-function shotKindFor(rng: Rng, slot: Position): GoalKind {
-  const [header, long] =
+/**
+ * Mevkiye göre şut türü olasılıkları [kafa, uzaktan]; kalanı normal şut.
+ * `headerBonus`: uzun top oynayan takımda kafa şutu payı artar.
+ */
+function shotKindFor(rng: Rng, slot: Position, headerBonus: number): GoalKind {
+  const [baseHeader, long] =
     slot === 'ST' ? [0.22, 0.08]
       : slot === 'AMC' || slot === 'AMR' || slot === 'AML' ? [0.1, 0.3]
         : slot === 'DC' || slot === 'DR' || slot === 'DL' || slot === 'WBR' || slot === 'WBL' ? [0.45, 0.3]
           : [0.12, 0.55];
+  const header = baseHeader + headerBonus;
   const r = rng.next();
   return r < header ? 'header' : r < header + long ? 'long' : 'normal';
 }
@@ -389,8 +459,11 @@ function resolveShot(ctx: Ctx, side: Side, shooterId: number, kind: GoalKind, th
   const keeperName = keeperId !== null ? nameOf(ctx, keeperId) : 'kalede kimse';
   const gk = teamUnits(state, opp, lookup).gk;
 
+  // Taktik: kendi şut kalitemiz ve rakibin savunma hattının açtığı/kapattığı alan.
+  const quality = ctx.effects[side].shotQuality;
+  const conceded = ctx.effects[oppSide].oppShotQuality;
   const pOnTarget = kind === 'penalty' ? 0.85
-    : Math.max(0.1, Math.min(0.75, TUNING.onTargetBase * (skill / 12) * KIND_ON_TARGET[kind]));
+    : Math.max(0.1, Math.min(0.75, TUNING.onTargetBase * (skill / 12) * KIND_ON_TARGET[kind] * quality));
   if (!rng.chance(pOnTarget)) {
     addRating(ctx, shooterId, kind === 'penalty' ? -0.6 : -0.05);
     if (kind === 'penalty') emit(ctx, 'penaltyMiss', side, 'penaltyMiss', { player: name, keeper: keeperName });
@@ -402,7 +475,8 @@ function resolveShot(ctx: Ctx, side: Side, shooterId: number, kind: GoalKind, th
   shooter.shotsOnTarget++;
   const pGoal = kind === 'penalty'
     ? Math.max(0.6, Math.min(0.95, 0.88 + (skill - 12) * 0.015 - (gk - 12) * 0.012))
-    : Math.max(0.06, Math.min(0.65, TUNING.goalBase * (skill / Math.max(gk, 3)) ** 1.2 * KIND_GOAL[kind] * threat ** 0.3));
+    : Math.max(0.06, Math.min(0.65,
+      TUNING.goalBase * (skill / Math.max(gk, 3)) ** 1.2 * KIND_GOAL[kind] * threat ** 0.3 * quality * conceded));
 
   if (rng.chance(pGoal)) {
     scoreGoal(ctx, side, shooterId, kind);
@@ -433,15 +507,14 @@ function awardCorner(ctx: Ctx, side: Side): void {
 
 function resolveAttack(ctx: Ctx, side: Side, units: Record<Side, Units>): void {
   const { state, rng } = ctx;
-  const team = teamOf(state, side);
   const oppSide = other(side);
-  const opp = teamOf(state, oppSide);
 
   const homeBoost = side === 'home' ? TUNING.homeAttack : 1;
   const threat = (units[side].att * homeBoost) / Math.max(units[oppSide].def, 1);
-  // Kendi hücum mentalitesi ve rakibin açık vermesi şut olasılığını artırır.
+  // Kendi taktiğimiz ve rakibin verdiği açık şut olasılığını değiştirir.
   const pShot = Math.max(0.05, Math.min(0.9,
-    TUNING.shotChance * threat ** TUNING.threatExponent * (1 + 0.05 * team.mentality + 0.1 * opp.mentality)));
+    TUNING.shotChance * threat ** TUNING.threatExponent *
+      ctx.effects[side].shotChance * ctx.effects[oppSide].oppShotChance));
 
   if (!rng.chance(pShot)) {
     if (rng.chance(TUNING.cornerFromAttack)) {
@@ -463,7 +536,7 @@ function resolveAttack(ctx: Ctx, side: Side, units: Record<Side, Units>): void {
   const shooterId = pickOnPitch(ctx, side, (ps, p) =>
     SHOOTER_WEIGHT[ps.slot!] * (p.attributes.finishing + p.attributes.offTheBall + p.attributes.longShots * 0.5));
   if (shooterId === null) return;
-  const kind = shotKindFor(rng, state.players[shooterId]!.slot!);
+  const kind = shotKindFor(rng, state.players[shooterId]!.slot!, ctx.effects[side].headerBonus);
   resolveShot(ctx, side, shooterId, kind, threat);
 }
 
@@ -493,8 +566,11 @@ function sendOff(ctx: Ctx, id: number): void {
 
 function resolveFoul(ctx: Ctx, attackingSide: Side): void {
   const { state, rng, lookup } = ctx;
-  // Fauller çoğunlukla savunan takımdan gelir.
-  const foulSide = rng.chance(0.62) ? other(attackingSide) : attackingSide;
+  // Fauller çoğunlukla savunan takımdan gelir; yoğun pres yapan takım daha çok faul yapar.
+  const defending = other(attackingSide);
+  const defWeight = 0.62 * ctx.effects[defending].fouls;
+  const attWeight = 0.38 * ctx.effects[attackingSide].fouls;
+  const foulSide = rng.chance(defWeight / (defWeight + attWeight)) ? defending : attackingSide;
   const victimSide = other(foulSide);
   const team = teamOf(state, foulSide);
   const foulerId = pickOnPitch(ctx, foulSide, (ps, p) =>
@@ -529,19 +605,26 @@ function resolveFoul(ctx: Ctx, attackingSide: Side): void {
 
   // Savunan takımın faulü: penaltı ya da tehlikeli serbest vuruş olabilir.
   if (foulSide !== attackingSide) {
+    const victims = teamOf(state, victimSide);
     if (rng.chance(0.017)) {
-      const taker = bestOnPitch(ctx, victimSide, (p) => p.attributes.penaltyTaking);
+      const taker = designatedTaker(ctx, victimSide, victims.penaltyTakerId, (p) => p.attributes.penaltyTaking);
       if (taker === null) return;
       addRating(ctx, foulerId, -0.5);
       emit(ctx, 'penalty', victimSide, 'penalty', { fouler: nameOf(ctx, foulerId), player: nameOf(ctx, taker) });
       resolveShot(ctx, victimSide, taker, 'penalty', 1);
     } else if (rng.chance(0.12) && rng.chance(0.45)) {
-      const taker = bestOnPitch(ctx, victimSide, (p) => p.attributes.freeKicks);
+      const taker = designatedTaker(ctx, victimSide, victims.freeKickTakerId, (p) => p.attributes.freeKicks);
       if (taker === null) return;
       emit(ctx, 'freekick', victimSide, 'freekick', { player: nameOf(ctx, taker) });
       resolveShot(ctx, victimSide, taker, 'freekick', 1);
     }
   }
+}
+
+/** Taktikte seçilen vurucu sahadaysa o, değilse özelliği en iyi olan. */
+function designatedTaker(ctx: Ctx, side: Side, chosen: number | null, score: (p: Player) => number): number | null {
+  if (chosen !== null && teamOf(ctx.state, side).onPitch.includes(chosen)) return chosen;
+  return bestOnPitch(ctx, side, score);
 }
 
 /** Sahadaki kaleci olmayan oyunculardan özelliği en yüksek olan. */
@@ -651,10 +734,11 @@ function aiMentality(state: MatchState, side: Side): Mentality {
 }
 
 function applyFatigue(ctx: Ctx, team: TeamState): void {
+  const tactical = ctx.effects[team.side].fatigue;
   for (const id of team.onPitch) {
     const ps = ctx.state.players[id]!;
     const stamina = ctx.lookup[id]!.attributes.stamina;
-    const drain = 0.24 * (1.55 - stamina / 20) * (1 + 0.06 * team.mentality) * (ps.slot === 'GK' ? 0.3 : 1);
+    const drain = 0.24 * (1.55 - stamina / 20) * tactical * (ps.slot === 'GK' ? 0.3 : 1);
     ps.condition = Math.max(20, ps.condition - drain);
   }
 }
@@ -667,22 +751,30 @@ function simulateMinute(ctx: Ctx): void {
   const { state, rng, lookup } = ctx;
 
   for (const side of ['home', 'away'] as const) {
-    if (!teamOf(state, side).userControlled) teamOf(state, side).mentality = aiMentality(state, side);
+    const team = teamOf(state, side);
+    if (!team.userControlled) team.instructions.mentality = aiMentality(state, side);
   }
 
   const units = { home: teamUnits(state, state.home, lookup), away: teamUnits(state, state.away, lookup) };
-  const mh = units.home.mid * TUNING.homeMidfield * (1 + 0.04 * state.home.mentality);
-  const ma = units.away.mid * (1 + 0.04 * state.away.mentality);
+  const effects = {
+    home: instructionEffects(state.home.instructions, units.home.profile, units.away.profile),
+    away: instructionEffects(state.away.instructions, units.away.profile, units.home.profile),
+  };
+  ctx.effects = effects;
+
+  // Top hakimiyeti: orta saha gücü × kendi talimatları × rakibin presi
+  const mh = units.home.mid * TUNING.homeMidfield * effects.home.midfield * effects.away.oppMidfield;
+  const ma = units.away.mid * effects.away.midfield * effects.home.oppMidfield;
   const side: Side = rng.chance(mh ** 2 / (mh ** 2 + ma ** 2)) ? 'home' : 'away';
   state.possessionTicks[side]++;
 
   const eventsBefore = state.events.length;
   let attacked = false;
-  if (rng.chance(TUNING.attackChance * (1 + 0.15 * teamOf(state, side).mentality))) {
+  if (rng.chance(TUNING.attackChance * effects[side].attackChance)) {
     attacked = true;
     resolveAttack(ctx, side, units);
   }
-  if (rng.chance(TUNING.foulChance)) resolveFoul(ctx, side);
+  if (rng.chance(TUNING.foulChance * (effects.home.fouls + effects.away.fouls) / 2)) resolveFoul(ctx, side);
   checkInjury(ctx, 'home');
   checkInjury(ctx, 'away');
 
@@ -725,7 +817,7 @@ function finalizeRatings(ctx: Ctx): void {
  */
 export function stepMatch(state: MatchState, lookup: PlayerLookup): void {
   if (state.period === 'full') return;
-  const ctx: Ctx = { state, lookup, rng: Rng.fromState(state.rngState) };
+  const ctx = makeCtx(state, lookup);
   const vars = () => ({ home: state.home.name, away: state.away.name, hg: state.score.home, ag: state.score.away });
 
   if (state.period === 'pre') {
@@ -752,14 +844,45 @@ export function stepMatch(state: MatchState, lookup: PlayerLookup): void {
 
 /** Kullanıcının oyuncu değişikliği. Başarısızsa false. */
 export function substitute(state: MatchState, lookup: PlayerLookup, side: Side, outId: number, inId: number): boolean {
-  const ctx: Ctx = { state, lookup, rng: Rng.fromState(state.rngState) };
+  const ctx = makeCtx(state, lookup);
   const ok = makeSubstitution(ctx, side, outId, inId);
   state.rngState = ctx.rng.getState();
   return ok;
 }
 
 export function setMentality(state: MatchState, side: Side, mentality: Mentality): void {
-  teamOf(state, side).mentality = mentality;
+  teamOf(state, side).instructions.mentality = mentality;
+}
+
+/**
+ * Maç içi taktik değişikliği. Diziliş değişirse sahadaki oyuncular yeni mevkilere
+ * en iyi uyumla dağıtılır (kaleci kalede kalır). Bitmiş maçta etkisizdir.
+ */
+export function changeTactics(
+  state: MatchState,
+  lookup: PlayerLookup,
+  side: Side,
+  change: { formation?: FormationId; instructions?: Partial<TeamInstructions> },
+): void {
+  if (state.period === 'full') return;
+  const team = teamOf(state, side);
+  if (change.instructions) team.instructions = { ...team.instructions, ...change.instructions };
+  if (!change.formation || change.formation === team.formation) return;
+
+  const ctx = makeCtx(state, lookup);
+  const slots = FORMATIONS[change.formation];
+  const keeper = team.onPitch.find((id) => state.players[id]!.slot === 'GK');
+  const outfield = team.onPitch.filter((id) => id !== keeper).map((id) => lookup[id]!);
+  // Kaleci mevkisi hariç kalan 10 mevkiye saha oyuncularını dağıt.
+  const assigned = assignToFormation(outfield, slots.slice(1));
+  if (keeper !== undefined) state.players[keeper]!.slot = 'GK';
+  assigned.forEach((id, i) => {
+    if (id !== null) state.players[id]!.slot = slots[i + 1]!;
+  });
+  team.formation = change.formation;
+  team.fullWeights = formationWeights(slots);
+  emit(ctx, 'info', side, 'tactic', { team: team.name, formation: change.formation });
+  state.rngState = ctx.rng.getState();
 }
 
 /** Maçı sonuna kadar oynatır; iki takımın kararlarını da yapay zekâ verir. */

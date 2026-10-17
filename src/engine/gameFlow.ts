@@ -4,7 +4,7 @@
  */
 import { addDays, type GameDate } from './date';
 import { buildResult } from './match/engine';
-import { applyResult, playFixture, startFixture } from './match/simulate';
+import { applyResult, drawMatchSeed, playFixture, startFixture } from './match/simulate';
 import type { MatchState } from './match/state';
 import { Rng } from './rng';
 import type { Fixture, GameWorld } from './types';
@@ -64,12 +64,16 @@ export function playTodaysMatches(world: GameWorld): Fixture[] {
   return fixtures;
 }
 
-/** Kullanıcının bugünkü maçını canlı oynatmak için başlatır. */
-export function startUserMatch(world: GameWorld): MatchState | null {
+/**
+ * Kullanıcının bugünkü maçını canlı oynatmak için başlatır.
+ * `seed` verilirse (başlama öncesi taktik değişti) maç aynı tohumla yeniden kurulur.
+ */
+export function startUserMatch(world: GameWorld, seed?: number): MatchState | null {
   const fixture = todaysUserFixture(world);
   if (!fixture) return null;
+  if (seed !== undefined) return startFixture(world, fixture, seed);
   const rng = Rng.fromState(world.rngState);
-  const state = startFixture(world, fixture, rng);
+  const state = startFixture(world, fixture, drawMatchSeed(rng));
   world.rngState = rng.getState();
   return state;
 }

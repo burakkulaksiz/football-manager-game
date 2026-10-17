@@ -49,6 +49,7 @@ const TEMPLATES = {
   red: ['Direkt kırmızı kart! {player} oyundan atıldı, {team} eksik kaldı.'],
   injury: ['{player} sakatlandı, sağlık ekibi sahada.', '{player} yerde kaldı, devam etmekte zorlanıyor.'],
   sub: ['Oyuncu değişikliği ({team}): {in} oyuna girdi, {out} çıktı.'],
+  tactic: ['{team} taktik değiştirdi: yeni diziliş {formation}.'],
   tackle: ['{player} topu kaptı, atak kesildi.', '{player} araya girerek tehlikeyi önledi.'],
   info: [
     '{team} topu ayağında tutuyor, sabırla pas yapıyor.',

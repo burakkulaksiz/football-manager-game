@@ -7,6 +7,7 @@ import { PlayerProfile } from '../screens/PlayerProfile';
 import { SquadScreen } from '../screens/SquadScreen';
 import { StatsScreen } from '../screens/StatsScreen';
 import { TableScreen } from '../screens/TableScreen';
+import { TacticsScreen } from '../screens/TacticsScreen';
 import { Header } from './Header';
 import { NavBar } from './NavBar';
 import { Sidebar } from './Sidebar';
@@ -21,6 +22,7 @@ function ScreenContent({ screen }: { screen: ScreenId }) {
     case 'table': return <TableScreen />;
     case 'stats': return <StatsScreen />;
     case 'match': return <MatchScreen />;
+    case 'tactics': return <TacticsScreen />;
     default: return <PlaceholderScreen screen={screen} />;
   }
 }

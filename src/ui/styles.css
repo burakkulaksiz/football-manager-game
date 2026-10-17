@@ -1,0 +1,269 @@
+/* FM 2005 havası: koyu lacivert/gri paneller, yoğun tablolar, küçük yazı. */
+:root {
+  --bg: #0f1626;
+  --bg-panel: #1b2540;
+  --bg-panel-alt: #222e4d;
+  --bg-header: #2c3d66;
+  --bg-sidebar: #141d33;
+  --bg-topbar: linear-gradient(#34477a, #1f2c4f);
+  --border: #3a4a73;
+  --text: #dfe5f2;
+  --text-muted: #8c99b8;
+  --accent: #f2c14e;
+  --accent-text: #1a1a1a;
+  --row-hover: #2f3f68;
+  --active: #3f5a9e;
+
+  font-family: Tahoma, Verdana, 'Segoe UI', sans-serif;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+/* ---------- Ana yerleşim ---------- */
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.shell-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.content {
+  flex: 1;
+  overflow: auto;
+  padding: 8px;
+}
+
+/* ---------- Üst bar ---------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 52px;
+  padding: 0 12px;
+  background: var(--bg-topbar);
+  border-bottom: 1px solid #000;
+}
+
+.topbar-club {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.club-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  font-weight: bold;
+}
+
+.topbar-club-name {
+  font-size: 15px;
+  font-weight: bold;
+}
+
+.topbar-sub {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.topbar-date {
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.btn-continue {
+  background: var(--accent);
+  color: var(--accent-text);
+  border: 1px solid #a7801f;
+  border-radius: 3px;
+  padding: 7px 22px;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.btn-continue:hover {
+  filter: brightness(1.1);
+}
+
+/* ---------- Sol menü ---------- */
+.sidebar {
+  width: 190px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-sidebar);
+  border-right: 1px solid #000;
+  overflow-y: auto;
+}
+
+.menu-group {
+  padding: 6px 0;
+}
+
+.menu-group-title {
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  color: var(--accent);
+  letter-spacing: 0.5px;
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 5px 12px 5px 18px;
+  background: none;
+  border: none;
+}
+
+.menu-item:hover {
+  background: var(--row-hover);
+}
+
+.menu-item.active {
+  background: var(--active);
+  font-weight: bold;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  padding: 6px 0;
+}
+
+/* ---------- Paneller ---------- */
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+
+.panel-title {
+  margin: 0;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: bold;
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-body {
+  padding: 10px;
+}
+
+/* ---------- Yoğun tablolar (sonraki aşamalarda kullanılacak) ---------- */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+  padding: 2px 6px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.data-table th {
+  background: var(--bg-header);
+  font-weight: bold;
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table tbody tr:nth-child(even) {
+  background: var(--bg-panel-alt);
+}
+
+.data-table tbody tr:hover {
+  background: var(--row-hover);
+}
+
+/* ---------- Ana menü ---------- */
+.main-menu {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at top, #24345e, var(--bg));
+}
+
+.main-menu-box {
+  width: 320px;
+  padding: 24px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+}
+
+.main-menu-title {
+  margin: 0;
+  font-size: 22px;
+}
+
+.main-menu-sub {
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+.menu-button {
+  padding: 9px;
+  background: var(--bg-header);
+  border: 1px solid var(--border);
+  font-weight: bold;
+}
+
+.menu-button:hover:not(:disabled) {
+  background: var(--active);
+}
+
+.main-menu-footer {
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-size: 11px;
+}

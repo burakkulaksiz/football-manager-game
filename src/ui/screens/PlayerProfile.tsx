@@ -1,7 +1,11 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   ageOn,
+  askingPrice,
   getClub,
+  isActive,
+  offerBlocker,
+  type Player,
   GOALKEEPING_ATTRS,
   marketValue,
   playerSeasonStats,
@@ -15,6 +19,7 @@ import {
 } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { Shirt } from '../components/Shirt';
+import { ContractDialog, OfferDialog } from '../components/TransferDialogs';
 import {
   attrClass,
   ATTRIBUTE_LABELS,
@@ -43,6 +48,54 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
       <span className="kv-label">{label}</span>
       <span className="kv-value">{children}</span>
     </div>
+  );
+}
+
+/** Profilin üstündeki transfer / sözleşme işlemleri. */
+function TransferActions({ player }: { player: Player }) {
+  const world = useWorld();
+  const setScreen = useGameStore((s) => s.setScreen);
+  const [dialog, setDialog] = useState<'transfer' | 'loan' | 'contract' | null>(null);
+  const own = player.clubId === world.playerClubId;
+  const activeOffers = world.offers.filter((o) => o.playerId === player.id && isActive(o));
+
+  if (own) {
+    return (
+      <section className="panel action-panel">
+        <div className="panel-body action-bar">
+          <span className="muted">
+            {player.loan
+              ? `${getClub(world, player.loan.fromClubId).name} kulübünden kiralık · dönüş ${formatDateShort(player.loan.until)}`
+              : `Sözleşme bitişi ${formatDateShort(player.contract.expires)} · yıllık ${formatMoney(player.contract.wage)}`}
+            {activeOffers.length > 0 && ` · ${activeOffers.length} açık teklif`}
+          </span>
+          {activeOffers.length > 0 && <button className="btn btn-small" onClick={() => setScreen('transfers')}>Teklifleri Gör</button>}
+          {!player.loan && <button className="btn" onClick={() => setDialog('contract')}>Sözleşme Yenile</button>}
+        </div>
+        {dialog === 'contract' && <ContractDialog player={player} onClose={() => setDialog(null)} />}
+      </section>
+    );
+  }
+
+  const transferBlock = offerBlocker(world, player, 'transfer');
+  const loanBlock = offerBlocker(world, player, 'loan');
+  return (
+    <section className="panel action-panel">
+      <div className="panel-body action-bar">
+        <span className="muted">
+          Kulübün beklentisi (tahmini): <strong className="value">{formatMoney(askingPrice(world, player))}</strong>
+          {activeOffers.some((o) => o.buyerId === world.playerClubId) && ' · açık teklifin var'}
+        </span>
+        <button className="btn" disabled={transferBlock !== null} title={transferBlock ?? ''} onClick={() => setDialog('transfer')}>
+          Transfer Teklifi
+        </button>
+        <button className="btn" disabled={loanBlock !== null} title={loanBlock ?? ''} onClick={() => setDialog('loan')}>
+          Kiralık Teklifi
+        </button>
+      </div>
+      {(transferBlock ?? loanBlock) && <div className="panel-note">{transferBlock ?? loanBlock}</div>}
+      {(dialog === 'transfer' || dialog === 'loan') && <OfferDialog player={player} kind={dialog} onClose={() => setDialog(null)} />}
+    </section>
   );
 }
 
@@ -83,6 +136,7 @@ export function PlayerProfile() {
 
   return (
     <div className="screen">
+      <TransferActions player={player} />
       <section className="panel">
         <h2 className="panel-title">Oyuncu Profili</h2>
         <div className="profile-grid">

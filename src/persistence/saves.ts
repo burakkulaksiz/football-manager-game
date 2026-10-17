@@ -2,10 +2,11 @@
  * Kayıt sistemi: kaydet, yükle, listele, sil, otomatik kayıt.
  * GameWorld düz veri olduğu için IndexedDB'ye olduğu gibi yazılır.
  */
-import { getClub, type GameWorld } from '../engine';
+import { CURRENT_WORLD_VERSION, getClub, migrateWorld, type GameWorld } from '../engine';
 import { db, type SaveSlot } from './db';
 
-export const SAVE_FORMAT_VERSION = 1;
+/** Kayıt biçimi = dünya biçimi sürümü (bkz. engine/migrate.ts). */
+export const SAVE_FORMAT_VERSION = CURRENT_WORLD_VERSION;
 
 /** Kariyer kimliği: aynı tohum ve kulüple başlamış oyun. */
 export function careerIdOf(world: GameWorld): string {
@@ -81,11 +82,12 @@ export async function loadGame(id: number): Promise<GameWorld> {
   const slot = await db.saves.get(id);
   const data = await db.saveData.get(id);
   if (!slot || !data) throw new Error('Kayıt bulunamadı.');
-  if (slot.formatVersion !== SAVE_FORMAT_VERSION) {
-    throw new Error(`Bu kayıt farklı bir oyun sürümüne ait (biçim ${slot.formatVersion}); açılamıyor.`);
+  if (slot.formatVersion > SAVE_FORMAT_VERSION) {
+    throw new Error(`Bu kayıt daha yeni bir oyun sürümüne ait (biçim ${slot.formatVersion}); açılamıyor.`);
   }
-  const world = data.world;
-  if (!world || !world.players || !world.season || !world.tactics) throw new Error('Kayıt dosyası bozuk.');
+  // Eski kayıtlar yeni biçime dönüştürülür (finans, transfer alanları eklenir).
+  const world = slot.formatVersion < SAVE_FORMAT_VERSION ? migrateWorld(data.world, slot.formatVersion) : data.world;
+  if (!world || !world.players || !world.season || !world.tactics || !world.finances) throw new Error('Kayıt dosyası bozuk.');
   return world;
 }
 

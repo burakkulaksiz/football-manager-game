@@ -109,7 +109,10 @@ export function SquadScreen() {
           {players.map((p) => (
             <tr key={p.id} onClick={() => openPlayer(p.id)}>
               <td className="num">{p.squadNumber}</td>
-              <td className="strong">{p.firstName} {p.lastName}</td>
+              <td className="strong">
+                {p.firstName} {p.lastName}
+                {p.loan && <span className="tag" title={"Kiralık, dönüş " + formatDateShort(p.loan.until)}>Kiralık</span>}
+              </td>
               <td><PositionBoxes player={p} /></td>
               <td className="num">{ageOn(p.birthDate, date)}</td>
               <td>{nationName(p.nationality)}</td>

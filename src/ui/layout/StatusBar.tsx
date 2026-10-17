@@ -3,8 +3,16 @@ import { useGameStore, useWorld } from '../../store/gameStore';
 import { formatDayMonth } from '../labels';
 import { pageHeading } from './pageHeading';
 
-/** Haber bandı: son oynanan haftanın sonuçları (FM'deki "+++" bandı). */
+/** Haber bandı: son haftanın sonuçları + son transfer haberleri (FM'deki "+++" bandı). */
 function tickerItems(world: GameWorld): string[] {
+  const transfers = world.news
+    .filter((n) => n.category === 'transfer' || n.category === 'loan')
+    .slice(-4)
+    .map((n) => n.title);
+  return [...resultItems(world), ...transfers];
+}
+
+function resultItems(world: GameWorld): string[] {
   const played = world.season.fixtures.filter((f) => f.result);
   if (played.length === 0) {
     const first = world.season.fixtures[0];

@@ -227,3 +227,48 @@ export function fitClass(fit: number): 'fit-good' | 'fit-ok' | 'fit-bad' {
   if (fit >= 0.82) return 'fit-ok';
   return 'fit-bad';
 }
+
+export const OFFER_STATUS_LABELS: Record<import('../engine').OfferStatus, string> = {
+  pending: 'Bekliyor',
+  countered: 'Karşı teklif',
+  accepted: 'Kabul edildi',
+  rejected: 'Reddedildi',
+  completed: 'Tamamlandı',
+  cancelled: 'İptal',
+  collapsed: 'Anlaşma yok',
+};
+
+export const NEWS_CATEGORY_LABELS: Record<import('../engine').NewsCategory, string> = {
+  transfer: 'Transfer',
+  offer: 'Teklif',
+  finance: 'Finans',
+  window: 'Transfer Dönemi',
+  contract: 'Sözleşme',
+  loan: 'Kiralık',
+};
+
+export const INCOME_LABELS: Record<import('../engine').IncomeCategory, string> = {
+  tickets: 'Bilet',
+  tv: 'Yayın',
+  sponsor: 'Sponsor',
+  transfersIn: 'Transfer Geliri',
+};
+
+export const EXPENSE_LABELS: Record<import('../engine').ExpenseCategory, string> = {
+  wages: 'Maaşlar',
+  bonuses: 'Primler',
+  transfersOut: 'Transfer Gideri',
+  signingBonuses: 'İmza Bonusu',
+};
+
+const MONTH_NAMES = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+
+/** '2026-08' → 'Ağustos 2026' */
+export function formatMonth(month: string): string {
+  return `${MONTH_NAMES[Number(month.slice(5, 7)) - 1]} ${month.slice(0, 4)}`;
+}
+
+/** Negatif tutarları da gösteren para biçimi: −€1,2 Mn */
+export function formatSignedMoney(amount: number): string {
+  return amount < 0 ? `−${formatMoney(-amount)}` : formatMoney(amount);
+}

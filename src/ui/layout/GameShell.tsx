@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { hasUnsavedProgress, useGameStore, type ScreenId } from '../../store/gameStore';
 import { ClubInfoScreen } from '../screens/ClubInfoScreen';
+import { FinanceScreen } from '../screens/FinanceScreen';
 import { FixturesScreen } from '../screens/FixturesScreen';
 import { MatchScreen } from '../screens/MatchScreen';
 import { PlaceholderScreen } from '../screens/PlaceholderScreen';
@@ -9,6 +10,7 @@ import { SquadScreen } from '../screens/SquadScreen';
 import { StatsScreen } from '../screens/StatsScreen';
 import { TableScreen } from '../screens/TableScreen';
 import { TacticsScreen } from '../screens/TacticsScreen';
+import { TransferScreen } from '../screens/TransferScreen';
 import { Header } from './Header';
 import { NavBar } from './NavBar';
 import { Sidebar } from './Sidebar';
@@ -24,6 +26,8 @@ function ScreenContent({ screen }: { screen: ScreenId }) {
     case 'stats': return <StatsScreen />;
     case 'match': return <MatchScreen />;
     case 'tactics': return <TacticsScreen />;
+    case 'transfers': return <TransferScreen />;
+    case 'finance': return <FinanceScreen />;
     default: return <PlaceholderScreen screen={screen} />;
   }
 }

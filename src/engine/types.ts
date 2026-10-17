@@ -44,6 +44,12 @@ export interface Injury {
   daysOut: number;
 }
 
+/** Kiralık: oyuncu clubId'deki kulüpte oynar, `until` tarihinde `fromClubId`'ye döner. */
+export interface Loan {
+  fromClubId: string;
+  until: GameDate;
+}
+
 export interface Player {
   id: number;
   firstName: string;
@@ -70,6 +76,8 @@ export interface Player {
   condition: number;
   injury: Injury | null;
   contract: Contract;
+  /** Kiralıksa dönüş bilgisi; değilse null. */
+  loan: Loan | null;
 }
 
 export type GoalKind = 'normal' | 'header' | 'long' | 'freekick' | 'penalty';
@@ -135,6 +143,91 @@ export interface MatchResult {
   players: PlayerMatchRecord[];
   /** Maçın adamı. */
   manOfTheMatch: number | null;
+  /** Seyirci sayısı (finans işlenince yazılır). */
+  attendance?: number;
+}
+
+/* ------------------------------------------------------------------ */
+/* Finans                                                              */
+/* ------------------------------------------------------------------ */
+
+export type IncomeCategory = 'tickets' | 'tv' | 'sponsor' | 'transfersIn';
+export type ExpenseCategory = 'wages' | 'bonuses' | 'transfersOut' | 'signingBonuses';
+
+/** Bir ayın gelir/gider dökümü (giderler pozitif sayı). */
+export interface MonthReport {
+  /** 'YYYY-MM' */
+  month: string;
+  income: Record<IncomeCategory, number>;
+  expense: Record<ExpenseCategory, number>;
+  /** Ay sonundaki kasa (ay kapanınca yazılır). */
+  balanceEnd: number;
+}
+
+export interface ClubFinance {
+  /** Kasa (€); negatif olabilir. */
+  balance: number;
+  /** Yönetimin transfer için ayırdığı tutar (€). */
+  transferBudget: number;
+  /** Yıllık maaş bütçesi (€). */
+  wageBudget: number;
+  /** Yıllık yayın geliri (aylık 1/12 ödenir). */
+  tvIncome: number;
+  /** Yıllık sponsor geliri (aylık 1/12 ödenir). */
+  sponsorIncome: number;
+  /** Bilet fiyatı ortalaması (€). */
+  ticketPrice: number;
+  current: MonthReport;
+  history: MonthReport[];
+}
+
+/* ------------------------------------------------------------------ */
+/* Transfer ve haberler                                                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Transfer teklifi. Yön kullanıcıya göre değişir:
+ *  - Kullanıcı alıcıysa: pending → (ertesi gün) accepted / countered / rejected;
+ *    accepted transferde sözleşme görüşmesi → completed ya da collapsed.
+ *  - Kullanıcı satıcıysa: pending (kullanıcının yanıtı bekleniyor) → completed / rejected /
+ *    countered (kullanıcının karşı teklifi; alıcı ertesi gün yanıtlar) / cancelled (süre doldu).
+ */
+export type OfferStatus = 'pending' | 'countered' | 'accepted' | 'rejected' | 'completed' | 'cancelled' | 'collapsed';
+
+export interface TransferOffer {
+  id: number;
+  playerId: number;
+  buyerId: string;
+  sellerId: string;
+  kind: 'transfer' | 'loan';
+  fee: number;
+  /** Karşı teklif tutarı (countered durumunda). */
+  counterFee: number | null;
+  status: OfferStatus;
+  created: GameDate;
+  /** Yanıtın verileceği / teklifin düşeceği gün. */
+  respondOn: GameDate;
+  /** Sözleşme görüşmesinde oyuncunun kalan sabrı. */
+  patience: number;
+  /** Yapay zekâ alıcının en fazla ödeyeceği tutar (gizli). */
+  maxFee: number | null;
+  /** Son durum açıklaması (UI'da gösterilir). */
+  note: string;
+}
+
+export type NewsCategory = 'transfer' | 'offer' | 'finance' | 'window' | 'contract' | 'loan';
+
+export interface NewsItem {
+  id: number;
+  date: GameDate;
+  category: NewsCategory;
+  title: string;
+  body: string;
+  /** Kullanıcıyı ilgilendiriyor: Devam bu haberin geldiği günde durur. */
+  important: boolean;
+  read: boolean;
+  playerId?: number;
+  clubId?: string;
 }
 
 export interface Fixture {
@@ -167,4 +260,10 @@ export interface GameWorld {
   season: Season;
   /** Kulüp id → kayıtlı taktik (şimdilik yalnızca kullanıcının kulübü; yapay zekâ her maçta seçer). */
   tactics: Record<string, Tactics>;
+  finances: Record<string, ClubFinance>;
+  offers: TransferOffer[];
+  nextOfferId: number;
+  /** En yeni sonda; en fazla NEWS_LIMIT kayıt tutulur. */
+  news: NewsItem[];
+  nextNewsId: number;
 }

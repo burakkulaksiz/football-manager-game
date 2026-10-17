@@ -1,12 +1,13 @@
 import { ageOn, clubPlayers, HOME_NATION, marketValue } from '../../engine';
 import { useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
-import { EXPECTATION_LABELS, formatMoney, formatNumber } from '../labels';
+import { EXPECTATION_LABELS, formatMoney, formatNumber, formatSignedMoney } from '../labels';
 
 export function ClubInfoScreen() {
   const world = useWorld();
   const club = world.clubs.find((c) => c.id === world.playerClubId)!;
   const players = clubPlayers(world, club.id);
+  const fin = world.finances[club.id]!;
 
   const totalWages = players.reduce((s, p) => s + p.contract.wage, 0);
   const totalValue = players.reduce((s, p) => s + marketValue(p, world.date), 0);
@@ -18,15 +19,16 @@ export function ClubInfoScreen() {
     ['Stadyum', `${club.stadium} (${formatNumber(club.capacity)} kişilik)`],
     ['İtibar', `${club.reputation} / 100`],
     ['Taraftar Beklentisi', EXPECTATION_LABELS[club.fanExpectation]],
-    ['Transfer Bütçesi', formatMoney(club.budget)],
-    ['Maaş Bütçesi', `${formatMoney(club.wageBudget)} / yıl`],
+    ['Kasa', formatSignedMoney(fin.balance)],
+    ['Transfer Bütçesi', formatMoney(fin.transferBudget)],
+    ['Maaş Bütçesi', `${formatMoney(fin.wageBudget)} / yıl`],
   ];
   const squadRows: [string, string][] = [
     ['Oyuncu Sayısı', String(players.length)],
     ['Yabancı Oyuncu', String(foreigners)],
     ['Yaş Ortalaması', avgAge.toLocaleString('tr-TR', { maximumFractionDigits: 1 })],
     ['Toplam Maaş', `${formatMoney(totalWages)} / yıl`],
-    ['Maaş Bütçesi Kullanımı', `%${Math.round((totalWages / club.wageBudget) * 100)}`],
+    ['Maaş Bütçesi Kullanımı', `%${Math.round((totalWages / fin.wageBudget) * 100)}`],
     ['Kadro Değeri', formatMoney(totalValue)],
   ];
 

@@ -5,16 +5,28 @@ import { createWorld } from './generation/worldGenerator';
 import { computeStandings } from './league/standings';
 import { simulateToEnd } from './match/engine';
 import { playSeason } from './testing';
+import type { GameWorld } from './types';
 
 const START = '2026-07-01';
 
+/** Devam'a, bir sonraki maç gününe varana kadar basar (aradaki haber duraklarını geçer). */
+function advanceToMatchDay(world: GameWorld): void {
+  const target = nextMatchDate(world)!;
+  while (world.date < target) {
+    const r = advance(world);
+    expect(r.kind).toBe('moved');
+  }
+}
 
 describe('oyun akışı', () => {
-  it('Devam önce maç gününe gider, sonra kendi maçımızı canlı oynatmak için durur', () => {
+  it('Devam ya önemli bir haberde ya da maç gününde durur; maç günü canlı maç için durur', () => {
     const world = createWorld(gameData, 5, 'galatasaray', START);
     const first = nextMatchDate(world)!;
 
-    expect(advance(world).kind).toBe('moved');
+    const r = advance(world);
+    expect(r.kind).toBe('moved');
+    if (r.kind === 'moved' && world.date < first) expect(r.news.length).toBeGreaterThan(0);
+    advanceToMatchDay(world);
     expect(world.date).toBe(first);
 
     const result = advance(world);
@@ -25,7 +37,7 @@ describe('oyun akışı', () => {
 
   it('canlı maç bitince sonuç işlenir ve haftanın diğer maçları oynanır', () => {
     const world = createWorld(gameData, 6, 'besiktas', START);
-    advance(world);
+    advanceToMatchDay(world);
     const state = startUserMatch(world)!;
     expect(state).not.toBeNull();
     simulateToEnd(state, world.players);
@@ -53,7 +65,8 @@ describe('oyun akışı', () => {
       expect(r.goals).toHaveLength(r.homeGoals + r.awayGoals);
       for (const g of r.goals) {
         expect([f.homeId, f.awayId]).toContain(g.clubId);
-        expect(world.players[g.playerId]!.clubId).toBe(g.clubId);
+        // Oyuncu sonradan transfer olmuş olabilir; o maçta o kulüp adına oynamış olmalı.
+        expect(r.players.find((p) => p.playerId === g.playerId)?.clubId).toBe(g.clubId);
       }
     }
   });

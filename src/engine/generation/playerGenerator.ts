@@ -158,5 +158,6 @@ export function generatePlayer(
       wage: baseWage(currentAbility) * opts.wageFactor,
       expires: makeDate(startYear + contractYears, 6, 30),
     },
+    loan: null,
   };
 }

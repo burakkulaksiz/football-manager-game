@@ -1,6 +1,10 @@
 import { useEffect, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
-/** Basit modal pencere: arka plan karartılır, Esc ya da dışarı tıklama kapatır. */
+/**
+ * Basit modal pencere: arka plan karartılır, Esc ya da dışarı tıklama kapatır.
+ * body'ye portal ile çizilir; aksi hâlde backdrop-filter kullanan paneller fixed konumu hapseder.
+ */
 export function Modal({ title, onClose, children, footer }: {
   title: string;
   onClose: () => void;
@@ -15,7 +19,7 @@ export function Modal({ title, onClose, children, footer }: {
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  return (
+  return createPortal(
     <div className="modal-backdrop" onMouseDown={onClose}>
       <div className="modal panel" role="dialog" aria-modal="true" aria-label={title} onMouseDown={(e) => e.stopPropagation()}>
         <h2 className="panel-title panel-title-row">
@@ -25,6 +29,7 @@ export function Modal({ title, onClose, children, footer }: {
         <div className="panel-body">{children}</div>
         {footer && <div className="modal-footer">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

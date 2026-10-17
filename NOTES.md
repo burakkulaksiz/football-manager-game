@@ -40,21 +40,35 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
   match/commentary.ts  Türkçe anlatım şablonları (isimden sonra ek gelmeyecek şekilde yazıldı).
   match/simulate.ts    Dünya bağlantısı: fikstür kurulumu, arka plan maçı, sonucu işleme (form güncelleme).
   gameFlow.ts          Devam: kendi maçımız varsa 'userMatch' döner (canlı), yoksa günün maçlarını oynatır
-                       ya da sonraki maç gününe ilerler (dünyayı yerinde değiştirir).
+                       ya da gün gün ilerler; önemli haber çıkan günde ya da maç gününde durur.
+  daily.ts             Günlük işler (processDay): ay başı finans, transfer dönemi haberleri, kiralık dönüşleri,
+                       teklif yanıtları, yapay zekâ transferleri.
+  news.ts              Haberler (world.news, en fazla 400). `important` = Devam'ı durdurur. 9. aşamada gelen kutusu.
+  finance/finance.ts   Kulüp finansı: ay başı (maaş, yayın, sponsor), maç günü (bilet, prim), aylık raporlar.
+  transfer/window.ts   Transfer dönemleri.
+  transfer/market.ts   Değerleme (askingPrice, importance), maaş talebi (wageDemand, kulüp maaş ölçeği),
+                       istekli mi (willingToJoin), transferPlayer, loanPlayer, returnLoans.
+  transfer/offers.ts   Kullanıcı teklifleri, karşı teklif, sözleşme görüşmesi (negotiateTransfer/Renewal),
+                       gelen tekliflere yanıt, günlük teklif işleme (processOffers).
+  transfer/ai.ts       Yapay zekâ alımları ve kullanıcıya teklifler (aiTransferDay).
+  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 2).
   testing.ts           Yalnızca testler: makeResult, playSeason.
   index.ts             Motorun dışa açık yüzü + SEASON_START_DATE (2026-07-01).
 src/store/gameStore.ts Zustand: phase (menu/newGame/load/game), screen + geçmiş, world, liveMatch (canlı maç),
                        maç eylemleri, taktik düzenleme (updateTactics), kayıt (saveCurrent, loadSave, otomatik kayıt),
-                       revision/savedRevision (kaydedilmemiş ilerleme), notice (bildirim).
+                       revision/savedRevision (kaydedilmemiş ilerleme), notice (bildirim), worldAction (motor
+                       işlemini çalıştırıp arayüzü günceller; transfer eylemleri bununla).
 src/persistence/db.ts  Dexie (IndexedDB) — 'fm-super-lig' veritabanı: `saves` (liste bilgisi), `saveData` (oyun).
 src/persistence/saves.ts  saveGame, autosave, loadGame, listSaves, deleteSave (testler: fake-indexeddb).
 src/ui/                React. Motoru sadece çağırır, oyun mantığı içermez.
   labels.ts            Türkçe etiketler (özellik, mevki, beklenti), para/tarih biçimleri.
   layout/              GameShell, Header, NavBar, Sidebar, StatusBar, pageHeading (başlık hapı + konum yolu)
   screens/             MainMenu, NewGameScreen, SquadScreen, PlayerProfile, ClubInfoScreen,
-                       FixturesScreen, TableScreen, StatsScreen, MatchScreen, TacticsScreen, Placeholder
+                       FixturesScreen, TableScreen, StatsScreen, MatchScreen, TacticsScreen, TransferScreen
+                       (ara / teklifler / haberler), FinanceScreen, LoadGameScreen, Placeholder
   components/          ClubBadge, Shirt, OutcomeBox, InstructionsPanel (FormationPicker + talimatlar; taktik
-                       ekranı ve maç içinde ortak)
+                       ekranı ve maç içinde ortak), Modal (portal ile body'ye), NoticeToast, SaveDialogs,
+                       TransferDialogs (OfferDialog, ContractDialog, CounterDialog)
   styles.css           Tema; renkler CSS değişkenleri olarak (bkz. "Görünüm")
 ```
 Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
@@ -119,9 +133,31 @@ Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
 - **Kayıt** (IndexedDB, Dexie şema sürümü 2): `saves` = SaveSlot `{ id, name, careerId, clubId, clubName,
   gameDate, season, isAutosave, createdAt, updatedAt, formatVersion }`; `saveData` = `{ id, world: GameWorld }`
   (aynı id). GameWorld olduğu gibi yazılır (düz veri), kayıt anında `structuredClone` ile kopyalanır.
-  `SAVE_FORMAT_VERSION = 1`: GameWorld yapısı değişirse artır ve `loadGame`'e dönüştürme ekle (yoksa eski
-  kayıt "farklı sürüm" hatasıyla açılmaz). Sezon sonu kaydı ~1.7 MB.
+  `SAVE_FORMAT_VERSION = CURRENT_WORLD_VERSION` (şu an 2). GameWorld yapısı değişince sürümü artır ve
+  `engine/migrate.ts`'e dönüşüm ekle; `loadGame` eski kayıtları otomatik dönüştürür, daha yeni sürümü reddeder.
+  Sezon sonu kaydı ~1.7 MB (+ haberler/teklifler).
 - **careerId** = `${seed}-${playerClubId}`. Otomatik kayıt kariyer başına tek slot; elle kayıt sınırsız.
+
+## Transfer ve finans kuralları (aşama 7)
+- **Dönemler:** yaz 1 Tem – 8 Eyl, devre arası 2 Oca – 1 Şub. Dönem kapanınca açık teklifler iptal.
+- **Kullanıcı alıcı:** teklif → satıcı ertesi gün karar: ≥ beklentinin %92'si kabul, ≥ %60 karşı teklif
+  (= beklenti), altı ret; kadrosu ≤ 20 olan satmaz. Beklenti = piyasa değeri × (1.15 + 0.35 × önem);
+  önem: ilk 11 = 1, rotasyon (12–16) = 0.5; sözleşmesine ≤ 1 yıl kalana ×0.8.
+- **Sözleşme:** oyuncu talebi = max(kulübün maaş ölçeğine göre adil maaş, mevcut maaş × 1.1);
+  istediği süre dışında +%10; (maaş + imza bonusu / yıl) ≥ talep → imzalar; %80'ine yakınsa talebini
+  söyler; 3 ret → anlaşma bozulur. Maaş bütçesi ve transfer bütçesi kontrol edilir.
+- **İsteklilik:** oyuncu, kulübünden 20 itibar puanından daha düşük kulübe gitmez (30+ yaş: 30 puan).
+- **Kiralık:** sezon sonuna (30 Haz) kadar; maaşı kiralayan öder; ilk 11 oyuncusu kiralık verilmez;
+  bedel beklentisi değerin %8'i.
+- **Kullanıcı satıcı:** yapay zekâ teklifi 7 gün bekler; kabul → hemen satış; karşı teklif → alıcı ertesi
+  gün, gizli üst sınırı (`maxFee`, değerin 1.1–1.4 katı) içindeyse kabul eder.
+- **Yapay zekâ alımları:** dönem içinde her kulüp günlük %5 (yaz) / %3 (kış) olasılıkla en eksik mevki
+  grubuna, bütçesine ve itibarına uygun oyuncu alır; kadro ≥ 28 ise almaz. Sezonda ~30–40 transfer.
+- **Finans:** başlangıç kasası = transfer bütçesi + maaş bütçesinin 1/4'ü. Yıllık yayın = maaş bütçesinin
+  %45'i, sponsor %30'u (aylık 1/12). Bilet = seyirci × bilet fiyatı (8 + itibar × 0.3 €); seyirci =
+  min(kapasite, taraftar × rakip çekiciliği), taraftar = 2000 + (itibar/100)³ × 60000. Galibiyet primi
+  maaş bütçesinin %0.3'ü (beraberlik 1/3). Satışın %50'si transfer bütçesine eklenir.
+- Lig sıralaması ödülü / yayın payının performansa bağlanması 9. aşamada (sezon sonu).
 
 ## Kayıt kuralları (kullanıcıyla kararlaştırıldı)
 - Canlı maç sürerken (başlama öncesi dahil) kayıt **yapılamaz**; liveMatch kaydedilmez.
@@ -161,7 +197,10 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
       motora etkileri (istatistiksel testlerle), yapay zekâ diziliş seçimi, maç içi taktik paneli.
 - [x] **6. Kayıt sistemi** — çoklu kayıt slotu, kaydet (yeni / üzerine), yükle, sil, kariyer başına otomatik
       kayıt (maç günü sonrası), ana menüde Devam Et + Kayıt Yükle ekranı, çıkış uyarısı, bildirimler.
-- [ ] 7. Transfer, sözleşme, finans
+- [x] **7. Transfer, sözleşme, finans** — Transfer Merkezi (oyuncu arama + filtreler, teklifler, haberler),
+      teklif / karşı teklif / kiralık, sözleşme görüşmesi ve yenileme, gelen teklifler, yapay zekâ transferleri,
+      transfer dönemleri, finans (kasa, bütçeler, aylık raporlar, bilet/yayın/sponsor/prim), Devam haberlerde
+      durur, menüde bekleyen teklif rozeti, eski kayıt dönüşümü (biçim 1 → 2).
 - [ ] 8. Moral, form, sakatlık, ceza, antrenman, gelişim
 - [ ] 9. Yönetim, gelen kutusu, sezon sonu, yeni sezon
 - [ ] 10. Cila
@@ -174,9 +213,12 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
 - 2D saha görünümü: kullanıcı "henüz gerekmez" dedi.
 - Belki ileride (kullanıcı "sonra ekleriz belki" dedi): maç ortasında kayıt (liveMatch'i de yazmak).
 
+- Serbest oyuncu havuzu yok (sözleşmesi biten oyuncular 9. aşamada sezon sonuyla birlikte ele alınacak).
+- Oyuncu "transfer listesine koyma" yok; yapay zekâ ilgisi kendiliğinden geliyor.
+
 ## Sıradaki adım
-7. aşama: Transfer, sözleşme, finans — oyuncu arama (mevki/yaş/değer/özellik filtresi), teklif / karşı teklif,
-kiralık (takas yok), sözleşme görüşmesi (maaş, süre, imza bonusu; oyuncu reddedebilir), transfer dönemleri
-(yaz + devre arası), yapay zekâ kulüpler arası transferler ve bize teklifler; finans: bütçe, maaş bütçesi,
-bilet/yayın/sponsor geliri, primler, transfer gelir/giderleri, aylık finans raporu. GameWorld'e yeni alanlar
-eklenecek → SAVE_FORMAT_VERSION artırılıp eski kayıt dönüşümü düşünülmeli.
+8. aşama: Moral (forma şansı, sözleşme, takım başarısı), form (zaten maç puanlarından), kalıcı sakatlıklar
+(maç içi sakatlık → gün sayısı, iyileşme günlük), cezalar (sarı kart birikimi, kırmızı kart → maç cezası),
+antrenman (genel odak seçimi), oyuncu gelişimi/gerilemesi (yaş, PA, profesyonellik, antrenman; günlük ya
+da haftalık), kondisyonun maçlar arası toparlanması. Günlük işler `daily.ts`'e eklenecek. GameWorld'e alan
+eklenirse CURRENT_WORLD_VERSION = 3 + migrate.

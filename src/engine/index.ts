@@ -17,6 +17,12 @@ export * from './match/tactics';
 export * from './match/engine';
 export * from './match/simulate';
 export * from './gameFlow';
+export * from './news';
+export * from './finance/finance';
+export * from './transfer/window';
+export * from './transfer/market';
+export * from './transfer/offers';
+export * from './migrate';
 
 /** Yeni kariyer bu tarihte başlar (yaz transfer dönemi başı). */
 export const SEASON_START_DATE = '2026-07-01';

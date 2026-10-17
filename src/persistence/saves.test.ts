@@ -78,6 +78,22 @@ describe('kayıt sistemi', () => {
     await expect(loadGame(id)).rejects.toThrow(/sürüm/);
   });
 
+  it('eski biçimdeki (aşama 6) kayıt yeni biçime dönüştürülerek açılır', async () => {
+    const world = createWorld(gameData, 9, 'kasimpasa', START);
+    const old = structuredClone(world) as Partial<GameWorld>;
+    delete old.finances;
+    delete old.offers;
+    delete old.news;
+    for (const p of Object.values(old.players!)) delete (p as { loan?: unknown }).loan;
+    const id = await saveGame(world, 'Eski biçim');
+    await db.saveData.put({ id, world: old as GameWorld });
+    await db.saves.update(id, { formatVersion: 1 });
+    const loaded = await loadGame(id);
+    expect(loaded.finances.kasimpasa!.balance).toBeGreaterThan(0);
+    expect(loaded.offers).toEqual([]);
+    expect(Object.values(loaded.players).every((p) => p.loan === null)).toBe(true);
+  });
+
   it('yüklenen oyun, hiç kaydedilmemiş gibi aynı sonuçlarla devam eder', async () => {
     const original = createWorld(gameData, 8, 'samsunspor', START);
     playRounds(original, 3);

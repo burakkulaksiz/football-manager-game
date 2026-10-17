@@ -2,17 +2,19 @@
  * Oyun akışı: "Devam" butonunun motor tarafı.
  * Bu fonksiyonlar dünyayı YERİNDE değiştirir (store sonra yeni referans oluşturur).
  */
+import { processDay } from './daily';
 import { addDays, type GameDate } from './date';
 import { buildResult } from './match/engine';
 import { applyResult, drawMatchSeed, playFixture, startFixture } from './match/simulate';
 import type { MatchState } from './match/state';
 import { Rng } from './rng';
-import type { Fixture, GameWorld } from './types';
+import type { Fixture, GameWorld, NewsItem } from './types';
 
 export type AdvanceResult =
   | { kind: 'played'; round: number; fixtures: Fixture[] }
   | { kind: 'userMatch'; fixture: Fixture }
-  | { kind: 'moved'; days: number };
+  /** Takvim ilerledi; kullanıcıyı ilgilendiren haber geldiyse o gün durur. */
+  | { kind: 'moved'; days: number; news: NewsItem[] };
 
 /** Bugün oynanmamış maç varsa onlar. */
 export function todaysFixtures(world: GameWorld): Fixture[] {
@@ -48,11 +50,16 @@ export function isSeasonOver(world: GameWorld): boolean {
 }
 
 /**
- * Tek günlük ilerleme. Günlük işler (sakatlık iyileşmesi, kondisyon, transfer haberleri…)
- * sonraki aşamalarda buraya eklenecek.
+ * Tek günlük ilerleme: takvim + günlük işler (finans, transfer, kiralıklar…).
+ * Kullanıcıyı ilgilendiren yeni haberleri döndürür.
  */
-function advanceOneDay(world: GameWorld): void {
+function advanceOneDay(world: GameWorld): NewsItem[] {
+  const before = world.nextNewsId;
   world.date = addDays(world.date, 1);
+  const rng = Rng.fromState(world.rngState);
+  processDay(world, rng);
+  world.rngState = rng.getState();
+  return world.news.filter((n) => n.id >= before && n.important);
 }
 
 /** Bugünkü (kalan) tüm maçları arka planda oynatır. */
@@ -92,7 +99,8 @@ export function finishUserMatch(world: GameWorld, state: MatchState): Fixture[] 
  *  - Bugün kulübümüzün maçı varsa 'userMatch' döner (canlı maç ekranı açılır).
  *    `autoPlayUserMatch` ise o maç da arka planda oynanır (testler / anında sonuç).
  *  - Bugün başka maçlar varsa onları oynatır (tarih değişmez).
- *  - Değilse, gün gün ilerleyerek bir sonraki maç gününe gelir.
+ *  - Değilse, gün gün ilerleyerek bir sonraki maç gününe gelir; kullanıcıyı ilgilendiren bir haber
+ *    (teklif yanıtı, gelen teklif, transfer dönemi…) çıkarsa o gün durur.
  *  - Sezon bittiyse bir gün ilerler (yeni sezon döngüsü 9. aşamada).
  */
 export function advance(world: GameWorld, options: { autoPlayUserMatch?: boolean } = {}): AdvanceResult {
@@ -106,9 +114,10 @@ export function advance(world: GameWorld, options: { autoPlayUserMatch?: boolean
   }
   const next = nextMatchDate(world);
   let days = 0;
+  let news: NewsItem[] = [];
   do {
-    advanceOneDay(world);
+    news = advanceOneDay(world);
     days++;
-  } while (next !== null && world.date < next);
-  return { kind: 'moved', days };
+  } while (news.length === 0 && next !== null && world.date < next);
+  return { kind: 'moved', days, news };
 }

@@ -5,6 +5,7 @@ import { ClubBadge } from '../components/ClubBadge';
 import { QuitDialog, SaveDialog } from '../components/SaveDialogs';
 import { formatDayMonth } from '../labels';
 import { MENU } from '../screens';
+import { actionableOffers } from '../screens/TransferScreen';
 
 /** Sol menünün altındaki yeşil kart: sıradaki maç. */
 function NextMatchCard() {
@@ -36,6 +37,9 @@ export function Sidebar() {
   const setScreen = useGameStore((s) => s.setScreen);
   const liveMatch = useGameStore((s) => s.liveMatch);
   const unsaved = useGameStore(hasUnsavedProgress);
+  const world = useWorld();
+  // Transfer Merkezi rozeti: yanıt bekleyen teklifler
+  const pendingActions = actionableOffers(world.offers, world.playerClubId);
   const [dialog, setDialog] = useState<'save' | 'quit' | null>(null);
   // Oyuncu profili açıkken "Kadro" vurgulu kalsın.
   const isActive = (id: string) => id === screen || (screen === 'player' && id === 'squad');
@@ -53,6 +57,7 @@ export function Sidebar() {
                 onClick={() => setScreen(item.id)}
               >
                 {item.label}
+                {item.id === 'transfers' && pendingActions > 0 && <span className="menu-badge">{pendingActions}</span>}
               </button>
             ))}
           </div>

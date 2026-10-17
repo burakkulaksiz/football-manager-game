@@ -13,7 +13,7 @@ function testPlayer(overrides: Partial<Player>): Player {
     clubId: null, squadNumber: null, positions: { ST: 20 }, foot: 'right',
     attributes: uniformAttrs(12), hidden: { consistency: 10, injuryProneness: 10, professionalism: 10 },
     currentAbility: 120, potentialAbility: 120, morale: 70, form: [], condition: 100, injury: null,
-    contract: { wage: 500_000, expires: '2029-06-30' },
+    contract: { wage: 500_000, expires: '2029-06-30' }, loan: null,
     ...overrides,
   };
 }

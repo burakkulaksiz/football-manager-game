@@ -92,6 +92,11 @@ interface GameState {
    * Maçlar oynanınca o haftanın sonuçları gösterilir.
    */
   advance: () => void;
+  /**
+   * Dünyayı değiştiren bir motor işlemini çalıştırır (transfer teklifi, sözleşme…),
+   * arayüzü günceller ve işlemin sonucunu döndürür.
+   */
+  worldAction: <T>(fn: (world: GameWorld) => T) => T;
   /** Kendi kulübümüzün taktiğini günceller (motorun saf yardımcılarıyla). */
   updateTactics: (fn: (tactics: Tactics, squad: Player[]) => Tactics) => void;
   /** Canlı maç başlamadan taktik değiştiyse maçı aynı tohumla yeniden kurar. */
@@ -268,7 +273,19 @@ export const useGameStore = create<GameState>()((set, get) => {
         set({ fixturesTab: 'round', fixturesRound: result.round });
         get().navigate({ screen: 'fixtures' });
         runAutosave();
+      } else if (result.news.length > 0) {
+        // Devam bir haber yüzünden durdu: kullanıcıya göster.
+        const [first, ...rest] = result.news;
+        get().showNotice(rest.length > 0 ? `${first!.title} (+${rest.length} haber)` : first!.title);
       }
+    },
+
+    worldAction: (fn) => {
+      const { world } = get();
+      if (!world) throw new Error('Açık bir oyun yok');
+      const result = fn(world);
+      touch(world);
+      return result;
     },
 
     updateTactics: (fn) => {

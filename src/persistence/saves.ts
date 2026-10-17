@@ -31,6 +31,7 @@ function meta(world: GameWorld, name: string, isAutosave: boolean): Omit<SaveSlo
     isAutosave,
     updatedAt: Date.now(),
     formatVersion: SAVE_FORMAT_VERSION,
+    managerName: world.manager?.name,
   };
 }
 

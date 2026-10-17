@@ -137,6 +137,7 @@ export function endSeason(world: GameWorld, rng: Rng): SeasonSummary {
       clubId: world.playerClubId,
     });
   }
+  if (userPosition === 1) world.manager.titles++;
   boardSeasonReview(world, userPosition, relegatedIds.includes(world.playerClubId));
   return summary;
 }

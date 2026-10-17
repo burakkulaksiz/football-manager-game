@@ -315,11 +315,24 @@ export interface GameWorld {
   seasonState: 'running' | 'ended';
   /** Görevden alındıysa kariyer biter. */
   gameOver: { date: GameDate; reason: string } | null;
+  manager: ManagerInfo;
 }
 
 /* ------------------------------------------------------------------ */
 /* Yönetim ve sezon geçmişi                                            */
 /* ------------------------------------------------------------------ */
+
+/** Kullanıcının menajer kartı (kariyer boyunca, sezonlar arası taşınır). */
+export interface ManagerInfo {
+  name: string;
+  /** Göreve başlama tarihi. */
+  joined: GameDate;
+  won: number;
+  drawn: number;
+  lost: number;
+  /** Lig şampiyonlukları. */
+  titles: number;
+}
 
 export interface BoardState {
   /** Yönetimin güveni 0–100. */

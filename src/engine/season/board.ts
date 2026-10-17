@@ -38,6 +38,11 @@ export function boardAfterMatch(world: GameWorld, fixture: Fixture): void {
   if (!fixture.result || (fixture.homeId !== user && fixture.awayId !== user)) return;
   const own = fixture.homeId === user ? fixture.result.homeGoals : fixture.result.awayGoals;
   const opp = fixture.homeId === user ? fixture.result.awayGoals : fixture.result.homeGoals;
+  // Menajer kariyer kaydı
+  if (own > opp) world.manager.won++;
+  else if (own === opp) world.manager.drawn++;
+  else world.manager.lost++;
+
   const bigClub = world.board.targetPosition <= 4;
   const delta = own > opp ? 1.5 : own === opp ? (bigClub ? -0.5 : 0.3) : bigClub ? -3.5 : -2.5;
   world.board.confidence = clamp(world.board.confidence + delta);
@@ -63,7 +68,7 @@ export function boardMonthly(world: GameWorld): void {
     category: 'board',
     title: warning ? 'Yönetimden uyarı' : 'Yönetimin aylık değerlendirmesi',
     body:
-      `Yönetim kurulu durumu değerlendirdi: takım ${position}. sırada, hedef ${board.targetPosition}. sıra. ` +
+      `Sayın ${world.manager.name}, yönetim kurulu durumu değerlendirdi: takım ${position}. sırada, hedef ${board.targetPosition}. sıra. ` +
       `Güven: ${confidenceLabel(board.confidence)} (${Math.round(board.confidence)}/100).` +
       (warning ? ' Sonuçlar düzelmezse görevine son verilecek.' : '') +
       (fin.balance < 0 ? ' Kulübün kasası eksiye düştü; harcamalara dikkat edilmeli.' : ''),

@@ -32,7 +32,8 @@ export function StatusBar() {
   const screen = useGameStore((s) => s.screen);
   const selectedPlayerId = useGameStore((s) => s.selectedPlayerId);
   const viewedClubId = useGameStore((s) => s.viewedClubId);
-  const { breadcrumb } = pageHeading(world, screen, selectedPlayerId, viewedClubId);
+  const selectedFixtureId = useGameStore((s) => s.selectedFixtureId);
+  const { breadcrumb } = pageHeading(world, screen, selectedPlayerId, viewedClubId, selectedFixtureId);
   const items = tickerItems(world);
   // Az haber varsa bant boş kalmasın diye metin tekrarlanır.
   const once = items.map((t) => `+++ ${t} `).join('');

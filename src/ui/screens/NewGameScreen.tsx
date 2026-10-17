@@ -9,15 +9,30 @@ export function NewGameScreen() {
   const startNewGame = useGameStore((s) => s.startNewGame);
   const quitToMenu = useGameStore((s) => s.quitToMenu);
   const [selected, setSelected] = useState<string | null>(null);
+  const [managerName, setManagerName] = useState('');
 
   const clubs = [...gameData.clubs].sort((a, b) => b.reputation - a.reputation);
   const selectedClub = clubs.find((c) => c.id === selected);
+  const nameOk = managerName.trim().length > 0;
+  const start = (clubId: string) => nameOk && startNewGame(clubId, managerName);
 
   return (
     <div className="new-game pitch-bg">
       <div className="new-game-inner">
         <div className="splash-kicker">Yeni Oyun</div>
         <h1 className="splash-title small">Kulübünü Seç</h1>
+        <div className="manager-name-row">
+          <label className="field">
+            Menajer adı
+            <input
+              autoFocus
+              maxLength={40}
+              placeholder="Adın ve soyadın"
+              value={managerName}
+              onChange={(e) => setManagerName(e.target.value)}
+            />
+          </label>
+        </div>
         <section className="panel">
           <h2 className="panel-title">Süper Lig Kulüpleri</h2>
           <table className="data-table clickable">
@@ -40,7 +55,7 @@ export function NewGameScreen() {
                   key={c.id}
                   className={c.id === selected ? 'selected' : ''}
                   onClick={() => setSelected(c.id)}
-                  onDoubleClick={() => startNewGame(c.id)}
+                  onDoubleClick={() => start(c.id)}
                 >
                   <td><ClubBadge club={c} size={18} /></td>
                   <td className="strong">{c.name}</td>
@@ -65,10 +80,10 @@ export function NewGameScreen() {
           </button>
           <button
             className="btn-continue"
-            disabled={!selectedClub}
-            onClick={() => selectedClub && startNewGame(selectedClub.id)}
+            disabled={!selectedClub || !nameOk}
+            onClick={() => selectedClub && start(selectedClub.id)}
           >
-            {selectedClub ? `${selectedClub.name} ile Başla` : 'Bir kulüp seç'}
+            {!nameOk ? 'Menajer adını yaz' : selectedClub ? `${selectedClub.name} ile Başla` : 'Bir kulüp seç'}
             <span className="btn-continue-arrow">›</span>
           </button>
         </div>

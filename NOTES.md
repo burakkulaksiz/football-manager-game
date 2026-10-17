@@ -39,6 +39,8 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
                        buildResult. Denge sabitleri TUNING içinde.
   match/commentary.ts  Türkçe anlatım şablonları (isimden sonra ek gelmeyecek şekilde yazıldı).
   match/simulate.ts    Dünya bağlantısı: fikstür kurulumu, arka plan maçı, sonucu işleme (form güncelleme).
+  match/report.ts      Maç raporu: matchTimeline (gol/kart/sakatlık sıralı), teamAppearances (giriş/çıkış dk
+                       oynanan süreden türetilir; sonuçta değişiklik olayı saklanmıyor).
   gameFlow.ts          Devam: kendi maçımız varsa 'userMatch' döner (canlı), yoksa günün maçlarını oynatır
                        ya da gün gün ilerler; önemli haber çıkan günde ya da maç gününde durur.
   daily.ts             Günlük işler (processDay): ay başı finans, transfer dönemi haberleri, kiralık dönüşleri,
@@ -51,7 +53,7 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
   transfer/offers.ts   Kullanıcı teklifleri, karşı teklif, sözleşme görüşmesi (negotiateTransfer/Renewal),
                        gelen tekliflere yanıt, günlük teklif işleme (processOffers).
   transfer/ai.ts       Yapay zekâ alımları ve kullanıcıya teklifler (aiTransferDay).
-  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 4; migrateWorld GameData de alır).
+  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 5; migrateWorld GameData de alır).
   squad/training.ts    Antrenman odağı/yoğunluğu ve etkileri (INTENSITY_EFFECTS, FOCUS_ATTRS).
   squad/injuries.ts    Sakatlık türleri, maç/antrenman sakatlığı, günlük iyileşme.
   squad/discipline.ts  Kart cezaları (maç sonrası).
@@ -60,6 +62,7 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
   squad/condition.ts   Günlük kondisyon toparlanması.
   season/expectation.ts Beklenti → hedef sıra, lig (division), yeni sezonda beklenti hesabı.
   season/board.ts      Yönetim güveni: maç sonrası, aylık değerlendirme, görevden alma (gameOver).
+                       boardAfterMatch menajer kartının G/B/M kaydını da tutar (world.manager).
   season/seasonEnd.ts  Sezon sonu: tablo, ödüller, sıralama primi, küme düşen/çıkan seçimi, arşiv.
   season/rollover.ts   1 Mayıs uyarı, 30 Haziran sözleşmeler, 1 Temmuz yeni sezon (lig değişimi, itibar,
                        emeklilik, altyapı, kadro budama, bütçeler, fikstür).
@@ -146,9 +149,9 @@ Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
 - `data/lower_league.json` — kurgusal 1. Lig kulüpleri (clubs.json ile aynı biçim, en az 3). Oyunda
   `division: 2`; kadroları oyun başında üretilir. Küme düşen Süper Lig kulübü de buraya iner.
 - **Kayıt** (IndexedDB, Dexie şema sürümü 2): `saves` = SaveSlot `{ id, name, careerId, clubId, clubName,
-  gameDate, season, isAutosave, createdAt, updatedAt, formatVersion }`; `saveData` = `{ id, world: GameWorld }`
+  gameDate, season, isAutosave, createdAt, updatedAt, formatVersion, managerName? }`; `saveData` = `{ id, world: GameWorld }`
   (aynı id). GameWorld olduğu gibi yazılır (düz veri), kayıt anında `structuredClone` ile kopyalanır.
-  `SAVE_FORMAT_VERSION = CURRENT_WORLD_VERSION` (şu an 2). GameWorld yapısı değişince sürümü artır ve
+  `SAVE_FORMAT_VERSION = CURRENT_WORLD_VERSION` (şu an 5). GameWorld yapısı değişince sürümü artır ve
   `engine/migrate.ts`'e dönüşüm ekle; `loadGame` eski kayıtları otomatik dönüştürür, daha yeni sürümü reddeder.
   Sezon sonu kaydı ~1.7 MB (+ haberler/teklifler).
 - **careerId** = `${seed}-${playerClubId}`. Otomatik kayıt kariyer başına tek slot; elle kayıt sınırsız.
@@ -272,7 +275,13 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
   - [x] Kadro ekranı: hızlı filtreler (mevki grubu; sakat/cezalı, sözleşmesi bitiyor, kiralık, gençler, ilk 11),
         isim arama, 4 görünüm (Genel, İstatistik, Sözleşme, Antrenör Raporu), sıralanabilir sütunlar, özet şeridi,
         2 oyuncu karşılaştırma (başka kulüpten de; seçim ve tercihler store'da korunur).
-  - [ ] Diğer adaylar: denge (gol kralı ~35), maç sonrası rapor, menajer adı, performans.
+  - [x] Maç sonrası rapor (ekran 'report', Route.fixtureId): tabela, tarih/stadyum/seyirci, maçın adamı, olay
+        zaman çizelgesi, istatistikler, iki takımın oyuncu puanları (giriş ▲ / çıkış ▼ dk). Canlı maç bitince açılır;
+        Fikstür'de oynanmış maça tıklayınca da. Yalnızca bu sezonun maçları (geçmiş sezon fikstürü saklanmıyor).
+  - [x] Menajer adı ve kartı (world.manager: ad, göreve başlama, G/B/M, şampiyonluk). Yeni oyunda ad zorunlu;
+        Kulüp Bilgisi'nden değiştirilebilir; başlıkta, ana menüde ve kayıt listesinde görünür. Biçim 4 → 5 dönüşümü
+        adı "Menajer" yapar, kaydı bu sezonun sonuçlarından ve arşivdeki şampiyonluklardan çıkarır.
+  - [ ] Diğer adaylar: denge (gol kralı ~35), performans.
 
 ## Açık konular / ileride
 - Elle gerçek kadro girişi (ör. `data/squads/<kulüpId>.json`) yok; kullanıcı "şimdilik gerek yok" dedi.
@@ -284,5 +293,4 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
 - Oyuncu "transfer listesine koyma" yok; yapay zekâ ilgisi kendiliğinden geliyor.
 
 ## Sıradaki adım
-10. aşama devam: kullanıcıya sıradaki cila maddesini sor (denge, maç sonrası rapor, menajer adı, performans
-ya da oynarken fark ettikleri).
+10. aşama devam: kullanıcıya sıradaki cila maddesini sor (denge, performans ya da oynarken fark ettikleri).

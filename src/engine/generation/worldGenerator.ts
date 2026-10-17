@@ -108,6 +108,7 @@ export function createWorld(
   seed: number,
   playerClubId: string,
   startDate: GameDate,
+  managerName = 'Menajer',
 ): GameWorld {
   if (!data.clubs.some((c) => c.id === playerClubId)) {
     throw new Error(`Bilinmeyen kulüp: ${playerClubId}`);
@@ -151,12 +152,13 @@ export function createWorld(
     history: [],
     seasonState: 'running',
     gameOver: null,
+    manager: { name: managerName.trim() || 'Menajer', joined: startDate, won: 0, drawn: 0, lost: 0, titles: 0 },
   };
   addNews(world, {
     category: 'board',
     title: `${userClub.name} yönetiminden hoş geldin mesajı`,
     body:
-      `Yönetim kurulu yeni menajerini selamlıyor. Bu sezonki hedefimiz ligi ${world.board.targetPosition}. sırada ya da daha iyi bitirmek. ` +
+      `Sayın ${world.manager.name}, yönetim kurulu olarak sizi kulübümüzde görmekten mutluluk duyuyoruz. Bu sezonki hedefimiz ligi ${world.board.targetPosition}. sırada ya da daha iyi bitirmek. ` +
       "Yaz transfer dönemi açık; kadroyu Transfer Merkezi'nden güçlendirebilir, taktiği ve antrenmanı ayarlayabilirsin. Başarılar!",
     important: false,
     clubId: playerClubId,

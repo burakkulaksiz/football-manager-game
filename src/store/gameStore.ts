@@ -35,12 +35,15 @@ export type ScreenId =
   | 'table'
   | 'stats'
   | 'player'
-  | 'match';
+  | 'match'
+  | 'report';
 
 /** Gezinme geçmişindeki bir sayfa (FM'deki ◀ ▶ okları için). */
 export interface Route {
   screen: ScreenId;
   playerId?: number;
+  /** Maç raporu ekranı için. */
+  fixtureId?: number;
 }
 
 export interface Notice {
@@ -63,6 +66,8 @@ interface GameState {
   /** Geçerli sayfa (history[historyIndex] ile aynı). */
   screen: ScreenId;
   selectedPlayerId: number | null;
+  /** Açık maç raporunun fikstürü. */
+  selectedFixtureId: number | null;
   history: Route[];
   historyIndex: number;
   /** Kadro ekranında görüntülenen kulüp (varsayılan: kendi kulübümüz). */
@@ -80,7 +85,9 @@ interface GameState {
 
   openNewGame: () => void;
   openLoadGame: () => void;
-  startNewGame: (clubId: string) => void;
+  startNewGame: (clubId: string, managerName: string) => void;
+  /** Menajer adını değiştirir. */
+  renameManager: (name: string) => void;
   /** Elle kayıt: yeni slot ya da `overwriteId` slotunun üzerine. Canlı maç sırasında yapılamaz. */
   saveCurrent: (name: string, overwriteId?: number) => Promise<boolean>;
   loadSave: (id: number) => Promise<boolean>;
@@ -90,6 +97,7 @@ interface GameState {
   navigate: (route: Route) => void;
   setScreen: (screen: ScreenId) => void;
   openPlayer: (playerId: number) => void;
+  openReport: (fixtureId: number) => void;
   back: () => void;
   forward: () => void;
   setViewedClub: (clubId: string) => void;
@@ -128,7 +136,7 @@ export function userSide(state: MatchState, world: GameWorld): Side {
 }
 
 function routeState(route: Route) {
-  return { screen: route.screen, selectedPlayerId: route.playerId ?? null };
+  return { screen: route.screen, selectedPlayerId: route.playerId ?? null, selectedFixtureId: route.fixtureId ?? null };
 }
 
 const START_ROUTE: Route = { screen: 'inbox' };
@@ -181,6 +189,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     notice: null,
     screen: START_ROUTE.screen,
     selectedPlayerId: null,
+    selectedFixtureId: null,
     history: [START_ROUTE],
     historyIndex: 0,
     viewedClubId: null,
@@ -195,11 +204,19 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     openLoadGame: () => set({ phase: 'load' }),
 
-    startNewGame: (clubId) => {
+    startNewGame: (clubId, managerName) => {
       // Seed oyunun başında bir kez belirlenir; motor içinde Math.random kullanılmaz.
       const seed = Date.now() >>> 0;
-      const world = createWorld(gameData, seed, clubId, SEASON_START_DATE);
+      const world = createWorld(gameData, seed, clubId, SEASON_START_DATE, managerName);
       set({ ...enterGame(world), currentSaveId: null, revision: 1 });
+    },
+
+    renameManager: (name) => {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      get().worldAction((w) => {
+        w.manager.name = trimmed;
+      });
     },
 
     saveCurrent: async (name, overwriteId) => {
@@ -240,7 +257,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     navigate: (route) => {
       const { history, historyIndex } = get();
       const current = history[historyIndex];
-      if (current && current.screen === route.screen && current.playerId === route.playerId) return;
+      if (current && current.screen === route.screen && current.playerId === route.playerId && current.fixtureId === route.fixtureId) return;
       // İleri geçmişi silinir, yeni sayfa sona eklenir (tarayıcı gibi).
       const next = [...history.slice(0, historyIndex + 1), route].slice(-50);
       set({ history: next, historyIndex: next.length - 1, ...routeState(route) });
@@ -249,6 +266,8 @@ export const useGameStore = create<GameState>()((set, get) => {
     setScreen: (screen) => get().navigate({ screen }),
 
     openPlayer: (playerId) => get().navigate({ screen: 'player', playerId }),
+
+    openReport: (fixtureId) => get().navigate({ screen: 'report', fixtureId }),
 
     back: () => {
       const { history, historyIndex } = get();
@@ -365,10 +384,11 @@ export const useGameStore = create<GameState>()((set, get) => {
     finishLiveMatch: () => {
       const { world, liveMatch } = get();
       if (!world || !liveMatch || liveMatch.period !== 'full') return;
+      const fixtureId = liveMatch.fixtureId;
       const round = finishUserMatch(world, liveMatch);
       touch(world);
       set({ liveMatch: null, fixturesTab: 'round', fixturesRound: round[0]?.round ?? 1 });
-      get().navigate({ screen: 'fixtures' });
+      get().navigate({ screen: 'report', fixtureId });
       runAutosave();
     },
   };

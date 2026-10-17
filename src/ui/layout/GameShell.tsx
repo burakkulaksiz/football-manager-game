@@ -5,6 +5,7 @@ import { ClubInfoScreen } from '../screens/ClubInfoScreen';
 import { FinanceScreen } from '../screens/FinanceScreen';
 import { FixturesScreen } from '../screens/FixturesScreen';
 import { InboxScreen } from '../screens/InboxScreen';
+import { MatchReportScreen } from '../screens/MatchReportScreen';
 import { MatchScreen } from '../screens/MatchScreen';
 import { PlaceholderScreen } from '../screens/PlaceholderScreen';
 import { PlayerProfile } from '../screens/PlayerProfile';
@@ -29,6 +30,7 @@ function ScreenContent({ screen }: { screen: ScreenId }) {
     case 'table': return <TableScreen />;
     case 'stats': return <StatsScreen />;
     case 'match': return <MatchScreen />;
+    case 'report': return <MatchReportScreen />;
     case 'tactics': return <TacticsScreen />;
     case 'training': return <TrainingScreen />;
     case 'transfers': return <TransferScreen />;
@@ -41,6 +43,7 @@ function ScreenContent({ screen }: { screen: ScreenId }) {
 export function GameShell() {
   const screen = useGameStore((s) => s.screen);
   const playerId = useGameStore((s) => s.selectedPlayerId);
+  const fixtureId = useGameStore((s) => s.selectedFixtureId);
   const unsaved = useGameStore(hasUnsavedProgress);
 
   // Kaydedilmemiş ilerleme varken sekme kapatılır/yenilenirse tarayıcı uyarsın.
@@ -58,7 +61,7 @@ export function GameShell() {
       <div className="shell-body">
         <Sidebar />
         {/* key: sayfa değişince içerik yeniden kurulur, kaydırma en üste döner */}
-        <main className="content pitch-bg" key={`${screen}-${playerId ?? ''}`}>
+        <main className="content pitch-bg" key={`${screen}-${playerId ?? ''}-${fixtureId ?? ''}`}>
           <ScreenContent screen={screen} />
         </main>
       </div>

@@ -12,6 +12,7 @@ import {
 import { useGameStore, userSide, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { FormationPicker, InstructionsPanel } from '../components/InstructionsPanel';
+import { MatchStatRows } from '../components/MatchStatRows';
 import { MENTALITY_LABELS, POSITION_LABELS, positionGroup, ratingClass } from '../labels';
 
 /** Dakika başına bekleme süresi (ms). */
@@ -103,39 +104,13 @@ function MomentumBar({ match }: { match: MatchState }) {
 function StatsPanel({ match }: { match: MatchState }) {
   const totalTicks = match.possessionTicks.home + match.possessionTicks.away;
   const possHome = totalTicks === 0 ? 50 : Math.round((match.possessionTicks.home / totalTicks) * 100);
-  const h = match.home.counters;
-  const a = match.away.counters;
-  const rows: [string, number, number, string?][] = [
-    ['Topla Oynama', possHome, 100 - possHome, '%'],
-    ['Şut', h.shots, a.shots],
-    ['İsabetli Şut', h.shotsOnTarget, a.shotsOnTarget],
-    ['Korner', h.corners, a.corners],
-    ['Faul', h.fouls, a.fouls],
-    ['Sarı Kart', h.yellowCards, a.yellowCards],
-    ['Kırmızı Kart', h.redCards, a.redCards],
-  ];
   return (
     <section className="panel">
       <h2 className="panel-title">İstatistikler</h2>
-      <div className="panel-body match-stats">
-        {rows.map(([label, hv, av, suffix = '']) => {
-          const total = hv + av;
-          const hp = total === 0 ? 50 : (hv / total) * 100;
-          return (
-            <div key={label} className="ms-row">
-              <div className="ms-values">
-                <span>{suffix === '%' ? `%${hv}` : hv}</span>
-                <span className="ms-label">{label}</span>
-                <span>{suffix === '%' ? `%${av}` : av}</span>
-              </div>
-              <div className="ms-bar">
-                <i className="home" style={{ width: `${hp}%` }} />
-                <i className="away" style={{ width: `${100 - hp}%` }} />
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <MatchStatRows
+        home={{ ...match.home.counters, possession: possHome }}
+        away={{ ...match.away.counters, possession: 100 - possHome }}
+      />
     </section>
   );
 }

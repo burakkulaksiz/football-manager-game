@@ -29,6 +29,7 @@ function scorerText(world: GameWorld, f: Fixture, clubId: string): string {
 function ClubFixtures() {
   const world = useWorld();
   const setFixturesView = useGameStore((s) => s.setFixturesView);
+  const openReport = useGameStore((s) => s.openReport);
   const clubId = world.playerClubId;
   const fixtures = world.season.fixtures
     .filter((f) => f.homeId === clubId || f.awayId === clubId)
@@ -53,7 +54,7 @@ function ClubFixtures() {
           const opponent = getClub(world, home ? f.awayId : f.homeId);
           const outcome = outcomeFor(f, clubId);
           return (
-            <tr key={f.id} onClick={() => setFixturesView('round', f.round)}>
+            <tr key={f.id} onClick={() => (f.result ? openReport(f.id) : setFixturesView('round', f.round))}>
               <td className="num">{f.round}</td>
               <td>{formatDateShort(f.date)}</td>
               <td className="strong">
@@ -77,6 +78,7 @@ function RoundFixtures() {
   const world = useWorld();
   const round = useGameStore((s) => s.fixturesRound);
   const setFixturesView = useGameStore((s) => s.setFixturesView);
+  const openReport = useGameStore((s) => s.openReport);
   const fixtures = world.season.fixtures.filter((f) => f.round === round);
   const go = (r: number) => setFixturesView('round', Math.max(1, Math.min(ROUNDS, r)));
 
@@ -101,7 +103,12 @@ function RoundFixtures() {
             const away = getClub(world, f.awayId);
             const ours = f.homeId === world.playerClubId || f.awayId === world.playerClubId;
             return (
-              <tr key={f.id} className={ours ? 'own-row' : ''}>
+              <tr
+                key={f.id}
+                className={`${ours ? 'own-row' : ''}${f.result ? ' clickable-row' : ''}`}
+                title={f.result ? 'Maç raporu' : undefined}
+                onClick={() => f.result && openReport(f.id)}
+              >
                 <td className="right">
                   <div className="strong">{home.name}</div>
                   <div className="scorers">{scorerText(world, f, f.homeId)}</div>

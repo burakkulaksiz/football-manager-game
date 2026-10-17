@@ -32,7 +32,7 @@ export function MainMenu() {
           )}
           {latest && (
             <div className="splash-latest">
-              {latest.name} · {formatSavedAt(latest.updatedAt)}
+              {latest.managerName ? `${latest.managerName} · ` : ''}{latest.name} · {formatSavedAt(latest.updatedAt)}
             </div>
           )}
           <button className={latest ? 'btn btn-wide' : 'btn-continue btn-wide'} onClick={openNewGame}>

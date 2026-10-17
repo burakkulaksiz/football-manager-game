@@ -20,8 +20,22 @@ export function pageHeading(
   screen: ScreenId,
   selectedPlayerId: number | null,
   viewedClubId: string | null,
+  selectedFixtureId: number | null = null,
 ): PageHeading {
   const ownClub = getClub(world, world.playerClubId);
+
+  if (screen === 'report') {
+    const fixture = world.season.fixtures.find((f) => f.id === selectedFixtureId);
+    const title = fixture?.result
+      ? `${getClub(world, fixture.homeId).name} ${fixture.result.homeGoals}-${fixture.result.awayGoals} ${getClub(world, fixture.awayId).name}`
+      : 'Maç Raporu';
+    return {
+      title,
+      subtitle: fixture ? `Maç Raporu · ${fixture.round}. Hafta` : 'Maç Raporu',
+      colors: LEAGUE_COLORS,
+      breadcrumb: ['Süper Lig', 'Fikstür', 'Maç Raporu'],
+    };
+  }
 
   if (screen === 'player' && selectedPlayerId !== null) {
     const player = world.players[selectedPlayerId];

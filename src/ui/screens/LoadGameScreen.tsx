@@ -77,6 +77,7 @@ export function LoadGameScreen() {
                       <td>
                         <span className="club-cell">
                           {club && <ClubBadge club={club} size={16} />} {s.clubName}
+                          {s.managerName && <span className="muted"> · {s.managerName}</span>}
                         </span>
                       </td>
                       <td>{seasonLabel(s.season)}</td>

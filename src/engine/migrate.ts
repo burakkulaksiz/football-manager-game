@@ -1,7 +1,7 @@
 /**
  * Eski kayıtları güncel GameWorld biçimine dönüştürür.
  * Biçim sürümü: 1 = aşama 6 (finans/transfer yok), 2 = aşama 7, 3 = aşama 8 (ceza, gelişim, antrenman),
- * 4 = aşama 9 (1. Lig, yönetim, sezon arşivi).
+ * 4 = aşama 9 (1. Lig, yönetim, sezon arşivi), 5 = menajer kartı.
  */
 import type { GameData } from './data';
 import { initFinance, initFinances, payMonthly } from './finance/finance';
@@ -11,7 +11,7 @@ import { initialBoard } from './season/expectation';
 import { DEFAULT_TRAINING } from './squad/training';
 import type { GameWorld } from './types';
 
-export const CURRENT_WORLD_VERSION = 4;
+export const CURRENT_WORLD_VERSION = 5;
 
 /** `raw` eski biçimdeki dünya; dönüştürülmüş dünya döner (yerinde değiştirir). */
 export function migrateWorld(raw: unknown, fromVersion: number, data: GameData): GameWorld {
@@ -58,6 +58,25 @@ export function migrateWorld(raw: unknown, fromVersion: number, data: GameData):
     world.history ??= [];
     world.seasonState ??= world.season.fixtures.every((f) => f.result !== null) ? 'ended' : 'running';
     world.gameOver ??= null;
+  }
+  if (fromVersion < 5) {
+    // Menajer kartı: bu sezonki sonuçlar ve geçmiş şampiyonluklardan
+    const user = world.playerClubId;
+    const record = { won: 0, drawn: 0, lost: 0 };
+    for (const f of world.season.fixtures) {
+      if (!f.result || (f.homeId !== user && f.awayId !== user)) continue;
+      const own = f.homeId === user ? f.result.homeGoals : f.result.awayGoals;
+      const opp = f.homeId === user ? f.result.awayGoals : f.result.homeGoals;
+      if (own > opp) record.won++;
+      else if (own === opp) record.drawn++;
+      else record.lost++;
+    }
+    world.manager ??= {
+      name: 'Menajer',
+      joined: world.history.length > 0 ? `${world.history[0]!.year}-07-01` : `${world.season.year}-07-01`,
+      ...record,
+      titles: world.history.filter((h) => h.championId === user).length,
+    };
   }
   return world;
 }

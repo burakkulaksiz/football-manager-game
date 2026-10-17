@@ -42,6 +42,15 @@ describe('sezon döngüsü', () => {
     expect(world.news.some((n) => n.category === 'season')).toBe(true);
   });
 
+  it('menajer kartı sezonun sonuçlarını ve şampiyonluğu tutar', () => {
+    if (world.gameOver) return;
+    const table = computeStandings(leagueClubs(world).map((c) => c.id), world.season.fixtures);
+    const row = table.find((r) => r.clubId === 'galatasaray')!;
+    expect(world.manager.name).toBe('Menajer');
+    expect([world.manager.won, world.manager.drawn, world.manager.lost]).toEqual([row.won, row.drawn, row.lost]);
+    expect(world.manager.titles).toBe(world.history[0]!.championId === 'galatasaray' ? 1 : 0);
+  });
+
   it('30 Haziran: kullanıcının sözleşmesi biten oyuncuları serbest kalır, yapay zekâ işine yarayanı yeniler', () => {
     const expiringUser = clubPlayers(world, 'galatasaray').filter((p) => p.contract.expires <= '2027-06-30' && !p.loan).map((p) => p.id);
     playUntil(world, '2027-06-30');
@@ -112,6 +121,8 @@ describe('yönetim', () => {
       if (i < MIN_ROUNDS_BEFORE_SACK - 1) expect(world.gameOver).toBeNull();
     }
     expect(world.gameOver).not.toBeNull();
+    expect(world.manager.won + world.manager.drawn).toBe(0);
+    expect(world.manager.lost).toBeGreaterThanOrEqual(MIN_ROUNDS_BEFORE_SACK);
     // Kovulduktan sonra oyun ilerlemez
     const date = world.date;
     expect(advance(world, gameData).kind).toBe('moved');

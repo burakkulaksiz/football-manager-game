@@ -17,6 +17,8 @@ export interface SaveSlot {
   isAutosave: boolean;
   createdAt: number;
   updatedAt: number;
+  /** Menajer adı (biçim 5 öncesi kayıtlarda yok). */
+  managerName?: string;
   /** Kayıt biçimi sürümü; ileride biçim değişirse eski kayıtları dönüştürmek için. */
   formatVersion: number;
 }

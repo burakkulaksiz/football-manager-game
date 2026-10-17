@@ -2703,3 +2703,154 @@ select {
   text-align: center;
   font-weight: 600;
 }
+
+/* ================= Maç raporu ================= */
+.link-button {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.report-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 18px;
+  color: var(--text-soft);
+  font-size: 12px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+}
+
+.tl-row {
+  display: grid;
+  grid-template-columns: 1fr 56px 1fr;
+  align-items: center;
+  min-height: 34px;
+  border-bottom: 1px solid var(--row-line);
+}
+
+.tl-minute {
+  justify-self: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.tl-home .tl-event {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+.tl-event {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tl-event > span:last-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.tl-home .tl-event > span:last-child {
+  align-items: flex-end;
+}
+
+.tl-note {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.report-ratings tr.sub-start td {
+  border-top: 2px solid rgba(255, 255, 255, 0.18);
+}
+
+.report-ratings tr.motm-row td {
+  background: rgba(246, 207, 60, 0.1);
+}
+
+.motm-star {
+  margin-left: 6px;
+  color: var(--accent);
+}
+
+.sub-in,
+.sub-out {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.sub-in { color: var(--good); }
+.sub-out { color: var(--low); }
+
+/* Menajer kartı ve yeni oyun ad girişi */
+.manager-name-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.manager-name-row .field {
+  flex: 0 1 320px;
+}
+
+.manager-record {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 10px 0;
+  text-align: center;
+}
+
+.manager-record > div {
+  padding: 6px 4px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.manager-record strong {
+  display: block;
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.manager-record span {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.round-table tr.clickable-row {
+  cursor: pointer;
+}
+
+.round-table tr.clickable-row:hover td {
+  background: var(--row-hover);
+}
+
+.report-actions {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+}

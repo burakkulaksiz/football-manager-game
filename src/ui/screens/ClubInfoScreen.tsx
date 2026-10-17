@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import {
   ageOn,
   clubPlayers,
   confidenceLabel,
+  formatDateTR,
   HOME_NATION,
   marketValue,
   MIN_ROUNDS_BEFORE_SACK,
@@ -9,9 +11,65 @@ import {
   userPosition,
   WARNING_CONFIDENCE,
 } from '../../engine';
-import { useWorld } from '../../store/gameStore';
+import { useGameStore, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { EXPECTATION_LABELS, formatMoney, formatNumber, formatSignedMoney } from '../labels';
+
+/** Menajer kartı: ad (değiştirilebilir) ve kariyer kaydı. */
+function ManagerCard() {
+  const world = useWorld();
+  const renameManager = useGameStore((s) => s.renameManager);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(world.manager.name);
+  const m = world.manager;
+  const played = m.won + m.drawn + m.lost;
+  const save = () => {
+    if (!draft.trim()) return;
+    renameManager(draft);
+    setEditing(false);
+  };
+
+  return (
+    <section className="panel">
+      <h2 className="panel-title">Menajer</h2>
+      <div className="panel-body">
+        {editing ? (
+          <div className="manager-name-row">
+            <label className="field">
+              Menajer adı
+              <input
+                autoFocus
+                maxLength={40}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') save();
+                  if (e.key === 'Escape') setEditing(false);
+                }}
+              />
+            </label>
+            <button className="btn" disabled={!draft.trim()} onClick={save}>Kaydet</button>
+            <button className="btn" onClick={() => setEditing(false)}>Vazgeç</button>
+          </div>
+        ) : (
+          <div className="club-header">
+            <span className="club-header-name">{m.name}</span>
+            <button className="btn btn-small" onClick={() => { setDraft(m.name); setEditing(true); }}>Adı Değiştir</button>
+          </div>
+        )}
+        <div className="manager-record">
+          <div><strong>{played}</strong><span>Maç</span></div>
+          <div><strong>{m.won}</strong><span>Galibiyet</span></div>
+          <div><strong>{m.drawn}</strong><span>Beraberlik</span></div>
+          <div><strong>{m.lost}</strong><span>Mağlubiyet</span></div>
+        </div>
+        <div className="kv"><span className="kv-label">Göreve başlama</span><span className="kv-value">{formatDateTR(m.joined)}</span></div>
+        <div className="kv"><span className="kv-label">Galibiyet yüzdesi</span><span className="kv-value">{played > 0 ? `%${Math.round((m.won / played) * 100)}` : '—'}</span></div>
+        <div className="kv"><span className="kv-label">Lig şampiyonluğu</span><span className="kv-value">{m.titles}</span></div>
+      </div>
+    </section>
+  );
+}
 
 export function ClubInfoScreen() {
   const world = useWorld();
@@ -53,6 +111,7 @@ export function ClubInfoScreen() {
   return (
     <div className="screen">
       <div className="two-columns">
+        <ManagerCard />
         <section className="panel">
           <h2 className="panel-title">Yönetim</h2>
           <div className="panel-body">
@@ -74,6 +133,8 @@ export function ClubInfoScreen() {
             </div>
           </div>
         </section>
+      </div>
+      <div className="two-columns">
         <section className="panel">
           <h2 className="panel-title">Kulübün Geçmiş Sezonları</h2>
           {pastSeasons.length === 0 ? (
@@ -98,8 +159,6 @@ export function ClubInfoScreen() {
             </table>
           )}
         </section>
-      </div>
-      <div className="two-columns">
         <section className="panel">
           <h2 className="panel-title">Kulüp Bilgisi</h2>
           <div className="panel-body">

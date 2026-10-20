@@ -30,6 +30,8 @@ export * from './squad/discipline';
 export * from './squad/morale';
 export * from './squad/development';
 export * from './squad/condition';
+export * from './squad/growth';
+export * from './squad/academy';
 export * from './season/expectation';
 export * from './season/board';
 export * from './season/seasonEnd';

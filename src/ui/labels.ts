@@ -147,7 +147,7 @@ export function attrClass(value: number): string {
   return 'attr';
 }
 
-const MONTHS_SHORT = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+export const MONTHS_SHORT = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
 
 /** '2026-08-15' → '15 Ağu' */
 export function formatDayMonth(date: GameDate): string {
@@ -251,6 +251,7 @@ export const NEWS_CATEGORY_LABELS: Record<import('../engine').NewsCategory, stri
   training: 'Antrenman',
   board: 'Yönetim',
   season: 'Sezon',
+  academy: 'Altyapı',
 };
 
 export const INCOME_LABELS: Record<import('../engine').IncomeCategory, string> = {
@@ -307,4 +308,23 @@ export function trendSymbol(trend: number): { text: string; className: string } 
 /** Antrenör raporu: yetenek (CA/PA) → 0.5–5 yıldız (lig ölçeğinde: 170+ = 5 yıldız). */
 export function abilityStars(ability: number): number {
   return Math.max(0.5, Math.min(5, Math.round(((ability - 45) / 25) * 2) / 2));
+}
+
+/** Son 6 ayın gelişimi (yetenek puanı gizli; yalnızca bu etiket gösterilir). */
+export const GROWTH_LABELS: Record<import('../engine').GrowthRate, { text: string; className: string }> = {
+  fast: { text: 'Hızlı gelişiyor', className: 'trend-up strong' },
+  good: { text: 'İyi gelişiyor', className: 'trend-up' },
+  slow: { text: 'Yavaş', className: 'muted' },
+  falling: { text: 'Geriliyor', className: 'trend-down' },
+  none: { text: '—', className: 'muted' },
+};
+
+/**
+ * Potansiyel yıldızları: kendi oyuncumuzda antrenör raporu (kesin), başka kulübün oyuncusunda
+ * gözlem tahmini — oyuncuya özgü sabit bir sapmayla (±0.5 yıldız civarı; her bakışta aynı).
+ */
+export function potentialStarsFor(player: import('../engine').Player, own: boolean): number {
+  if (own) return abilityStars(player.potentialAbility);
+  const noise = ((Math.imul(player.id, 2654435761) >>> 0) % 1000) / 1000 - 0.5;
+  return abilityStars(player.potentialAbility + noise * 28);
 }

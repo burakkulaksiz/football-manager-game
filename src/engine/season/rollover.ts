@@ -4,7 +4,8 @@
  */
 import type { GameData } from '../data';
 import { addDays, makeDate } from '../date';
-import { clubPlayers, generateYouthPlayer, getClub, leagueClubs } from '../generation/worldGenerator';
+import { clubPlayers, getClub, leagueClubs } from '../generation/worldGenerator';
+import { academyIntake, manageAcademies, renewAcademyContracts } from '../squad/academy';
 import { generateSeason, seasonLabel } from '../league/schedule';
 import { addNews } from '../news';
 import { ageOn } from '../player';
@@ -13,7 +14,6 @@ import type { Club, GameWorld, Player } from '../types';
 import {
   contractExpiry,
   formatPlain,
-  freeSquadNumber,
   preferredYears,
   releasePlayer,
   wageDemand,
@@ -43,6 +43,7 @@ export function contractWarnings(world: GameWorld): void {
 
 /** 30 Haziran: sözleşmesi biten oyuncular. Yapay zekâ işine yarayanları yeniler, kullanıcınınkiler ayrılır. */
 export function processExpiringContracts(world: GameWorld, rng: Rng): void {
+  renewAcademyContracts(world);
   const released: Player[] = [];
   const ranks = new Map<string, number[]>();
   for (const club of world.clubs) {
@@ -94,8 +95,9 @@ function retirePlayers(world: GameWorld, rng: Rng): void {
     releasePlayer(world, p);
     delete world.players[p.id];
   }
-  // Silinen oyunculara ait eski teklifler de temizlenir.
+  // Silinen oyunculara ait eski teklifler ve takip listesi de temizlenir.
   world.offers = world.offers.filter((o) => world.players[o.playerId] !== undefined);
+  world.youthWatch = world.youthWatch.filter((id) => world.players[id] !== undefined);
   if (retiredUser.length > 0) {
     addNews(world, {
       category: 'player',
@@ -104,28 +106,6 @@ function retirePlayers(world: GameWorld, rng: Rng): void {
       important: true,
       clubId: world.playerClubId,
     });
-  }
-}
-
-function youthIntake(world: GameWorld, rng: Rng, data: GameData): void {
-  for (const club of world.clubs) {
-    const count = rng.int(3, 4);
-    const names: string[] = [];
-    for (let i = 0; i < count; i++) {
-      const youth = generateYouthPlayer(rng, data, club, world.date, world.nextPlayerId++);
-      world.players[youth.id] = youth;
-      youth.squadNumber = freeSquadNumber(world, youth, club.id);
-      names.push(`${fullName(youth)} (${ageOn(youth.birthDate, world.date)})`);
-    }
-    if (club.id === world.playerClubId) {
-      addNews(world, {
-        category: 'player',
-        title: 'Altyapıdan yeni oyuncular',
-        body: `Altyapıdan A takıma yükselen gençler: ${names.join(', ')}. Antrenman ekranından gelişimlerini takip edebilirsin.`,
-        important: true,
-        clubId: club.id,
-      });
-    }
   }
 }
 
@@ -201,7 +181,9 @@ function newSeasonFinances(world: GameWorld): void {
 export function startNewSeason(world: GameWorld, rng: Rng, data: GameData): void {
   applyLeagueChanges(world);
   retirePlayers(world, rng);
-  youthIntake(world, rng, data);
+  // Altyapı: yaş sınırını geçenler (yapay zekâ alır ya da bırakır), sonra yeni grup U19'a
+  manageAcademies(world);
+  academyIntake(world, rng, data);
   trimAiSquads(world);
   newSeasonFinances(world);
 

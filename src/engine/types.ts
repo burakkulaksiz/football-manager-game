@@ -90,6 +90,10 @@ export interface Player {
   trend: number;
   /** Son şikâyet tarihi (forma şansı); tekrar tekrar şikâyet etmesin. */
   lastComplaint: GameDate | null;
+  /** Altyapıda (U19 kadrosunda): lig maçlarında oynamaz, A takım kadrosunda görünmez. */
+  academy?: boolean;
+  /** Gelişim geçmişi (≤ 23 yaş): başlangıç ayı ('YYYY-MM') ve art arda aylık yetenek değerleri. */
+  growth?: { start: string; ca: number[] };
 }
 
 export type GoalKind = 'normal' | 'header' | 'long' | 'freekick' | 'penalty';
@@ -243,7 +247,8 @@ export type NewsCategory =
   | 'player'
   | 'training'
   | 'board'
-  | 'season';
+  | 'season'
+  | 'academy';
 
 /* ------------------------------------------------------------------ */
 /* Antrenman                                                           */
@@ -316,6 +321,8 @@ export interface GameWorld {
   /** Görevden alındıysa kariyer biter. */
   gameOver: { date: GameDate; reason: string } | null;
   manager: ManagerInfo;
+  /** Takip listesindeki (genelde genç) oyuncular. */
+  youthWatch: number[];
 }
 
 /* ------------------------------------------------------------------ */

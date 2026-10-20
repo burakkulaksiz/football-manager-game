@@ -20,6 +20,7 @@ export const MENU: MenuGroup[] = [
       { id: 'squad', label: 'Kadro', stage: 2 },
       { id: 'tactics', label: 'Taktik', stage: 5 },
       { id: 'training', label: 'Antrenman', stage: 8 },
+      { id: 'academy', label: 'Altyapı', stage: 10 },
       { id: 'club', label: 'Kulüp Bilgisi', stage: 2 },
       { id: 'finance', label: 'Finans', stage: 7 },
       { id: 'transfers', label: 'Transfer Merkezi', stage: 7 },

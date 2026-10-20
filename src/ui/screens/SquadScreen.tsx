@@ -26,6 +26,7 @@ import { Stars } from '../components/Stars';
 import { StatusTags } from '../components/StatusTags';
 import {
   abilityStars,
+  potentialStarsFor,
   attrClass,
   ATTRIBUTE_LABELS,
   formatDateShort,
@@ -177,7 +178,12 @@ const VIEW_COLUMNS: Record<SquadView, Column[]> = {
   report: [
     NUMBER, NAME, POSITION, AGE,
     { id: 'ability', label: 'Yetenek', sort: (p) => p.currentAbility, render: (p) => <Stars value={abilityStars(p.currentAbility)} /> },
-    { id: 'potential', label: 'Potansiyel', sort: (p) => p.potentialAbility, render: (p) => <Stars value={abilityStars(p.potentialAbility)} /> },
+    // Başka kulübün oyuncusunda potansiyel gözlem tahmini (kendi oyuncumuzda antrenör raporu)
+    {
+      id: 'potential', label: 'Potansiyel',
+      sort: (p, c) => potentialStarsFor(p, p.clubId === c.world.playerClubId),
+      render: (p, c) => <Stars value={potentialStarsFor(p, p.clubId === c.world.playerClubId)} />,
+    },
     {
       id: 'trend', label: 'Gelişim', sort: (p) => p.trend,
       render: (p) => {
@@ -222,6 +228,8 @@ function CompareDialog({ ids, onClose }: { ids: [number, number]; onClose: () =>
   const [a, b] = ids.map((id) => world.players[id]!) as [Player, Player];
   const sa = playerSeasonStats(world.season.fixtures, a.id);
   const sb = playerSeasonStats(world.season.fixtures, b.id);
+  const potA = potentialStarsFor(a, a.clubId === world.playerClubId);
+  const potB = potentialStarsFor(b, b.clubId === world.playerClubId);
   const isGK = (p: Player) => primaryPosition(p) === 'GK';
   const groups: { title: string; keys: readonly AttributeKey[] }[] = [
     ...(!isGK(a) || !isGK(b) ? [{ title: 'Teknik', keys: TECHNICAL_ATTRS }] : []),
@@ -261,8 +269,7 @@ function CompareDialog({ ids, onClose }: { ids: [number, number]; onClose: () =>
         <CompareRow label="Maaş" a={formatMoney(a.contract.wage)} b={formatMoney(b.contract.wage)} />
         <CompareRow label="Yetenek" a={<Stars value={abilityStars(a.currentAbility)} />} b={<Stars value={abilityStars(b.currentAbility)} />}
           aValue={abilityStars(a.currentAbility)} bValue={abilityStars(b.currentAbility)} />
-        <CompareRow label="Potansiyel" a={<Stars value={abilityStars(a.potentialAbility)} />} b={<Stars value={abilityStars(b.potentialAbility)} />}
-          aValue={abilityStars(a.potentialAbility)} bValue={abilityStars(b.potentialAbility)} />
+        <CompareRow label="Potansiyel" a={<Stars value={potA} />} b={<Stars value={potB} />} aValue={potA} bValue={potB} />
         <CompareRow label="Kondisyon" a={`%${a.condition}`} b={`%${b.condition}`} aValue={a.condition} bValue={b.condition} />
         <CompareRow label="Moral" a={moraleLabel(a.morale)} b={moraleLabel(b.morale)} aValue={a.morale} bValue={b.morale} />
         <CompareRow label="Sezon: maç / gol / asist" a={`${sa.apps} / ${sa.goals} / ${sa.assists}`} b={`${sb.apps} / ${sb.goals} / ${sb.assists}`} />

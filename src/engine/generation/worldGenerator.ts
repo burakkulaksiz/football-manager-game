@@ -8,7 +8,11 @@ import { initFinances } from '../finance/finance';
 import { defaultTactics } from '../match/tactics';
 import { addNews } from '../news';
 import { divisionOf, initialBoard } from '../season/expectation';
+import { recordGrowth } from '../squad/growth';
 import { DEFAULT_TRAINING } from '../squad/training';
+
+/** Altyapı üretiminin ayrı rng'si için tohum tuzu. */
+export const ACADEMY_SEED_SALT = 0xa11ce5;
 import { generatePlayer } from './playerGenerator';
 
 type Role = 'starter' | 'backup' | 'youth';
@@ -153,7 +157,10 @@ export function createWorld(
     seasonState: 'running',
     gameOver: null,
     manager: { name: managerName.trim() || 'Menajer', joined: startDate, won: 0, drawn: 0, lost: 0, titles: 0 },
+    youthWatch: [],
   };
+  fillAcademies(world, data, new Rng((seed ^ ACADEMY_SEED_SALT) >>> 0));
+  recordGrowth(world);
   addNews(world, {
     category: 'board',
     title: `${userClub.name} yönetiminden hoş geldin mesajı`,
@@ -188,18 +195,29 @@ export function generateClubSquad(rng: Rng, data: GameData, club: Club, date: Ga
   return squad.map((e) => e.player);
 }
 
-/** Altyapıdan gelen genç oyuncu (16–17 yaş): düşük seviye, yüksek potansiyel. */
-export function generateYouthPlayer(rng: Rng, data: GameData, club: Club, date: GameDate, id: number): Player {
+/** Altyapı gencinin gerçek bir cevher (yüksek ek potansiyel) olma olasılığı. */
+export const WONDERKID_CHANCE = 0.06;
+
+/** Altyapıdan gelen genç oyuncu (varsayılan 16–17 yaş): düşük seviye, potansiyeli yaşla gelir; ara sıra cevher. */
+export function generateYouthPlayer(
+  rng: Rng,
+  data: GameData,
+  club: Club,
+  date: GameDate,
+  id: number,
+  ages: readonly [number, number] = [16, 17],
+): Player {
   const positions: Position[] = ['GK', 'DC', 'DR', 'DL', 'DM', 'MC', 'AMR', 'AML', 'AMC', 'ST'];
   const position = positions[rng.weightedIndex([1, 2, 1, 1, 1, 2, 1, 1, 1, 2])]!;
   const player = generatePlayer(rng, data, id, date, {
     position,
     level: clubBaseLevel(club.reputation) - 4.5 + rng.normal(0, 1),
-    age: rng.int(16, 17),
+    age: rng.int(ages[0], ages[1]),
     nationality: pickNationality(rng, data, 'youth', club.reputation),
     clubId: club.id,
     wageFactor: 0.6 + club.reputation / 100,
-    extraPotential: rng.int(10, 45),
+    // Gençlerin çoğu sıradan; arada bir gerçek cevher çıkar (yaşa bağlı büyüme payı zaten generatePotential'da)
+    extraPotential: rng.chance(WONDERKID_CHANCE) ? rng.int(20, 45) : rng.int(-5, 18),
   });
   player.contract.wage = roundNice(Math.max(12_000, player.contract.wage * 0.4));
   return player;
@@ -210,9 +228,28 @@ export function leagueClubs(world: GameWorld): Club[] {
   return world.clubs.filter((c) => divisionOf(c) === 1);
 }
 
-/** Bir kulübün oyuncuları. */
+/** Bir kulübün A takım oyuncuları (altyapı / U19 hariç). */
 export function clubPlayers(world: GameWorld, clubId: string): Player[] {
-  return Object.values(world.players).filter((p) => p.clubId === clubId);
+  return Object.values(world.players).filter((p) => p.clubId === clubId && !p.academy);
+}
+
+/** Başlangıçtaki altyapı kadrosu büyüklüğü (kulüp başına). */
+export const INITIAL_ACADEMY_SIZE: readonly [number, number] = [7, 9];
+
+/**
+ * Her kulübe U19 kadrosu üretir (15–18 yaş). Ayrı bir rng ile: aynı tohumla ana dünya
+ * (kadrolar, fikstür) altyapı eklenmeden önceki hâliyle birebir aynı kalır.
+ */
+export function fillAcademies(world: GameWorld, data: GameData, rng: Rng): void {
+  for (const club of world.clubs) {
+    const count = rng.int(INITIAL_ACADEMY_SIZE[0], INITIAL_ACADEMY_SIZE[1]);
+    for (let i = 0; i < count; i++) {
+      const youth = generateYouthPlayer(rng, data, club, world.date, world.nextPlayerId++, [15, 18]);
+      youth.academy = true;
+      youth.squadNumber = null;
+      world.players[youth.id] = youth;
+    }
+  }
 }
 
 export function getClub(world: GameWorld, clubId: string): Club {

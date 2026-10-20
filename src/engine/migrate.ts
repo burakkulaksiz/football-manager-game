@@ -1,17 +1,18 @@
 /**
  * Eski kayıtları güncel GameWorld biçimine dönüştürür.
  * Biçim sürümü: 1 = aşama 6 (finans/transfer yok), 2 = aşama 7, 3 = aşama 8 (ceza, gelişim, antrenman),
- * 4 = aşama 9 (1. Lig, yönetim, sezon arşivi), 5 = menajer kartı.
+ * 4 = aşama 9 (1. Lig, yönetim, sezon arşivi), 5 = menajer kartı, 6 = altyapı (U19) ve gelişim geçmişi.
  */
 import type { GameData } from './data';
 import { initFinance, initFinances, payMonthly } from './finance/finance';
-import { generateClubSquad } from './generation/worldGenerator';
+import { ACADEMY_SEED_SALT, fillAcademies, generateClubSquad } from './generation/worldGenerator';
+import { recordGrowth } from './squad/growth';
 import { Rng } from './rng';
 import { initialBoard } from './season/expectation';
 import { DEFAULT_TRAINING } from './squad/training';
 import type { GameWorld } from './types';
 
-export const CURRENT_WORLD_VERSION = 5;
+export const CURRENT_WORLD_VERSION = 6;
 
 /** `raw` eski biçimdeki dünya; dönüştürülmüş dünya döner (yerinde değiştirir). */
 export function migrateWorld(raw: unknown, fromVersion: number, data: GameData): GameWorld {
@@ -77,6 +78,14 @@ export function migrateWorld(raw: unknown, fromVersion: number, data: GameData):
       ...record,
       titles: world.history.filter((h) => h.championId === user).length,
     };
+  }
+  if (fromVersion < 6) {
+    // Altyapı: her kulübe U19 kadrosu (ayrı rng; mevcut oyuncular A takımda kalır), takip listesi, gelişim geçmişi
+    world.youthWatch ??= [];
+    if (!Object.values(world.players).some((p) => p.academy)) {
+      fillAcademies(world, data, new Rng((world.seed ^ ACADEMY_SEED_SALT ^ 0x6) >>> 0));
+    }
+    recordGrowth(world);
   }
   return world;
 }

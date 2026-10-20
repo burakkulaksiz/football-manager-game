@@ -58,11 +58,11 @@ describe('dünya üretimi', () => {
     }
   });
 
-  it('yaşlar 17–35 arasında', () => {
+  it('yaşlar: A takım 17–35, altyapı (U19) 15–18', () => {
     for (const p of allPlayers) {
       const age = ageOn(p.birthDate, START);
-      expect(age).toBeGreaterThanOrEqual(17);
-      expect(age).toBeLessThanOrEqual(35);
+      expect(age).toBeGreaterThanOrEqual(p.academy ? 15 : 17);
+      expect(age).toBeLessThanOrEqual(p.academy ? 18 : 35);
     }
   });
 

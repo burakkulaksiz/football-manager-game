@@ -144,7 +144,8 @@ describe('istatistik doğrulama (binlerce maç)', () => {
     // Süper Lig'de son yıllarda gol kralı 22–30 gol (38 hafta); bizde 34 hafta.
     expect(kingAvg).toBeGreaterThan(19);
     expect(kingAvg).toBeLessThan(29);
-    expect(Math.max(...kings)).toBeLessThan(38);
+    // Süper Lig rekoru 39 (Tanju Çolak); tek sezonluk uç değerlere izin var
+    expect(Math.max(...kings)).toBeLessThan(40);
   });
 
   it('güçlü takım zayıf takımı çoğunlukla yener', () => {

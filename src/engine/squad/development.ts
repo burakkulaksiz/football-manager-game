@@ -20,7 +20,7 @@ import { ageOn, computeCurrentAbility, primaryPosition } from '../player';
 import { POSITION_WEIGHTS } from '../positions';
 import type { Rng } from '../rng';
 import type { GameWorld, Player } from '../types';
-import { FOCUS_ATTRS, INTENSITY_EFFECTS, trainingOf } from './training';
+import { DEFAULT_TRAINING, FOCUS_ATTRS, INTENSITY_EFFECTS, trainingOf } from './training';
 
 /** Yaşa göre haftalık gelişim puanı (özellik puanı cinsinden). */
 export function ageRate(age: number): number {
@@ -75,7 +75,8 @@ function declineAttribute(p: Player, rng: Rng): void {
 export function developPlayer(world: GameWorld, p: Player, rng: Rng): number {
   const age = ageOn(p.birthDate, world.date);
   const base = ageRate(age);
-  const training = trainingOf(world, p.clubId);
+  // Altyapı (U19) kendi antrenman programıyla çalışır: normal yoğunluk, dengeli
+  const training = p.academy ? DEFAULT_TRAINING : trainingOf(world, p.clubId);
   const professionalism = p.hidden.professionalism / 20;
   let gain: number;
   if (base > 0) {

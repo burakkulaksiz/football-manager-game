@@ -2,7 +2,9 @@ import { useState, type ReactNode } from 'react';
 import {
   ageOn,
   askingPrice,
+  canSendToAcademy,
   getClub,
+  growthRate,
   isActive,
   offerBlocker,
   type Player,
@@ -14,11 +16,15 @@ import {
   PHYSICAL_ATTRS,
   POSITIONS,
   primaryPosition,
+  promoteToFirstTeam,
+  sendToAcademy,
   TECHNICAL_ATTRS,
+  toggleWatch,
   type AttributeKey,
   type Attributes,
 } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
+import { GrowthChart } from '../components/GrowthChart';
 import { Shirt } from '../components/Shirt';
 import { Stars } from '../components/Stars';
 import { ContractDialog, OfferDialog } from '../components/TransferDialogs';
@@ -29,10 +35,12 @@ import {
   FOOT_LABELS,
   formatDateShort,
   formatMoney,
+  GROWTH_LABELS,
   moraleLabel,
   nationName,
   abilityStars,
   POSITION_NAMES,
+  potentialStarsFor,
   ratingClass,
   trendSymbol,
 } from '../labels';
@@ -59,6 +67,23 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 function TransferActions({ player }: { player: Player }) {
   const world = useWorld();
   const setScreen = useGameStore((s) => s.setScreen);
+  const worldAction = useGameStore((s) => s.worldAction);
+  const showNotice = useGameStore((s) => s.showNotice);
+  const watched = world.youthWatch.includes(player.id);
+  const watchButton = (
+    <button className="btn btn-small" onClick={() => worldAction((w) => toggleWatch(w, player.id))}>
+      {watched ? '★ Takipte' : '☆ Takip et'}
+    </button>
+  );
+  const moveSquad = () => {
+    if (player.academy) {
+      worldAction((w) => promoteToFirstTeam(w, w.players[player.id]!));
+      showNotice(`${player.firstName} ${player.lastName} A takıma alındı.`);
+    } else {
+      worldAction((w) => sendToAcademy(w, w.players[player.id]!));
+      showNotice(`${player.firstName} ${player.lastName} U19'a gönderildi.`);
+    }
+  };
   const [dialog, setDialog] = useState<'transfer' | 'loan' | 'contract' | null>(null);
   const own = player.clubId === world.playerClubId;
   const activeOffers = world.offers.filter((o) => o.playerId === player.id && isActive(o));
@@ -68,13 +93,17 @@ function TransferActions({ player }: { player: Player }) {
       <section className="panel action-panel">
         <div className="panel-body action-bar">
           <span className="muted">
-            {player.loan
-              ? `${getClub(world, player.loan.fromClubId).name} kulübünden kiralık · dönüş ${formatDateShort(player.loan.until)}`
-              : `Sözleşme bitişi ${formatDateShort(player.contract.expires)} · yıllık ${formatMoney(player.contract.wage)}`}
+            {player.academy
+              ? `U19 oyuncusu · yıllık ${formatMoney(player.contract.wage)} (altyapı sözleşmesi her yaz kendiliğinden uzar)`
+              : player.loan
+                ? `${getClub(world, player.loan.fromClubId).name} kulübünden kiralık · dönüş ${formatDateShort(player.loan.until)}`
+                : `Sözleşme bitişi ${formatDateShort(player.contract.expires)} · yıllık ${formatMoney(player.contract.wage)}`}
             {activeOffers.length > 0 && ` · ${activeOffers.length} açık teklif`}
           </span>
           {activeOffers.length > 0 && <button className="btn btn-small" onClick={() => setScreen('transfers')}>Teklifleri Gör</button>}
-          {!player.loan && <button className="btn" onClick={() => setDialog('contract')}>Sözleşme Yenile</button>}
+          {player.academy && <button className="btn btn-go" onClick={moveSquad}>A takıma al</button>}
+          {canSendToAcademy(world, player) && <button className="btn" onClick={moveSquad}>U19&apos;a gönder</button>}
+          {!player.loan && !player.academy && <button className="btn" onClick={() => setDialog('contract')}>Sözleşme Yenile</button>}
         </div>
         {dialog === 'contract' && <ContractDialog player={player} onClose={() => setDialog(null)} />}
       </section>
@@ -102,6 +131,7 @@ function TransferActions({ player }: { player: Player }) {
           Kulübün beklentisi (tahmini): <strong className="value">{formatMoney(askingPrice(world, player))}</strong>
           {activeOffers.some((o) => o.buyerId === world.playerClubId) && ' · açık teklifin var'}
         </span>
+        {watchButton}
         <button className="btn" disabled={transferBlock !== null} title={transferBlock ?? ''} onClick={() => setDialog('transfer')}>
           Transfer Teklifi
         </button>
@@ -148,6 +178,8 @@ export function PlayerProfile() {
     (a, b) => (player.positions[b] ?? 0) - (player.positions[a] ?? 0),
   );
   const stats = playerSeasonStats(world.season.fixtures, player.id);
+  const own = player.clubId === world.playerClubId;
+  const growth = GROWTH_LABELS[growthRate(player)];
   const dash = (n: number) => (stats.apps === 0 ? '—' : n);
 
   return (
@@ -172,7 +204,7 @@ export function PlayerProfile() {
                 <PositionBoxes player={player} />
               </div>
             </div>
-            <Row label="Kulüp">{club?.name ?? 'Serbest'}</Row>
+            <Row label="Kulüp">{club ? `${club.name}${player.academy ? ' · U19' : ''}` : 'Serbest'}</Row>
             <Row label="Tercih Ettiği Ayak">{FOOT_LABELS[player.foot]}</Row>
             <Row label="Piyasa Değeri">{formatMoney(marketValue(player, world.date))}</Row>
             <Row label="Maaş">{formatMoney(player.contract.wage)} / yıl</Row>
@@ -194,10 +226,26 @@ export function PlayerProfile() {
             <Row label="Gelişim"><span className={trendSymbol(player.trend).className}>{trendSymbol(player.trend).text}</span></Row>
             <div className="sub-head sub-head-gap">Antrenör Raporu</div>
             <Row label="Yetenek"><Stars value={abilityStars(player.currentAbility)} /></Row>
-            <Row label="Potansiyel"><Stars value={abilityStars(player.potentialAbility)} /></Row>
+            {own ? (
+              <Row label="Potansiyel"><Stars value={potentialStarsFor(player, true)} /></Row>
+            ) : (
+              <Row label="Potansiyel (tahmin)"><Stars value={potentialStarsFor(player, false)} title="Gözlem tahmini" /></Row>
+            )}
           </div>
         </div>
       </section>
+
+      {player.growth && player.growth.ca.length >= 2 && (
+        <section className="panel">
+          <h2 className="panel-title panel-title-row">
+            <span>Gelişim</span>
+            <span className={`title-extra ${growth.className}`}>Son 6 ay: {growth.text}</span>
+          </h2>
+          <div className="panel-body growth-panel">
+            <GrowthChart player={player} large />
+          </div>
+        </section>
+      )}
 
       <div className="two-columns">
         <section className="panel">

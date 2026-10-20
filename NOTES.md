@@ -53,13 +53,16 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
   transfer/offers.ts   Kullanıcı teklifleri, karşı teklif, sözleşme görüşmesi (negotiateTransfer/Renewal),
                        gelen tekliflere yanıt, günlük teklif işleme (processOffers).
   transfer/ai.ts       Yapay zekâ alımları ve kullanıcıya teklifler (aiTransferDay).
-  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 5; migrateWorld GameData de alır).
+  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 6; migrateWorld GameData de alır).
   squad/training.ts    Antrenman odağı/yoğunluğu ve etkileri (INTENSITY_EFFECTS, FOCUS_ATTRS).
   squad/injuries.ts    Sakatlık türleri, maç/antrenman sakatlığı, günlük iyileşme.
   squad/discipline.ts  Kart cezaları (maç sonrası).
   squad/morale.ts      Maç sonrası moral, günlük ortalamaya dönüş, şikâyetler.
   squad/development.ts Haftalık gelişim/gerileme (pazartesi).
   squad/condition.ts   Günlük kondisyon toparlanması.
+  squad/academy.ts     Altyapı (U19): academyPlayers, promoteToFirstTeam, sendToAcademy, manageAcademies,
+                       academyIntake, renewAcademyContracts, toggleWatch (takip listesi).
+  squad/growth.ts      Gelişim geçmişi (≤ 23 yaş, aylık CA; start + ca[] sıkı biçim, en fazla 36 ay), growthRate.
   season/expectation.ts Beklenti → hedef sıra, lig (division), yeni sezonda beklenti hesabı.
   season/board.ts      Yönetim güveni: maç sonrası, aylık değerlendirme, görevden alma (gameOver).
                        boardAfterMatch menajer kartının G/B/M kaydını da tutar (world.manager).
@@ -151,7 +154,7 @@ Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
 - **Kayıt** (IndexedDB, Dexie şema sürümü 2): `saves` = SaveSlot `{ id, name, careerId, clubId, clubName,
   gameDate, season, isAutosave, createdAt, updatedAt, formatVersion, managerName? }`; `saveData` = `{ id, world: GameWorld }`
   (aynı id). GameWorld olduğu gibi yazılır (düz veri), kayıt anında `structuredClone` ile kopyalanır.
-  `SAVE_FORMAT_VERSION = CURRENT_WORLD_VERSION` (şu an 5). GameWorld yapısı değişince sürümü artır ve
+  `SAVE_FORMAT_VERSION = CURRENT_WORLD_VERSION` (şu an 6). GameWorld yapısı değişince sürümü artır ve
   `engine/migrate.ts`'e dönüşüm ekle; `loadGame` eski kayıtları otomatik dönüştürür, daha yeni sürümü reddeder.
   Sezon sonu kaydı ~1.7 MB (+ haberler/teklifler).
 - **careerId** = `${seed}-${playerClubId}`. Otomatik kayıt kariyer başına tek slot; elle kayıt sınırsız.
@@ -366,3 +369,20 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
 
 ## Sıradaki adım
 10. aşama devam: kullanıcı FIKIRLER.md listesinden sıradaki maddeyi seçer (yapılanlar orada [x] işaretlenir).
+
+## Altyapı kuralları (aşama 10, kullanıcı seçti: ayrı U19 takımı)
+- Player.academy = U19 oyuncusu. clubPlayers() A takımı döndürür (U19 hariç): maç kadrosu, kadro ekranı, taktik,
+  moral, transfer sıralamaları (squadRanks) U19'u saymaz. U19 haftalık gelişime katılır (DEFAULT_TRAINING).
+- Başlangıç: her kulübe 7–9 kişilik U19 (15–18 yaş), ayrı rng (seed ^ ACADEMY_SEED_SALT) — ana dünya aynı kalır.
+- 30 Haziran: U19 sözleşmeleri 1 yıl uzar. 1 Temmuz: manageAcademies (yapay zekâ: 19+ yaştakini A takımın
+  22. oyuncusundan iyiyse alır, değilse oyuncu silinir; 17+ yaşta 16. oyuncudan iyiyse erken alır; A takım ≤ 28),
+  kullanıcıya 19+ için haber; sonra academyIntake (her kulübe 4–6 kişi, 15–16 yaş; haber kategorisi 'academy').
+- Genç potansiyeli: generatePotential yaşa bağlı pay + ek: %6 cevher (+20…45), diğerleri −5…+18.
+  U19 PA medyanı ~109, %90'ı ≤ 137, 5 yıldız (≥ 158) ~%1 (academy.test denetler).
+- U19'a gönderme: A takımdaki, kiralık olmayan, 19 yaşından küçük oyuncu. Transfer/kiralık/serbest bırakma
+  oyuncuyu U19'dan çıkarır. Yapay zekâ başka kulübün U19'undan oyuncu almaz; kullanıcı teklif yapabilir.
+- world.youthWatch: takip listesi (oyuncu silinince temizlenir). Biçim 6 dönüşümü: U19 kadroları, youthWatch,
+  ilk gelişim kaydı.
+- Arayüz: Altyapı ekranı (U19 Kadrosu / Gelişim / Ligdeki Gençler). Yetenek puanı gizli: grafiklerde sayı yok,
+  "Son 6 ay" etiketi (Hızlı ≥ +10, İyi ≥ +4, Yavaş ≥ 0, Geriliyor). Başka kulübün oyuncusunda potansiyel gözlem
+  tahmini (potentialStarsFor: oyuncuya sabit ±0.5 yıldız sapma) — kadro ekranı ve profilde de.

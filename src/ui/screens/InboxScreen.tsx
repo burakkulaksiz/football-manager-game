@@ -24,6 +24,7 @@ const CATEGORY_SCREEN: Partial<Record<NewsCategory, { screen: ScreenId; label: s
   discipline: { screen: 'training', label: 'Antrenman' },
   board: { screen: 'club', label: 'Kulüp Bilgisi' },
   season: { screen: 'stats', label: 'Lig İstatistikleri' },
+  academy: { screen: 'academy', label: 'Altyapı' },
   finance: { screen: 'finance', label: 'Finans' },
 };
 

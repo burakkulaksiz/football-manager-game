@@ -3187,3 +3187,89 @@ select {
     transition: none;
   }
 }
+
+/* ================= Altyapı ================= */
+.tag-u19 {
+  background: rgba(47, 116, 208, 0.45);
+  color: #dbe8ff;
+}
+
+.tag-warn {
+  background: rgba(233, 128, 111, 0.4);
+  color: #ffe1db;
+}
+
+.data-table tr.row-warn td {
+  background: rgba(233, 128, 111, 0.08);
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+/* Takip listesi yıldızı */
+.watch-toggle {
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.watch-toggle:hover,
+.watch-toggle.on {
+  color: var(--accent);
+}
+
+/* Gelişim grafiği (yetenek puanı gizli: eksende sayı yok) */
+.growth-chart {
+  display: inline-flex;
+  flex-direction: column;
+  vertical-align: middle;
+}
+
+.growth-chart svg {
+  display: block;
+  overflow: visible;
+}
+
+.growth-line {
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.growth-line.up { stroke: var(--good); }
+.growth-line.down { stroke: var(--low); }
+.growth-dot.up { fill: var(--good); }
+.growth-dot.down { fill: var(--low); }
+
+.growth-chart.large .growth-line {
+  stroke-width: 2.4;
+}
+
+.growth-area {
+  fill: rgba(143, 232, 119, 0.12);
+  stroke: none;
+}
+
+.growth-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.growth-chart.large {
+  display: flex;
+  width: 100%;
+}
+
+.growth-chart.large .growth-line,
+.growth-chart.large .growth-area {
+  vector-effect: non-scaling-stroke;
+}

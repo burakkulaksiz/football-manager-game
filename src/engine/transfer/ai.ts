@@ -64,7 +64,7 @@ function attemptPurchase(world: GameWorld, buyer: Club, rng: Rng): void {
 
   const candidates: { player: Player; price: number; score: number }[] = [];
   for (const p of Object.values(world.players)) {
-    if (p.clubId === buyer.id || p.clubId === world.playerClubId || p.loan) continue;
+    if (p.clubId === buyer.id || p.clubId === world.playerClubId || p.loan || p.academy) continue;
     if (groupOf(primaryPosition(p)) !== group) continue;
     if (ageOn(p.birthDate, world.date) > 32 || p.currentAbility < level - 8) continue;
     // Serbest oyuncu bedelsiz; kulübü olan için satıcı kadrosu ve itibar kontrolü

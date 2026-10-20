@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { hasUnsavedProgress, useGameStore, type ScreenId } from '../../store/gameStore';
 import { GameOverOverlay } from '../components/GameOverOverlay';
+import { AcademyScreen } from '../screens/AcademyScreen';
 import { ClubInfoScreen } from '../screens/ClubInfoScreen';
 import { FinanceScreen } from '../screens/FinanceScreen';
 import { FixturesScreen } from '../screens/FixturesScreen';
@@ -33,6 +34,7 @@ function ScreenContent({ screen }: { screen: ScreenId }) {
     case 'report': return <MatchReportScreen />;
     case 'tactics': return <TacticsScreen />;
     case 'training': return <TrainingScreen />;
+    case 'academy': return <AcademyScreen />;
     case 'transfers': return <TransferScreen />;
     case 'finance': return <FinanceScreen />;
     default: return <PlaceholderScreen screen={screen} />;

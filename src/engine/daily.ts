@@ -13,6 +13,7 @@ import { returnLoans } from './transfer/market';
 import { processOffers } from './transfer/offers';
 import { transferWindow } from './transfer/window';
 import { boardMonthly } from './season/board';
+import { recordGrowth } from './squad/growth';
 import { contractWarnings, processExpiringContracts, startNewSeason } from './season/rollover';
 import { endSeason } from './season/seasonEnd';
 import { recoverCondition } from './squad/condition';
@@ -47,6 +48,7 @@ export function processDay(world: GameWorld, rng: Rng, data: GameData): void {
   if (world.date.endsWith('-01')) {
     startNewMonth(world);
     boardMonthly(world);
+    recordGrowth(world);
   }
   // Sezon döngüsü
   if (world.seasonState === 'running' && world.season.fixtures.every((f) => f.result !== null)) endSeason(world, rng);

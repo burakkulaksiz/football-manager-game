@@ -111,6 +111,27 @@ describe('kayıt sistemi', () => {
     expect(loaded.manager).toMatchObject({ name: 'Menajer', won: 1, drawn: 1, lost: 1, titles: 0 });
   });
 
+  it('altyapısız (biçim 5) kayıt dönüştürülür: her kulübe U19 kadrosu, takip listesi, gelişim geçmişi', async () => {
+    const world = createWorld(gameData, 12, 'kasimpasa', START);
+    const old = structuredClone(world) as Partial<GameWorld>;
+    delete old.youthWatch;
+    for (const [id, p] of Object.entries(old.players!)) {
+      if (p.academy) delete old.players![Number(id)];
+      else delete p.growth;
+    }
+    const firstTeam = Object.keys(old.players!).length;
+    const id = await saveGame(world, 'Biçim 5');
+    await db.saveData.put({ id, world: old as GameWorld });
+    await db.saves.update(id, { formatVersion: 5 });
+    const loaded = await loadGame(id);
+    expect(loaded.youthWatch).toEqual([]);
+    const academy = Object.values(loaded.players).filter((p) => p.academy);
+    expect(academy.length).toBeGreaterThanOrEqual(7 * loaded.clubs.length);
+    // Mevcut oyuncular A takımda kalır
+    expect(Object.values(loaded.players).filter((p) => !p.academy)).toHaveLength(firstTeam);
+    expect(academy.every((p) => p.growth?.ca.length === 1)).toBe(true);
+  });
+
   it('yüklenen oyun, hiç kaydedilmemiş gibi aynı sonuçlarla devam eder', async () => {
     const original = createWorld(gameData, 8, 'samsunspor', START);
     playRounds(original, 3);

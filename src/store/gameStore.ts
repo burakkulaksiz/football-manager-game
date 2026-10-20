@@ -28,6 +28,7 @@ export type ScreenId =
   | 'squad'
   | 'tactics'
   | 'training'
+  | 'academy'
   | 'club'
   | 'finance'
   | 'transfers'

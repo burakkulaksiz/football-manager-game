@@ -77,7 +77,7 @@ export type SquadRanks = ReadonlyMap<number, number>;
 export function squadRanks(world: GameWorld): SquadRanks {
   const byClub = new Map<string, Player[]>();
   for (const p of Object.values(world.players)) {
-    if (!p.clubId) continue;
+    if (!p.clubId || p.academy) continue;
     const list = byClub.get(p.clubId);
     if (list) list.push(p);
     else byClub.set(p.clubId, [p]);
@@ -162,6 +162,8 @@ export function transferPlayer(world: GameWorld, player: Player, buyerId: string
 
   player.clubId = buyerId;
   player.loan = null;
+  // Alan kulübün A takımına katılır (altyapıdan alınsa da)
+  delete player.academy;
   // Yeni kulüp, yeni heyecan
   player.morale = Math.max(player.morale, 72);
   player.contract = { wage: terms.wage, expires: contractExpiry(world.date, terms.years) };
@@ -190,6 +192,7 @@ export function loanPlayer(world: GameWorld, player: Player, toClubId: string, f
   detachFromClub(world, player, fromClubId);
 
   player.clubId = toClubId;
+  delete player.academy;
   player.loan = { fromClubId, until: makeDate(seasonEndYear(world.date), 6, 30) };
   player.squadNumber = freeSquadNumber(world, player, toClubId);
   cancelOffersFor(world, player.id);
@@ -265,4 +268,5 @@ export function releasePlayer(world: GameWorld, player: Player): void {
   player.clubId = null;
   player.squadNumber = null;
   player.loan = null;
+  delete player.academy;
 }

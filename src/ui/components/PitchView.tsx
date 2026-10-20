@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { getClub, type MatchState, type PlayKind, type Side } from '../../engine';
 import { useWorld } from '../../store/gameStore';
+import { readableText } from '../colors';
 import { colorsClash, PITCH_LENGTH, PITCH_WIDTH } from '../pitch';
 import { buildScene, frameSpots, framesForDuration } from '../pitchScene';
 
@@ -42,6 +43,49 @@ function PitchMarkings() {
   );
 }
 
+const VIEW_BOX = `-3 -2 ${PITCH_LENGTH + 6} ${PITCH_WIDTH + 4}`;
+
+/** Çim ve saha çizgileri: değişmez, yalnızca boyut değişince yeniden çizilir. */
+const PitchBackground = memo(function PitchBackground({ maxHeight }: { maxHeight: number }) {
+  return (
+    <svg className="pitch-grass" style={{ maxHeight }} viewBox={VIEW_BOX} role="img" aria-label="2D saha">
+      <defs>
+        <pattern id="pitch-stripes" width={PITCH_LENGTH / 9} height={PITCH_WIDTH} patternUnits="userSpaceOnUse">
+          <rect width={PITCH_LENGTH / 18} height={PITCH_WIDTH} fill="#2f7a2a" />
+          <rect x={PITCH_LENGTH / 18} width={PITCH_LENGTH / 18} height={PITCH_WIDTH} fill="#2a6f25" />
+        </pattern>
+      </defs>
+      <rect x={0} y={0} width={PITCH_LENGTH} height={PITCH_WIDTH} fill="url(#pitch-stripes)" />
+      <PitchMarkings />
+    </svg>
+  );
+});
+
+/** Sahanın altında kalan şerit ve boşluklar (px): saha + şerit ekrana sığsın. */
+const BELOW_PITCH = 64;
+
+/**
+ * Sahanın en fazla yüksekliği: kaydırma alanının (main.content) görünür yüksekliğinden sahanın
+ * üstündeki içerik çıkarılır; böylece saha kaydırmadan bütünüyle görünür (ekran küçülürse en az 320 px).
+ */
+function useFitHeight(ref: React.RefObject<HTMLDivElement | null>, layoutKey: string): number {
+  const [height, setHeight] = useState(520);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = ref.current;
+      const scroller = el?.closest('main');
+      if (!el || !scroller) return;
+      const top = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+      setHeight(Math.max(320, Math.round(scroller.clientHeight - top - BELOW_PITCH)));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+    // layoutKey: üstteki içerik değişince (başlama öncesi notu kalkınca vb.) yeniden ölç
+  }, [ref, layoutKey]);
+  return height;
+}
+
 /**
  * Canlı maçın 2D görünümü. Her dakika kısa bir sahne olarak oynar (pas → pas → asist → şut → sonuç):
  * top kare kare takım arkadaşları arasında dolaşır, oyuncular topa göre kayar.
@@ -49,6 +93,7 @@ function PitchMarkings() {
  */
 export function PitchView({ match, minuteMs }: { match: MatchState; minuteMs: number }) {
   const world = useWorld();
+  const ref = useRef<HTMLDivElement>(null);
   const play = match.lastPlay;
   const kickoff = play === null;
   const scene = useMemo(() => framesForDuration(buildScene(match, play, match.minute), minuteMs), [match, play, minuteMs]);
@@ -68,6 +113,7 @@ export function PitchView({ match, minuteMs }: { match: MatchState; minuteMs: nu
     return () => clearInterval(timer);
   }, [scene, frameMs]);
 
+  const maxHeight = useFitHeight(ref, match.period);
   const frame = scene[Math.min(index, scene.length - 1)]!;
   const previous = index > 0 ? scene[index - 1] : undefined;
   const isFinal = index >= scene.length - 1;
@@ -80,6 +126,8 @@ export function PitchView({ match, minuteMs }: { match: MatchState; minuteMs: nu
       ? { fill: awayClub.colors.secondary, stroke: awayClub.colors.primary }
       : { fill: awayClub.colors.primary, stroke: awayClub.colors.secondary },
   };
+  // Numara ve etiket yazısı formanın üstünde okunmalı
+  const ink = (side: Side) => readableText(kits[side].fill, kits[side].stroke);
 
   // Çok kısa geçiş göze görünmez ama her karede SVG'yi yeniden boyatır: hızlı modda kapalı.
   const moveMs = scene.length > 1 ? frameMs * 0.85 : minuteMs < 100 ? 0 : minuteMs * 0.85;
@@ -90,31 +138,29 @@ export function PitchView({ match, minuteMs }: { match: MatchState; minuteMs: nu
   const dots = [...frameSpots(match, frame, kickoff)].map(([id, { side, at }]) => {
     const keeper = match.players[id]?.slot === 'GK';
     const carrier = frame.carrierId === id;
+    // Topu taşıyanın ve kart görenin adı noktanın altında
+    const named = carrier || card?.playerId === id;
     return (
       <g key={id} className="pitch-player" style={{ transform: `translate(${at.x}px, ${at.y}px)` }}>
         <circle
-          r={1.85}
+          r={1.3}
           fill={keeper ? '#1d1f24' : kits[side].fill}
           stroke={keeper ? kits[side].fill : kits[side].stroke}
           className={carrier ? 'involved' : undefined}
         />
-        <text y={0.62} fill={keeper ? '#fff' : kits[side].stroke}>{world.players[id]?.squadNumber ?? ''}</text>
-        {card?.playerId === id && <rect className={`pitch-card ${card.type}`} x={0.9} y={-3.9} width={1.4} height={1.9} rx={0.2} />}
+        <text y={0.48} fill={keeper ? '#fff' : ink(side)}>{world.players[id]?.squadNumber ?? ''}</text>
+        {named && <text className="pitch-name" y={3.1}>{world.players[id]?.lastName ?? ''}</text>}
+        {card?.playerId === id && <rect className={`pitch-card ${card.type}`} x={0.7} y={-3} width={1.05} height={1.45} rx={0.15} />}
       </g>
     );
   });
 
   return (
-    <div className="pitch-view" style={style}>
-      <svg viewBox={`-3 -2 ${PITCH_LENGTH + 6} ${PITCH_WIDTH + 4}`} role="img" aria-label="2D saha">
-        <defs>
-          <pattern id="pitch-stripes" width={PITCH_LENGTH / 9} height={PITCH_WIDTH} patternUnits="userSpaceOnUse">
-            <rect width={PITCH_LENGTH / 18} height={PITCH_WIDTH} fill="#2f7a2a" />
-            <rect x={PITCH_LENGTH / 18} width={PITCH_LENGTH / 18} height={PITCH_WIDTH} fill="#2a6f25" />
-          </pattern>
-        </defs>
-        <rect x={0} y={0} width={PITCH_LENGTH} height={PITCH_WIDTH} fill="url(#pitch-stripes)" />
-        <PitchMarkings />
+    <div className="pitch-view" style={style} ref={ref}>
+      {/* İki katman: çim ve çizgiler bir kez çizilir; her dakika yalnızca oyuncu katmanı boyanır */}
+      <div className="pitch-stage">
+        <PitchBackground maxHeight={maxHeight} />
+        <svg className="pitch-layer" viewBox={VIEW_BOX} aria-hidden="true">
         {previous && frame.move !== 'none' && (
           <line
             key={`${match.minute}-${index}`}
@@ -127,14 +173,15 @@ export function PitchView({ match, minuteMs }: { match: MatchState; minuteMs: nu
         )}
         {dots}
         <g className="pitch-ball" style={{ transform: `translate(${frame.ball.x}px, ${frame.ball.y}px)` }}>
-          <circle r={0.9} />
+          <circle r={0.62} />
         </g>
-      </svg>
+        </svg>
+      </div>
       {label && play && (
         <div
           key={`${match.minute}-${play.kind}`}
           className={`pitch-label${play.kind === 'goal' ? ' goal' : ''}`}
-          style={{ background: kits[play.side].fill, color: kits[play.side].stroke }}
+          style={{ background: kits[play.side].fill, color: ink(play.side) }}
         >
           {label}
         </div>

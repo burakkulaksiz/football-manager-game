@@ -1225,6 +1225,9 @@ select {
 }
 
 .match-grid {
+  /* Saha açıkken kadrolar ve anlatım ekranın altında: görünmezken düzen/boyama atlanır */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
   display: grid;
   grid-template-columns: minmax(250px, 1fr) minmax(360px, 1.35fr) minmax(250px, 1fr);
   gap: 14px;
@@ -2863,12 +2866,24 @@ select {
   contain: layout paint style;
 }
 
-.pitch-view svg {
+/* Saha maç ekranının tam genişliğinde; ekrana sığacak kadar yüksek (oran korunur, ortalanır) */
+.pitch-stage {
+  position: relative;
+}
+
+.pitch-grass {
   display: block;
   width: 100%;
   height: auto;
-  border-radius: 8px;
-  background: #23601f;
+}
+
+/* Oyuncu katmanı arka planın tam üstünde, kendi katmanında (yalnızca bu boyanır) */
+.pitch-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  will-change: transform;
 }
 
 .pitch-lines rect,
@@ -2895,20 +2910,87 @@ select {
 }
 
 .pitch-player circle {
-  stroke-width: 0.45;
+  stroke-width: 0.32;
 }
 
 .pitch-player circle.involved {
   stroke: var(--accent);
-  stroke-width: 0.7;
+  stroke-width: 0.5;
 }
 
 .pitch-player text {
   font-family: var(--font-display);
-  font-size: 1.9px;
+  font-size: 1.35px;
   font-weight: 700;
   text-anchor: middle;
   pointer-events: none;
+}
+
+/* Topu taşıyanın adı: koyu kenarlı beyaz yazı (çim üstünde okunur) */
+.pitch-player text.pitch-name {
+  font-family: var(--font-ui);
+  font-size: 1.45px;
+  font-weight: 600;
+  fill: #fff;
+  stroke: rgba(0, 0, 0, 0.75);
+  stroke-width: 0.35px;
+  paint-order: stroke;
+}
+
+.pitch-panel {
+  position: relative;
+  margin-bottom: 0;
+}
+
+.pitch-panel.collapsed {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+}
+
+.pitch-panel-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.pitch-hide {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  z-index: 2;
+  opacity: 0.75;
+}
+
+.pitch-hide:hover {
+  opacity: 1;
+}
+
+/* Sahanın altındaki son olay şeridi */
+.event-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 10px 10px;
+  padding: 6px 12px;
+  border-left: 4px solid var(--slate-400);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  font-weight: 600;
+}
+
+.event-bar .ev-minute {
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 15px;
+}
+
+.event-bar.goal {
+  background: linear-gradient(90deg, rgba(246, 207, 60, 0.35), rgba(0, 0, 0, 0.35));
+  color: #fff;
+  font-size: 15px;
 }
 
 .pitch-ball circle {

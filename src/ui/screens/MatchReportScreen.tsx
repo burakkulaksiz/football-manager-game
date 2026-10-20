@@ -11,6 +11,7 @@ import {
 } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
+import { readableText } from '../colors';
 import { MatchStatRows } from '../components/MatchStatRows';
 import { formatNumber, POSITION_LABELS, positionGroup, ratingClass } from '../labels';
 
@@ -181,7 +182,7 @@ export function MatchReportScreen() {
     <div className="match-screen">
       <div className="scoreboard">
         <div className="sb-side">
-          <div className="sb-team" style={{ background: home.colors.primary, color: home.colors.secondary }}>
+          <div className="sb-team" style={{ background: home.colors.primary, color: readableText(home.colors.primary, home.colors.secondary) }}>
             <ClubBadge club={home} size={30} />
             <span>{home.name}</span>
           </div>
@@ -194,7 +195,7 @@ export function MatchReportScreen() {
           <div className="sb-clock">Maç Sonu</div>
         </div>
         <div className="sb-side right">
-          <div className="sb-team" style={{ background: away.colors.primary, color: away.colors.secondary }}>
+          <div className="sb-team" style={{ background: away.colors.primary, color: readableText(away.colors.primary, away.colors.secondary) }}>
             <span>{away.name}</span>
             <ClubBadge club={away} size={30} />
           </div>

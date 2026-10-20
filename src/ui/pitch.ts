@@ -4,7 +4,7 @@
  *
  * Koordinatlar metre: x 0–105 (ev sahibi sağa hücum eder), y 0–68 (yukarıdan aşağı).
  */
-import { FORMATION_LAYOUT, FORMATIONS, type MatchPlay, type MatchState, type Side } from '../engine';
+import { FORMATION_LAYOUT, FORMATIONS, type MatchPlay, type MatchState, type Position, type Side } from '../engine';
 
 export const PITCH_LENGTH = 105;
 export const PITCH_WIDTH = 68;
@@ -40,7 +40,7 @@ export function ballSpot(play: MatchPlay | null, minute: number): Point {
     case 'hold': return at(38 + h1 * 28, 10 + h2 * 48);
     case 'foul': return at(45 + h1 * 30, 10 + h2 * 48);
     case 'attack': return at(70 + h1 * 14, 8 + h2 * 52);
-    case 'freekick': return at(79, 20 + h2 * 28);
+    case 'freekick': return freeKickSpot(s, minute);
     case 'corner': return at(104.6, h2 < 0.5 ? 0.6 : PITCH_WIDTH - 0.6);
     case 'blocked': return at(84 + h1 * 4, 24 + h2 * 20);
     // Auta: direklerin dışından çizgiyi geçer
@@ -52,12 +52,20 @@ export function ballSpot(play: MatchPlay | null, minute: number): Point {
   }
 }
 
+/** Serbest vuruşun yeri (ceza sahası önü, 25–30 m). Kazanılan serbest vuruşla şutu aynı yerden. */
+export function freeKickSpot(side: Side, minute: number): Point {
+  return { x: alongX(side, 79), y: 20 + hash01(minute, 2) * 28 };
+}
+
 /** Şutun çıktığı yer (şut çizgisi için); şut değilse null. */
 export function shotOrigin(play: MatchPlay | null, minute: number): Point | null {
   if (!play || !['blocked', 'miss', 'save', 'penalty', 'goal'].includes(play.kind)) return null;
   if (play.fromPenalty) return { x: alongX(play.side, PITCH_LENGTH - 11), y: MID_Y };
   const h1 = hash01(minute, 3);
   const h2 = hash01(minute, 4);
+  if (play.fromFreeKick) return freeKickSpot(play.side, minute);
+  // Korner ortasına kafa: altıpasla penaltı noktası arası
+  if (play.fromCorner) return { x: alongX(play.side, 94 + h1 * 5), y: MID_Y - 5 + h2 * 10 };
   return { x: alongX(play.side, 80 + h1 * 13), y: 18 + h2 * 32 };
 }
 
@@ -77,27 +85,14 @@ export function blockLine(side: Side, ball: Point): number {
  * `kickoff`: başlama vuruşu dizilişi (herkes kendi yarısında).
  */
 export function teamSpots(match: MatchState, side: Side, ball: Point, kickoff: boolean): Map<number, Point> {
-  const team = match[side];
   // Top bir kaleye 20 m'den yakınsa (korner, şut, penaltı) oyuncular ceza sahasına doluşur.
   const attackProgress = side === 'home' ? ball.x : PITCH_LENGTH - ball.x;
   const inOppBox = !kickoff && attackProgress > 85;
   const inOwnBox = !kickoff && attackProgress < 20;
-  // Dizilişteki mevki sırası ile saha yerleşimi aynı sıradadır
-  const layout = FORMATION_LAYOUT[team.formation];
-  const formationSlots = FORMATIONS[team.formation];
-  const used = new Set<number>();
   const t = kickoff ? 0.12 : blockLine(side, ball);
   const spots = new Map<number, Point>();
 
-  for (const id of team.onPitch) {
-    const slot = match.players[id]!.slot;
-    // Aynı mevkiden birden çok varsa (iki stoper) sıradaki boş yer
-    let index = formationSlots.findIndex((s, i) => s === slot && !used.has(i));
-    // Mevki dizilişte yoksa (beklenmedik durum) nokta kaybolmasın: boştaki ilk yer
-    if (index === -1) index = formationSlots.findIndex((_, i) => i > 0 && !used.has(i));
-    if (index === -1) continue;
-    used.add(index);
-    const [lx, ly] = layout[index]!;
+  for (const { id, slot, lx, ly } of formationRoles(match, side)) {
     let a: number;
     if (slot === 'GK') a = 4 + t * 8;
     else a = 6 + ((100 - ly) / 100) * 52 + t * 36;
@@ -123,6 +118,36 @@ export function teamSpots(match: MatchState, side: Side, ball: Point, kickoff: b
     spots.set(id, { x: alongX(side, a), y: clamp(y, 2, PITCH_WIDTH - 2) });
   }
   return spots;
+}
+
+export interface FormationRole {
+  id: number;
+  slot: Position | null;
+  /** Dizilişteki yer (FORMATION_LAYOUT): lx soldan sağa, ly yukarı = hücum (küçük ly = ileri). */
+  lx: number;
+  ly: number;
+}
+
+/** Sahadaki oyuncuların dizilişteki yerleri (saha yerleşimi ve duran top rolleri için). */
+export function formationRoles(match: MatchState, side: Side): FormationRole[] {
+  const team = match[side];
+  // Dizilişteki mevki sırası ile saha yerleşimi aynı sıradadır
+  const layout = FORMATION_LAYOUT[team.formation];
+  const formationSlots = FORMATIONS[team.formation];
+  const used = new Set<number>();
+  const roles: FormationRole[] = [];
+  for (const id of team.onPitch) {
+    const slot = match.players[id]!.slot;
+    // Aynı mevkiden birden çok varsa (iki stoper) sıradaki boş yer
+    let index = formationSlots.findIndex((s, i) => s === slot && !used.has(i));
+    // Mevki dizilişte yoksa (beklenmedik durum) nokta kaybolmasın: boştaki ilk yer
+    if (index === -1) index = formationSlots.findIndex((_, i) => i > 0 && !used.has(i));
+    if (index === -1) continue;
+    used.add(index);
+    const [lx, ly] = layout[index]!;
+    roles.push({ id, slot, lx, ly });
+  }
+  return roles;
 }
 
 /** İki takımın renkleri çok yakınsa deplasman ikinci rengini giyer. */

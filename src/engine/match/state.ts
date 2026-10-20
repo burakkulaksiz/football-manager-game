@@ -52,6 +52,10 @@ export interface MatchPlay {
   playerId: number | null;
   /** Şut penaltıdan mı (top penaltı noktasından çıkar). */
   fromPenalty?: boolean;
+  /** Şut korner ortasından (kafa) mı. */
+  fromCorner?: boolean;
+  /** Şut doğrudan serbest vuruştan mı. */
+  fromFreeKick?: boolean;
   /** Golün asistini yapan. */
   assistId?: number | null;
   /** Şutu karşılayan kaleci (kurtarış / gol / penaltı). */

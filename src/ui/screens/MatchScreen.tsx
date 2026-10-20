@@ -11,6 +11,7 @@ import {
 } from '../../engine';
 import { useGameStore, userSide, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
+import { readableText } from '../colors';
 import { FormationPicker, InstructionsPanel } from '../components/InstructionsPanel';
 import { MatchStatRows } from '../components/MatchStatRows';
 import { PitchView } from '../components/PitchView';
@@ -57,7 +58,7 @@ function Scoreboard({ match }: { match: MatchState }) {
   return (
     <div className="scoreboard">
       <div className="sb-side">
-        <div className="sb-team" style={{ background: home.colors.primary, color: home.colors.secondary }}>
+        <div className="sb-team" style={{ background: home.colors.primary, color: readableText(home.colors.primary, home.colors.secondary) }}>
           <ClubBadge club={home} size={30} />
           <span>{home.name}</span>
         </div>
@@ -70,7 +71,7 @@ function Scoreboard({ match }: { match: MatchState }) {
         <div className={`sb-clock${live ? ' live' : ''}`}>{clockText(match)}</div>
       </div>
       <div className="sb-side right">
-        <div className="sb-team" style={{ background: away.colors.primary, color: away.colors.secondary }}>
+        <div className="sb-team" style={{ background: away.colors.primary, color: readableText(away.colors.primary, away.colors.secondary) }}>
           <span>{away.name}</span>
           <ClubBadge club={away} size={30} />
         </div>
@@ -127,7 +128,25 @@ function readPitchPref(): boolean {
   }
 }
 
-function PitchPanel({ match, minuteMs }: { match: MatchState; minuteMs: number }) {
+/** Sahanın altında son olay (FM'deki yorum şeridi gibi). */
+function EventBar({ match }: { match: MatchState }) {
+  const world = useWorld();
+  const last = [...match.events].reverse().find((e) => e.type !== 'info');
+  if (!last) return <div className="event-bar muted">Maç başlamadı.</div>;
+  const club = last.side ? getClub(world, match[last.side].clubId) : null;
+  return (
+    <div
+      className={`event-bar${last.type === 'goal' ? ' goal' : ''}`}
+      style={club ? { borderLeftColor: club.colors.primary } : undefined}
+    >
+      <span className="ev-minute">{last.type === 'kickoff' ? '' : formatMinute(last.minute, last.extra)}</span>
+      <span>{last.text}</span>
+    </div>
+  );
+}
+
+/** 2D saha açık/kapalı tercihi (tarayıcıda hatırlanır). */
+function usePitchPref(): [boolean, () => void] {
   const [show, setShow] = useState(readPitchPref);
   const toggle = () => {
     setShow(!show);
@@ -137,13 +156,23 @@ function PitchPanel({ match, minuteMs }: { match: MatchState; minuteMs: number }
       // depolama kapalı: tercih yalnızca bu oturumda geçerli
     }
   };
+  return [show, toggle];
+}
+
+function PitchPanel({ match, minuteMs, show, toggle }: { match: MatchState; minuteMs: number; show: boolean; toggle: () => void }) {
+  if (!show) {
+    return (
+      <section className="panel pitch-panel collapsed">
+        <span className="pitch-panel-title">2D Saha</span>
+        <button className="btn btn-small" onClick={toggle}>Göster</button>
+      </section>
+    );
+  }
   return (
-    <section className="panel">
-      <h2 className="panel-title panel-title-row">
-        <span>Saha</span>
-        <button className="btn btn-small" onClick={toggle}>{show ? 'Gizle' : 'Göster'}</button>
-      </h2>
-      {show && <PitchView match={match} minuteMs={minuteMs} />}
+    <section className="panel pitch-panel">
+      <button className="btn btn-small pitch-hide" onClick={toggle} title="2D sahayı gizle">Gizle</button>
+      <PitchView match={match} minuteMs={minuteMs} />
+      <EventBar match={match} />
     </section>
   );
 }
@@ -359,6 +388,7 @@ export function MatchScreen() {
   const [running, setRunning] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [showTactics, setShowTactics] = useState(false);
+  const [showPitch, togglePitch] = usePitchPref();
   const period = match?.period;
 
   // Başlama öncesi Taktik ekranına gidilip dönüldüyse maçı güncel kadroyla yeniden kur.
@@ -394,7 +424,8 @@ export function MatchScreen() {
   return (
     <div className="match-screen">
       <Scoreboard match={match} />
-      <MomentumBar match={match} />
+      {/* Saha açıkken baskı çubuğu gereksiz: yer sahaya kalsın */}
+      {!showPitch && <MomentumBar match={match} />}
       <Controls
         match={match}
         running={running}
@@ -417,10 +448,10 @@ export function MatchScreen() {
         </div>
       )}
       {match.period === 'half' && <div className="motm">Devre arası — oyuncu değişikliği ve taktik değişikliği yapabilirsin.</div>}
+      <PitchPanel match={match} minuteMs={running ? SPEEDS[speed]!.ms : SPEEDS[1]!.ms} show={showPitch} toggle={togglePitch} />
       <div className="match-grid">
         <TeamPanel match={match} side="home" />
         <div className="match-center">
-          <PitchPanel match={match} minuteMs={running ? SPEEDS[speed]!.ms : SPEEDS[1]!.ms} />
           <StatsPanel match={match} />
           <Commentary match={match} />
         </div>

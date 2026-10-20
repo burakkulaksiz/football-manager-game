@@ -314,6 +314,19 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
         framesForDuration: dakika < 300 ms ise yalnızca son kare, yoksa en fazla ⌊ms/110⌋ (2–5) kare.
         PitchView kareleri dakika süresinin %90'ına yayar; pas izi kesik, şut izi düz çizgi; kart oyuncunun üstünde.
         Duraklatılmışken sahne Normal hız süresiyle oynar. "Çok Hızlı" 4× yavaş CPU'da 24 dk/sn.
+  - [x] Duran top sahneleri + büyük saha. Motor: lastPlay.fromCorner / fromFreeKick (resolveShot'a korner bayrağı);
+        penaltı/serbest vuruş şutunda faulü yapan önceki andan taşınır. pitch.ts: freeKickSpot (kazanılan serbest vuruş
+        ile şutu aynı yer), shotOrigin korner kafası için altıpas önü; formationRoles (dizilişteki yer, roller için).
+        pitchScene.ts: SceneFrame.setPiece {kind, side, spot} — diziliş `spot`a göre kurulur, şuttan sonra bozulmaz.
+        setPieceSpots: korner (hücumcular CORNER_TARGETS'a, savunanlar markaja, biri yakın direğe), serbest vuruş
+        (topa 9.15 m'de 4 kişilik baraj, hücumcular ceza sahası çizgisinde), penaltı (çizgi/yay çevresinde iki sıra).
+        Her iki takımdan geride kalanlar: hücum edenin en geri 2'si, savunanın en ileri 1'i.
+        Saha maç ekranında tam genişlikte (kadroların üstünde); yüksekliği main.content'in görünür alanına göre
+        ölçülür (useFitHeight, en az 320 px), saha açıkken "Son 10 dk" çubuğu gizli; altında son olay şeridi (EventBar);
+        topu taşıyanın ve kart görenin soyadı noktanın altında. Performans: çim/çizgiler ayrı, memo'lu SVG
+        (PitchBackground); her dakika yalnızca oyuncu katmanı boyanır; .match-grid content-visibility: auto.
+        ui/colors.ts readableText: ikinci renk zeminde okunmuyorsa beyaz/siyah (tabela, başlık hapı, saha numaraları).
+        DİKKAT: `.pitch-bg` uygulamanın çim zemin sınıfı; saha SVG'si `.pitch-grass`.
   - [ ] Sıradaki: FIKIRLER.md'den seçilecek.
 
 ## Açık konular / ileride

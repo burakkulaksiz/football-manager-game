@@ -9,7 +9,7 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
   - [x] **Top taşıyıcı:** topun her an bir oyuncuda olması; top o oyuncunun ayağında durur, pas çizgisiyle diğerine geçer.
   - [x] **Olay oyuncuları gerçek:** faul yapan, kart gören, asist yapan, kurtarış yapan kaleci sahada vurgulanır
         (motordan oyuncu kimlikleri de `lastPlay`'e eklenir).
-  - [ ] **Duran top sahneleri:** korner ve serbest vuruşta oyuncular kurulu pozisyona geçer (baraj, kale önü kalabalığı),
+  - [x] **Duran top sahneleri:** korner ve serbest vuruşta oyuncular kurulu pozisyona geçer (baraj, kale önü kalabalığı),
         penaltıda herkes ceza sahası dışında bekler.
   - [ ] **Gol sonrası:** golü atan oyuncu köşe bayrağına koşar, takım arkadaşları toplanır; ardından santra dizilişi.
   - [ ] **Taktiğe göre şekil:** mentalite (hücum/defans), savunma çizgisi, genişlik ve pres talimatları blok derinliğini
@@ -18,7 +18,8 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
         çıkar, sakat oyuncu yerde, değişiklikte yeni numara kenardan girer.
   - [ ] **Oyuncu üzerine gelince bilgi:** isim, mevki, kondisyon ve maç puanı; tıklayınca değişiklik seçimi.
   - [ ] **Isı haritası / şut haritası:** maç içinde ve maç raporunda, takımın şutları (gol/isabet/aut) ve top hakimiyeti bölgeleri.
-  - [ ] **Kamera seçenekleri:** tam saha / topu takip eden yakın görünüm; büyük ekranda sahayı genişletme (tam ekran saha modu).
+  - [ ] **Kamera seçenekleri:** tam saha / topu takip eden yakın görünüm; tam ekran saha modu.
+        (Büyük saha yapıldı: maç ekranında tam genişlik, ekrana sığan yükseklik.)
   - [ ] **Görsel cila:** forma renginde iki renkli nokta (forma + şort), kale fileleri, top gölgesi, gol anında ağ sallanması,
         çim desenine güneş/gölge.
   - [ ] **Sadece önemli anlar modu:** FM'deki gibi sakin dakikaları atlayıp atak, şut ve duran topları sahada göstermek.

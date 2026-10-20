@@ -84,13 +84,44 @@ describe('2D saha sahnesi', () => {
     const shooter = m.home.onPitch.find((id) => m.players[id]!.slot === 'ST')!;
     const play: MatchPlay = { side: 'home', kind: 'goal', playerId: shooter, fromPenalty: true };
     const scene = buildScene(m, play, 30);
-    const spot = scene.find((f) => f.clearBoxFor === 'home' && f.carrierId === shooter)!;
+    const spot = scene.find((f) => f.setPiece?.kind === 'penalty' && f.carrierId === shooter)!;
     expect(spot.ball).toEqual({ x: PITCH_LENGTH - 11, y: PITCH_WIDTH / 2 });
     for (const [id, { at }] of frameSpots(m, spot, false)) {
       if (id === shooter || m.players[id]!.slot === 'GK') continue;
       const inBox = at.x > PITCH_LENGTH - 16.5 && Math.abs(at.y - PITCH_WIDTH / 2) < 20.16;
       expect(inBox).toBe(false);
     }
+  });
+
+  const inBox = (p: { x: number; y: number }) => p.x > PITCH_LENGTH - 16.5 && Math.abs(p.y - PITCH_WIDTH / 2) < 20.16;
+
+  it('korner: kullanan bayrakta, en az 4 hücumcu ve savunmacılar ceza sahasında, birkaç oyuncu geride', () => {
+    const m = match();
+    const play: MatchPlay = { side: 'home', kind: 'corner', playerId: null };
+    const scene = buildScene(m, play, 33);
+    const last = scene.at(-1)!;
+    expect(last.setPiece).toMatchObject({ kind: 'corner', side: 'home', spot: last.ball });
+    expect(last.ball.x).toBeGreaterThan(PITCH_LENGTH - 1);
+    const spots = [...frameSpots(m, last, false).values()];
+    const home = spots.filter((p) => p.side === 'home');
+    const away = spots.filter((p) => p.side === 'away');
+    expect(home.filter((p) => inBox(p.at)).length).toBeGreaterThanOrEqual(4);
+    expect(away.filter((p) => inBox(p.at)).length).toBeGreaterThanOrEqual(7);
+    expect(home.filter((p) => p.at.x < PITCH_LENGTH / 2 + 10).length).toBeGreaterThanOrEqual(3); // kaleci + 2 geride
+  });
+
+  it('serbest vuruş: topa 9.15 m uzaklıkta 4 kişilik baraj, kullanan topun başında', () => {
+    const m = match();
+    const taker = m.away.onPitch.find((id) => m.players[id]!.slot === 'AMC' || m.players[id]!.slot === 'MC')!;
+    const play: MatchPlay = { side: 'away', kind: 'freekick', playerId: taker };
+    const last = buildScene(m, play, 52).at(-1)!;
+    expect(last.setPiece?.kind).toBe('freekick');
+    expect(last.carrierId).toBe(taker);
+    const spots = frameSpots(m, last, false);
+    const wall = [...spots.values()].filter((p) => p.side === 'home' && Math.abs(Math.hypot(p.at.x - last.ball.x, p.at.y - last.ball.y) - 9.15) < 1.2);
+    expect(wall.length).toBeGreaterThanOrEqual(4);
+    const t = spots.get(taker)!.at;
+    expect(Math.hypot(t.x - last.ball.x, t.y - last.ball.y)).toBeLessThan(2);
   });
 
   it('hızlı modda yalnızca son kare, yavaşta en fazla 5 kare', () => {

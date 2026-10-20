@@ -1,6 +1,7 @@
 import { formatDateTR, getClub, seasonLabel } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
+import { readableText } from '../colors';
 import { splitDateTR } from '../labels';
 import { pageHeading } from './pageHeading';
 
@@ -24,7 +25,7 @@ export function Header() {
 
       <div
         className="title-pill"
-        style={{ background: heading.colors.primary, color: heading.colors.secondary }}
+        style={{ background: heading.colors.primary, color: readableText(heading.colors.primary, heading.colors.secondary) }}
       >
         <div className="title-pill-title">{heading.title}</div>
         <div className="title-pill-sub">{heading.subtitle}</div>

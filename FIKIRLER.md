@@ -23,7 +23,7 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
   - [x] **Görsel cila:** forma renginde iki renkli nokta (forma + şort), kale fileleri, top gölgesi, gol anında ağ sallanması,
         çim desenine güneş/gölge.
   - [x] **Sadece önemli anlar modu:** FM'deki gibi sakin dakikaları atlayıp atak, şut ve duran topları sahada göstermek.
-  - [ ] **Performans:** oyuncuları HTML katmanında (GPU'da hareket eden) çizmek; yavaş makinede bile akıcı geçiş.
+  - [x] **Performans:** oyuncuları HTML katmanında (GPU'da hareket eden) çizmek; yavaş makinede bile akıcı geçiş.
 - [ ] Ses (kodla üretilen + gerçek kayıtlar; düdük, gol, uğultu, açma/kapama)
 - [ ] Maç ortasında kayıt
 - [ ] Devre arası konuşması (moral etkisi)

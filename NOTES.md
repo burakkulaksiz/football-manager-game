@@ -349,6 +349,11 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
   - [x] Görsel cila: iki renkli oyuncu (forma = birinci renk, şort = ikinci; renk çakışmasında ters), oyuncu ve top
         gölgesi, kale fileleri (çapraz örgü deseni, direkler; oyuncu katmanında) ve golde file sallanması (.pitch-net.ripple,
         golün girdiği kale), köşe yayları, çimde tribün gölgesi ve hafif güneş (sabit arka plan katmanında).
+  - [x] Performans: oyuncular ve top HTML katmanında (.pitch-dots > .pdot / .pball), kayma transform geçişiyle
+        ekran kartında (SVG transform geçişleri ana iş parçacığında çalışıyordu). Katman büyütülmez: konum ve birim
+        (--u, metre başına px) kamerayı içerir (pitch.ts toScreen / screenUnit, testli) — yakın kamerada yazılar net.
+        Sahne kutusu genişliği ResizeObserver ile (useElementWidth). Çim, çizgiler, fileler, pas izleri SVG'de kalır.
+        Ölçüm (önemli an sırasında): CPU 6× yavaşta ana iş parçacığı kare hızı 42–52 → 52–58, yük 430–550 → 300–450 ms/sn.
   - [ ] Sıradaki: FIKIRLER.md'den seçilecek.
 
 ## Açık konular / ileride

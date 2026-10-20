@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { clubPlayers, createMatch, createWorld, stepMatch, type MatchState } from '../engine';
 import { autoSelectLineup } from '../engine/match/formation';
 import { gameData } from '../gameData';
-import { ballSpot, blockLine, cameraTransform, CAMERA_ZOOM, colorsClash, PITCH_LENGTH, PITCH_VIEW, PITCH_WIDTH, shotOrigin, teamSpots } from './pitch';
+import { ballSpot, blockLine, cameraTransform, CAMERA_ZOOM, colorsClash, PITCH_LENGTH, PITCH_VIEW, PITCH_WIDTH, screenUnit, shotOrigin, teamSpots, toScreen } from './pitch';
 
 const world = createWorld(gameData, 3, 'galatasaray', '2026-07-01');
 
@@ -88,5 +88,22 @@ describe('kamera', () => {
       expect(cam.ty).toBeLessThanOrEqual(0);
       expect(cam.ty).toBeGreaterThanOrEqual(1 - CAMERA_ZOOM);
     }
+  });
+});
+
+describe('ekran konumu (HTML oyuncu katmanı)', () => {
+  it('kameranın ortaladığı nokta ekranın ortasına düşer; birim büyütmeyle büyür', () => {
+    const width = 1110;
+    const height = (width * PITCH_VIEW.h) / PITCH_VIEW.w;
+    const target = { x: 60, y: 30 };
+    const cam = cameraTransform(target, CAMERA_ZOOM);
+    const p = toScreen(target, cam, width);
+    expect(p.x).toBeCloseTo(width / 2, 6);
+    expect(p.y).toBeCloseTo(height / 2, 6);
+    const full = cameraTransform(null, CAMERA_ZOOM);
+    expect(screenUnit(full, width)).toBeCloseTo(10, 6);
+    expect(screenUnit(cam, width)).toBeCloseTo(10 * CAMERA_ZOOM, 6);
+    // Tam sahada sahanın sol üst köşesi (0, 0) kenar payı kadar içeride
+    expect(toScreen({ x: 0, y: 0 }, full, width)).toEqual({ x: 30, y: 20 });
   });
 });

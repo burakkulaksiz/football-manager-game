@@ -194,3 +194,20 @@ export function cameraTransform(target: Point | null, zoom: number): CameraTrans
     zoom,
   };
 }
+
+/**
+ * Saha noktasının ekran konumu (px), kamerayla birlikte: sahne kutusunun genişliği `width` px.
+ * Oyuncular büyütülen katmanın dışında çizilir (yazılar yakın kamerada da net kalsın);
+ * konum ve birim boyutu (`unit`: metre başına px) kamerayı burada içerir.
+ */
+export function toScreen(p: Point, cam: CameraTransform, width: number): Point {
+  const height = (width * PITCH_VIEW.h) / PITCH_VIEW.w;
+  const fx = (p.x - PITCH_VIEW.x) / PITCH_VIEW.w;
+  const fy = (p.y - PITCH_VIEW.y) / PITCH_VIEW.h;
+  return { x: (cam.tx + fx * cam.zoom) * width, y: (cam.ty + fy * cam.zoom) * height };
+}
+
+/** Ekranda bir metrenin px karşılığı (kamera büyütmesiyle). */
+export function screenUnit(cam: CameraTransform, width: number): number {
+  return (width / PITCH_VIEW.w) * cam.zoom;
+}

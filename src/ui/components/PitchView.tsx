@@ -2,12 +2,26 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSPr
 import { getClub, type MatchState, type Side } from '../../engine';
 import { useWorld } from '../../store/gameStore';
 import { readableText } from '../colors';
-import { cameraTransform, CAMERA_ZOOM, colorsClash, PITCH_LENGTH, PITCH_VIEW, PITCH_WIDTH } from '../pitch';
+import { cameraTransform, CAMERA_ZOOM, colorsClash, PITCH_LENGTH, PITCH_VIEW, PITCH_WIDTH, screenUnit, toScreen } from '../pitch';
 import { buildScene, frameSpots, isHighlight, playLabel, revealIndex, SCENE_FRAME_MS } from '../pitchScene';
 
-/** Oyuncu noktasının alt kısmı (şort): yarıçap 1.3, merkezin 0.5 altındaki kirişten aşağısı. */
-const SHORTS_PATH = 'M -1.2 0.5 A 1.3 1.3 0 0 0 1.2 0.5 Z';
+/** Forma/şort sınırı: noktanın yukarıdan %69'u (yarıçap 1.3, merkezin 0.5 altı). */
+const SHIRT_SPLIT = 69;
 const KEEPER_KIT = '#1d1f24';
+
+/** Öğenin genişliği (px); boyut değişince güncellenir. */
+function useElementWidth(ref: React.RefObject<HTMLElement | null>): number {
+  const [width, setWidth] = useState(0);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    setWidth(el.clientWidth);
+    const observer = new ResizeObserver(() => setWidth(el.clientWidth));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ref]);
+  return width;
+}
 
 /** Şut karesinde top hızlı gider; diğer karelerde oyuncular ve top yavaşça kayar. */
 const SHOT_MOVE_MS = 380;
@@ -163,6 +177,8 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
   }, [scene]);
 
   const maxHeight = useFitHeight(ref, match.period, fullscreen);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const stageWidth = useElementWidth(stageRef);
   const frame = scene[Math.min(index, scene.length - 1)];
   const previous = index > 0 ? scene[index - 1] : undefined;
   // Sonuç (etiket, kart, sakatlık) sonuç karesinden itibaren görünür; golde ardından sevinç gelir
@@ -193,35 +209,43 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
   // Gol karesi ve sevinç: golün girdiği file sallanır (santrada durur)
   const goalRipple = play?.kind === 'goal' && revealed && !frame?.kickoff ? play.side : null;
 
-  const dots = frame && spots
+  // Oyuncular ve top HTML katmanında: kayma animasyonu ekran kartında (ana iş parçacığı serbest).
+  // Konumlar kamerayı içerir; katman büyütülmediği için yazılar yakın kamerada da net.
+  const unit = screenUnit(cam, stageWidth);
+  const dots = frame && spots && stageWidth > 0
     // Topu taşıyan / vurgulanan en son çizilir: adı kalabalıkta (ör. gol sevinci) üstte kalsın
     ? [...spots]
       .sort(([a], [b]) => Number(a === frame.carrierId || a === frame.focusId) - Number(b === frame.carrierId || b === frame.focusId))
       .map(([id, { side, at }]) => {
-      const keeper = match.players[id]?.slot === 'GK';
-      const carrier = frame.carrierId === id || frame.focusId === id;
-      // Topu taşıyanın (sevinçte golcünün), kart görenin ve sakatlananın adı noktanın altında
-      const named = carrier || card?.playerId === id || injuredId === id;
-      return (
-        <g key={id} className="pitch-player" style={{ transform: `translate(${at.x}px, ${at.y}px)` }}>
-          <circle className="pitch-shadow" cx={0.3} cy={0.4} r={1.3} />
-          {/* Forma (üst) ve şort (alt); kalecinin forması takım renginde kenarlı */}
-          <circle r={1.3} fill={keeper ? KEEPER_KIT : kits[side].fill} />
-          <path d={SHORTS_PATH} fill={keeper ? kits[side].fill : kits[side].stroke} />
-          <circle r={1.3} className={`pitch-outline${carrier ? ' involved' : ''}`} />
-          <text y={0.25} fill={keeper ? '#fff' : ink(side)}>{world.players[id]?.squadNumber ?? ''}</text>
-          {named && <text className="pitch-name" y={3.1}>{world.players[id]?.lastName ?? ''}</text>}
-          {card?.playerId === id && <rect className={`pitch-card ${card.type}`} x={0.7} y={-3} width={1.05} height={1.45} rx={0.15} />}
-          {injuredId === id && <text className="pitch-injury" x={-1.6} y={-1.6}>✚</text>}
-        </g>
-      );
-    })
+        const keeper = match.players[id]?.slot === 'GK';
+        const carrier = frame.carrierId === id || frame.focusId === id;
+        // Topu taşıyanın (sevinçte golcünün), kart görenin ve sakatlananın adı noktanın altında
+        const named = carrier || card?.playerId === id || injuredId === id;
+        const p = toScreen(at, cam, stageWidth);
+        // Forma (üst) ve şort (alt); kalecinin forması koyu, şortu takım renginde
+        const shirt = keeper ? KEEPER_KIT : kits[side].fill;
+        const shorts = keeper ? kits[side].fill : kits[side].stroke;
+        return (
+          <div key={id} className="pdot" style={{ transform: `translate3d(${p.x}px, ${p.y}px, 0)` }}>
+            <div
+              className={`pdot-body${carrier ? ' involved' : ''}`}
+              style={{ background: `linear-gradient(${shirt} ${SHIRT_SPLIT}%, ${shorts} ${SHIRT_SPLIT}%)`, color: keeper ? '#fff' : ink(side) }}
+            >
+              {world.players[id]?.squadNumber ?? ''}
+            </div>
+            {named && <div className="pdot-name">{world.players[id]?.lastName ?? ''}</div>}
+            {card?.playerId === id && <div className={`pdot-card ${card.type}`} />}
+            {injuredId === id && <div className="pdot-injury">✚</div>}
+          </div>
+        );
+      })
     : null;
+  const ballAt = frame && stageWidth > 0 ? toScreen(frame.ball, cam, stageWidth) : null;
 
   return (
     <div className="pitch-view" style={style} ref={ref}>
       {/* İki katman: çim ve çizgiler bir kez çizilir; yalnızca oyuncu katmanı boyanır */}
-      <div className="pitch-stage" style={{ width: Math.round(maxHeight * ASPECT) }}>
+      <div className="pitch-stage" ref={stageRef} style={{ width: Math.round(maxHeight * ASPECT) }}>
         {/* Kamera: yalnızca CSS dönüşümü (saha yeniden çizilmez, ekran kartında kayar) */}
         <div
           className="pitch-camera"
@@ -247,14 +271,12 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
               y2={frame.ball.y}
             />
           )}
-          {dots}
-          {frame && (
-            <g className="pitch-ball" style={{ transform: `translate(${frame.ball.x}px, ${frame.ball.y}px)` }}>
-              <ellipse className="pitch-ball-shadow" cx={0.35} cy={0.5} rx={0.62} ry={0.4} />
-              <circle r={0.62} />
-            </g>
-          )}
         </svg>
+        </div>
+        {/* Oyuncu katmanı: büyütülmez; birim (--u, metre başına px) kamerayla gelir */}
+        <div className="pitch-dots" style={{ '--u': `${unit}px` } as CSSProperties}>
+          {dots}
+          {ballAt && <div className="pball" style={{ transform: `translate3d(${ballAt.x}px, ${ballAt.y}px, 0)` }}><div className="pball-body" /></div>}
         </div>
       </div>
       {label && play && (

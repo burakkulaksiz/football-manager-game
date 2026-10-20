@@ -2912,27 +2912,94 @@ select {
 }
 
 
-/* Oyuncular ve top bir dakikadan diğerine kayarak geçer */
-.pitch-player,
-.pitch-ball {
+/* Oyuncu katmanı (HTML): sahne kutusunun üstünde, büyütülmez; konumlar kamerayı içerir */
+.pitch-dots {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Oyuncular ve top kayarak geçer: transform geçişi ekran kartında (ana iş parçacığı serbest) */
+.pdot,
+.pball {
+  position: absolute;
+  top: 0;
+  left: 0;
   transition: transform var(--pitch-move, 300ms) ease-in-out;
+  will-change: transform;
 }
 
-/* Oyuncu: gölge, forma + şort, ince koyu kenar (topu taşıyanda sarı halka) */
-.pitch-player .pitch-shadow {
-  fill: rgba(0, 0, 0, 0.32);
+.pdot-body {
+  position: absolute;
+  left: calc(var(--u) * -1.3);
+  top: calc(var(--u) * -1.3);
+  width: calc(var(--u) * 2.6);
+  height: calc(var(--u) * 2.6);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 calc(var(--u) * 0.2) rgba(0, 0, 0, 0.55), calc(var(--u) * 0.3) calc(var(--u) * 0.4) 0 rgba(0, 0, 0, 0.32);
+  font-family: var(--font-display);
+  font-size: calc(var(--u) * 1.35);
+  font-weight: 700;
+  line-height: 1;
+  padding-bottom: calc(var(--u) * 0.45);
+  box-sizing: border-box;
 }
 
-.pitch-player .pitch-outline {
-  fill: none;
-  stroke: rgba(0, 0, 0, 0.55);
-  stroke-width: 0.2;
+.pdot-body.involved {
+  box-shadow: 0 0 0 calc(var(--u) * 0.4) var(--accent), calc(var(--u) * 0.3) calc(var(--u) * 0.4) 0 rgba(0, 0, 0, 0.32);
 }
 
-.pitch-player .pitch-outline.involved {
-  stroke: var(--accent);
-  stroke-width: 0.5;
+/* Topu taşıyanın adı: koyu kenarlı beyaz yazı (çim üstünde okunur) */
+.pdot-name {
+  position: absolute;
+  top: calc(var(--u) * 1.6);
+  left: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: max(11px, calc(var(--u) * 1.45));
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 0 3px #000, 0 1px 2px #000;
 }
+
+.pdot-card {
+  position: absolute;
+  left: calc(var(--u) * 0.7);
+  top: calc(var(--u) * -3);
+  width: calc(var(--u) * 1.05);
+  height: calc(var(--u) * 1.45);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+.pdot-card.yellow { background: #ffd43b; }
+.pdot-card.red { background: #ef4444; }
+
+.pdot-injury {
+  position: absolute;
+  left: calc(var(--u) * -2.4);
+  top: calc(var(--u) * -2.9);
+  color: #ff5a4e;
+  font-size: calc(var(--u) * 1.8);
+  font-weight: 700;
+  text-shadow: 0 0 2px #fff;
+}
+
+.pball-body {
+  position: absolute;
+  left: calc(var(--u) * -0.62);
+  top: calc(var(--u) * -0.62);
+  width: calc(var(--u) * 1.24);
+  height: calc(var(--u) * 1.24);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #111, calc(var(--u) * 0.35) calc(var(--u) * 0.5) calc(var(--u) * 0.2) rgba(0, 0, 0, 0.35);
+}
+
+
+
 
 /* Kale: file ve direkler */
 .pitch-net {
@@ -2965,28 +3032,8 @@ select {
   fill: #fff;
 }
 
-.pitch-ball-shadow {
-  fill: rgba(0, 0, 0, 0.35);
-}
 
-.pitch-player text {
-  font-family: var(--font-display);
-  font-size: 1.35px;
-  font-weight: 700;
-  text-anchor: middle;
-  pointer-events: none;
-}
 
-/* Topu taşıyanın adı: koyu kenarlı beyaz yazı (çim üstünde okunur) */
-.pitch-player text.pitch-name {
-  font-family: var(--font-ui);
-  font-size: 1.45px;
-  font-weight: 600;
-  fill: #fff;
-  stroke: rgba(0, 0, 0, 0.75);
-  stroke-width: 0.35px;
-  paint-order: stroke;
-}
 
 .pitch-panel {
   position: relative;
@@ -3082,12 +3129,6 @@ select {
   font-size: 15px;
 }
 
-.pitch-ball circle {
-  fill: #fff;
-  stroke: #111;
-  stroke-width: 0.25;
-  filter: drop-shadow(0 0.3px 0.4px rgba(0, 0, 0, 0.6));
-}
 
 /* Topun son hareketi: pas ince kesik çizgi, şut kalın */
 .pitch-trail {
@@ -3107,21 +3148,8 @@ select {
   stroke: var(--accent);
 }
 
-.pitch-player text.pitch-injury {
-  font-size: 1.8px;
-  fill: #ff5a4e;
-  stroke: #fff;
-  stroke-width: 0.25px;
-  paint-order: stroke;
-}
 
-.pitch-card.yellow { fill: #ffd43b; }
-.pitch-card.red { fill: #ef4444; }
 
-.pitch-card {
-  stroke: rgba(0, 0, 0, 0.5);
-  stroke-width: 0.15;
-}
 
 @keyframes pitch-fade {
   from { opacity: 1; }
@@ -3154,8 +3182,8 @@ select {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pitch-player,
-  .pitch-ball {
+  .pdot,
+  .pball {
     transition: none;
   }
 }

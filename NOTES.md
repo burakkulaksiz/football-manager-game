@@ -222,6 +222,14 @@ Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
 - **Gelen Kutusu:** world.news içinden `important` ya da kulübümüzle ilgili olanlar; okundu bilgisi haberde.
 - Denge (aşama 9 sonrası): deplasman takımı 75'ten sonra beraberliğe razı (mentalite −1); goalBase 0.275,
   injuryChance 0.0018. ~4600 maç: 2.52 gol, %44.1 ev, %25.9 beraberlik.
+- Denge (aşama 10, gol dağılımı): gol kralı 29–42 ve takım golleri 14–103 idi (güç farkı üç yerde çarpılıyordu).
+  Değişenler: threatExponent 1.35 → 1.2; top hakimiyeti üssü 2 → 1.5 (possessionExponent); vuruş yeteneğinin
+  etkisi: isabet × (0.5 + yetenek/24) (önce yetenek/12), gol × (yetenek/kaleci)^0.8 (finishingExponent, önce 1.2);
+  SHOOTER_WEIGHT ST 6 → 3.5; penaltı (penaltyChance) 0.017 → 0.024; goalBase 0.275 → 0.31.
+  12 sezon: gol kralı ort. 24 (19–32), kulübün en golcüsü takım gollerinin %28'i, santrforlar tüm gollerin
+  %32'si, en golcü takım 72–93 gol, en az golcü 24–32, şampiyon 72–95 puan, penaltı golü 0.26/maç,
+  asist kralı 10–15. ~4600 maç: 2.69 gol, %44.2 ev, %26.3 beraberlik. engine.test.ts gol kralını da denetler.
+  testing.ts playSeason yönetim güvenini tazeler (görevden alınma test sezonunu yarıda kesmesin).
 
 ## Kayıt kuralları (kullanıcıyla kararlaştırıldı)
 - Canlı maç sürerken (başlama öncesi dahil) kayıt **yapılamaz**; liveMatch kaydedilmez.
@@ -281,7 +289,8 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
   - [x] Menajer adı ve kartı (world.manager: ad, göreve başlama, G/B/M, şampiyonluk). Yeni oyunda ad zorunlu;
         Kulüp Bilgisi'nden değiştirilebilir; başlıkta, ana menüde ve kayıt listesinde görünür. Biçim 4 → 5 dönüşümü
         adı "Menajer" yapar, kaydı bu sezonun sonuçlarından ve arşivdeki şampiyonluklardan çıkarır.
-  - [ ] Diğer adaylar: denge (gol kralı ~35), performans.
+  - [x] Denge: gol dağılımı (gol kralı, takımlar arası fark, penaltı) — ayrıntı "Sezon döngüsü" bölümünün sonunda.
+  - [ ] Diğer adaylar: performans.
 
 ## Açık konular / ileride
 - Elle gerçek kadro girişi (ör. `data/squads/<kulüpId>.json`) yok; kullanıcı "şimdilik gerek yok" dedi.
@@ -293,4 +302,4 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
 - Oyuncu "transfer listesine koyma" yok; yapay zekâ ilgisi kendiliğinden geliyor.
 
 ## Sıradaki adım
-10. aşama devam: kullanıcıya sıradaki cila maddesini sor (denge, performans ya da oynarken fark ettikleri).
+10. aşama devam: kullanıcıya sıradaki cila maddesini sor (performans ya da oynarken fark ettikleri).

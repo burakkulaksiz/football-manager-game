@@ -85,11 +85,19 @@ describe('tek maç', () => {
 
 describe('istatistik doğrulama (binlerce maç)', () => {
   // 15 sezon × 306 maç ≈ 4600 maç
-  const results = Array.from({ length: 15 }, (_, i) => {
+  const seasons = Array.from({ length: 15 }, (_, i) => {
     const w = createWorld(gameData, 500 + i, 'galatasaray', START);
     playSeason(w);
     return w.season.fixtures.map((f) => f.result!);
-  }).flat();
+  });
+  const results = seasons.flat();
+  // Her sezonun gol kralının gol sayısı
+  const kings = seasons.map((season) => {
+    const goals = new Map<number, number>();
+    for (const r of season) for (const g of r.goals) goals.set(g.playerId, (goals.get(g.playerId) ?? 0) + 1);
+    return Math.max(...goals.values());
+  });
+  const kingAvg = kings.reduce((s, k) => s + k, 0) / kings.length;
   const n = results.length;
   const avg = (fn: (r: MatchResult) => number) => results.reduce((s, r) => s + fn(r), 0) / n;
 
@@ -130,6 +138,13 @@ describe('istatistik doğrulama (binlerce maç)', () => {
     expect(yellows).toBeGreaterThan(2.5);
     expect(yellows).toBeLessThan(6);
     expect(reds).toBeLessThan(0.3);
+  });
+
+  it(`gol kralı ~24 gol (ölçülen ort. ${kingAvg.toFixed(1)}, en çok ${Math.max(...kings)})`, () => {
+    // Süper Lig'de son yıllarda gol kralı 22–30 gol (38 hafta); bizde 34 hafta.
+    expect(kingAvg).toBeGreaterThan(19);
+    expect(kingAvg).toBeLessThan(29);
+    expect(Math.max(...kings)).toBeLessThan(38);
   });
 
   it('güçlü takım zayıf takımı çoğunlukla yener', () => {

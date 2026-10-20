@@ -54,11 +54,15 @@ export const TUNING = {
   /** Güçler eşitken atağın şuta dönüşme olasılığı. */
   shotChance: 0.5,
   /** Atak/savunma oranının şut olasılığına etkisi (üs). */
-  threatExponent: 1.35,
+  threatExponent: 1.2,
+  /** Orta saha gücü oranının top hakimiyetine etkisi (üs). */
+  possessionExponent: 1.5,
   /** Şutun rakip oyuncuya çarpma olasılığı. */
   blockChance: 0.22,
   onTargetBase: 0.5,
-  goalBase: 0.275,
+  goalBase: 0.31,
+  /** Vuruş yeteneği / kaleci oranının gol olasılığına etkisi (üs). Büyükse iyi golcüler çok fazla atar. */
+  finishingExponent: 0.8,
   /** İç saha avantajı: hücum ve orta saha çarpanları. */
   homeAttack: 1.2,
   homeMidfield: 1.05,
@@ -70,6 +74,8 @@ export const TUNING = {
   /** Şuta dönüşmeyen atağın kornerle bitme olasılığı. */
   cornerFromAttack: 0.3,
   directRedChance: 0.004,
+  /** Savunan takımın faulünün penaltı olma olasılığı. */
+  penaltyChance: 0.024,
 };
 
 /* ------------------------------------------------------------------ */
@@ -351,7 +357,7 @@ function keeperOf(ctx: Ctx, side: Side): number | null {
 
 const SHOOTER_WEIGHT: Record<Position, number> = {
   GK: 0, DC: 0.5, DR: 0.4, DL: 0.4, WBR: 0.8, WBL: 0.8, DM: 0.7, MC: 1.5, MR: 1.8, ML: 1.8,
-  AMC: 3.5, AMR: 3, AML: 3, ST: 6,
+  AMC: 3.5, AMR: 3, AML: 3, ST: 3.5,
 };
 
 const CREATOR_WEIGHT: Record<Position, number> = {
@@ -463,7 +469,7 @@ function resolveShot(ctx: Ctx, side: Side, shooterId: number, kind: GoalKind, th
   const quality = ctx.effects[side].shotQuality;
   const conceded = ctx.effects[oppSide].oppShotQuality;
   const pOnTarget = kind === 'penalty' ? 0.85
-    : Math.max(0.1, Math.min(0.75, TUNING.onTargetBase * (skill / 12) * KIND_ON_TARGET[kind] * quality));
+    : Math.max(0.1, Math.min(0.75, TUNING.onTargetBase * (0.5 + skill / 24) * KIND_ON_TARGET[kind] * quality));
   if (!rng.chance(pOnTarget)) {
     addRating(ctx, shooterId, kind === 'penalty' ? -0.6 : -0.05);
     if (kind === 'penalty') emit(ctx, 'penaltyMiss', side, 'penaltyMiss', { player: name, keeper: keeperName });
@@ -476,7 +482,7 @@ function resolveShot(ctx: Ctx, side: Side, shooterId: number, kind: GoalKind, th
   const pGoal = kind === 'penalty'
     ? Math.max(0.6, Math.min(0.95, 0.88 + (skill - 12) * 0.015 - (gk - 12) * 0.012))
     : Math.max(0.06, Math.min(0.65,
-      TUNING.goalBase * (skill / Math.max(gk, 3)) ** 1.2 * KIND_GOAL[kind] * threat ** 0.3 * quality * conceded));
+      TUNING.goalBase * (skill / Math.max(gk, 3)) ** TUNING.finishingExponent * KIND_GOAL[kind] * threat ** 0.3 * quality * conceded));
 
   if (rng.chance(pGoal)) {
     scoreGoal(ctx, side, shooterId, kind);
@@ -606,7 +612,7 @@ function resolveFoul(ctx: Ctx, attackingSide: Side): void {
   // Savunan takımın faulü: penaltı ya da tehlikeli serbest vuruş olabilir.
   if (foulSide !== attackingSide) {
     const victims = teamOf(state, victimSide);
-    if (rng.chance(0.017)) {
+    if (rng.chance(TUNING.penaltyChance)) {
       const taker = designatedTaker(ctx, victimSide, victims.penaltyTakerId, (p) => p.attributes.penaltyTaking);
       if (taker === null) return;
       addRating(ctx, foulerId, -0.5);
@@ -767,7 +773,8 @@ function simulateMinute(ctx: Ctx): void {
   // Top hakimiyeti: orta saha gücü × kendi talimatları × rakibin presi
   const mh = units.home.mid * TUNING.homeMidfield * effects.home.midfield * effects.away.oppMidfield;
   const ma = units.away.mid * effects.away.midfield * effects.home.oppMidfield;
-  const side: Side = rng.chance(mh ** 2 / (mh ** 2 + ma ** 2)) ? 'home' : 'away';
+  const pe = TUNING.possessionExponent;
+  const side: Side = rng.chance(mh ** pe / (mh ** pe + ma ** pe)) ? 'home' : 'away';
   state.possessionTicks[side]++;
 
   const eventsBefore = state.events.length;

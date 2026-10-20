@@ -23,12 +23,11 @@ function playUntil(world: GameWorld, date: string): void {
 describe('sezon döngüsü', () => {
   const world = createWorld(gameData, 101, 'galatasaray', START);
   const lowerIds = world.clubs.filter((c) => divisionOf(c) === 2).map((c) => c.id);
-  const lastMatch = world.season.fixtures.reduce((d, f) => (f.date > d ? f.date : d), '');
 
   it('son maçın ertesi günü sezon kapanır: şampiyon, küme düşenler, çıkanlar, ödüller, primler', () => {
-    playUntil(world, lastMatch);
-    const finalTable = computeStandings(leagueClubs(world).map((c) => c.id), world.season.fixtures);
     playUntil(world, '2027-05-20');
+    // Fikstür 1 Temmuz'a kadar geçen sezonundur; tablo son haftadan sonra alınır.
+    const finalTable = computeStandings(leagueClubs(world).map((c) => c.id), world.season.fixtures);
     expect(world.seasonState).toBe('ended');
     const summary = world.history[0]!;
     expect(summary.year).toBe(2026);

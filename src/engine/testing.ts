@@ -21,8 +21,14 @@ export function makeResult(homeGoals: number, awayGoals: number, goals: GoalEven
   };
 }
 
-/** Sezonu sonuna kadar oynatır (kendi maçımız da arka planda). */
+/**
+ * Sezonu sonuna kadar oynatır (kendi maçımız da arka planda).
+ * Yönetim güveni her gün tazelenir: kötü giden bir sezonda görevden alınma oyunu yarıda kesmesin.
+ */
 export function playSeason(world: GameWorld): void {
   let guard = 0;
-  while (!isSeasonOver(world) && guard++ < 1000) advance(world, gameData, { autoPlayUserMatch: true });
+  while (!isSeasonOver(world) && guard++ < 1000) {
+    world.board.confidence = 100;
+    advance(world, gameData, { autoPlayUserMatch: true });
+  }
 }

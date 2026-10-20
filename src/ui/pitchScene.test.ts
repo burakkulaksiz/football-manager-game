@@ -3,7 +3,7 @@ import { clubPlayers, createMatch, createWorld, stepMatch, type MatchPlay, type 
 import { autoSelectLineup } from '../engine/match/formation';
 import { gameData } from '../gameData';
 import { ballSpot, PITCH_LENGTH, PITCH_WIDTH } from './pitch';
-import { buildScene, frameSpots, isHighlight, playLabel, SCENE_FRAME_MS, SCENE_HOLD_MS, sceneDurationMs } from './pitchScene';
+import { buildScene, frameSpots, isHighlight, revealIndex, playLabel, SCENE_FRAME_MS, SCENE_HOLD_MS, sceneDurationMs } from './pitchScene';
 
 const world = createWorld(gameData, 3, 'galatasaray', '2026-07-01');
 
@@ -25,13 +25,16 @@ function playAll(m: MatchState): { minute: number; play: MatchPlay; state: Match
 describe('2D saha sahnesi', () => {
   const plays = [9, 10, 11].flatMap((seed) => playAll(match(seed)));
 
-  it('her sahne 1–5 kare, son kare motorun anıyla aynı yerde, top saha içinde (gol/aut hariç)', () => {
+  it('sonuca kadar 1–5 kare, sonuç karesi motorun anıyla aynı yerde, top saha içinde (gol/aut hariç)', () => {
     for (const { minute, play, state } of plays) {
       const scene = buildScene(state, play, minute);
-      expect(scene.length).toBeGreaterThanOrEqual(1);
-      expect(scene.length).toBeLessThanOrEqual(5);
-      expect(scene[scene.length - 1]!.ball).toEqual(ballSpot(play, minute));
-      for (const f of scene.slice(0, -1)) {
+      const reveal = revealIndex(scene);
+      expect(reveal).toBeGreaterThanOrEqual(0);
+      expect(reveal).toBeLessThanOrEqual(4);
+      expect(scene[reveal]!.ball).toEqual(ballSpot(play, minute));
+      // Gol dışında sonuç son karedir; golde ardından 3 sevinç karesi
+      expect(scene.length - 1 - reveal).toBe(play.kind === 'goal' ? 3 : 0);
+      for (const f of scene.slice(0, reveal)) {
         expect(f.ball.x).toBeGreaterThanOrEqual(0);
         expect(f.ball.x).toBeLessThanOrEqual(PITCH_LENGTH);
         expect(f.ball.y).toBeGreaterThanOrEqual(0);
@@ -49,7 +52,27 @@ describe('2D saha sahnesi', () => {
       const shot = carriers.indexOf(play.playerId);
       expect(shot).toBeGreaterThan(0);
       expect(carriers[shot - 1]).toBe(play.assistId);
-      expect(scene[scene.length - 1]!.move).toBe('shot');
+      expect(scene[revealIndex(scene)]!.move).toBe('shot');
+    }
+  });
+
+  it('gol sevinci: golcü köşe bayrağına, takım arkadaşları çevresinde; sonra santra, gol yiyen başlar', () => {
+    const goal = plays.find((p) => p.play.kind === 'goal' && p.play.playerId !== null)!;
+    const { minute, play, state } = goal;
+    const scene = buildScene(state, play, minute);
+    const [run, huddle, kickoff] = scene.slice(revealIndex(scene) + 1);
+    const flagAt = frameSpots(state, huddle!, false).get(play.playerId!)!.at;
+    // Rakip kaleye yakın köşe: hücum yönünde 101 m, kenar çizgisine 5 m
+    expect(Math.min(flagAt.y, PITCH_WIDTH - flagAt.y)).toBeCloseTo(5, 5);
+    expect(run!.focusId).toBe(play.playerId);
+    const mates = [...frameSpots(state, huddle!, false)].filter(([id, p]) => p.side === play.side && id !== play.playerId && state.players[id]!.slot !== 'GK');
+    for (const [, p] of mates) expect(Math.hypot(p.at.x - flagAt.x, p.at.y - flagAt.y)).toBeLessThan(6);
+    expect(kickoff!.kickoff).toBe(true);
+    expect(kickoff!.ball).toEqual({ x: PITCH_LENGTH / 2, y: PITCH_WIDTH / 2 });
+    expect(kickoff!.carrierSide).not.toBe(play.side);
+    for (const [, p] of frameSpots(state, kickoff!, false)) {
+      if (p.side === 'home') expect(p.at.x).toBeLessThanOrEqual(PITCH_LENGTH / 2);
+      else expect(p.at.x).toBeGreaterThanOrEqual(PITCH_LENGTH / 2);
     }
   });
 

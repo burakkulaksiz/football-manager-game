@@ -30,6 +30,12 @@ export interface SceneFrame {
   setPiece?: SetPiece;
   /** Sakatlanan oyuncu (yerde, işaretli). */
   injuredId?: number;
+  /** Anın sonucu bu karede (etiket ve skor burada açıklanır; sonrası gol sevinci). */
+  result?: boolean;
+  /** Adı gösterilip vurgulanan oyuncu (yeri değişmez; ör. sevinçte golcü). */
+  focusId?: number;
+  /** Santra dizilişi (gol sonrası). */
+  kickoff?: boolean;
 }
 
 export interface SetPiece {
@@ -217,7 +223,54 @@ export function buildScene(match: MatchState, play: MatchPlay | null, minute: nu
       last.placed.push({ id: play.injuredId, side: injuredSide, at: { x: last.ball.x + (injuredSide === 'home' ? -3 : 3), y: last.ball.y + 2 } });
     }
   }
-  return frames.slice(-5);
+  const core = frames.slice(-5);
+  core[core.length - 1]!.result = true;
+  if (play.kind === 'goal') core.push(...celebration(match, play, core[core.length - 1]!));
+  return core;
+}
+
+/**
+ * Gol sevinci (gol karesinden sonra): golcü yakın köşe bayrağına koşar, takım arkadaşları ona doğru;
+ * sonra golcünün etrafında toplanırlar, rakip kaleci topu ağlardan alır; en son santra dizilişi.
+ */
+function celebration(match: MatchState, play: MatchPlay, goalFrame: SceneFrame): SceneFrame[] {
+  const side = play.side;
+  const opp = other(side);
+  const base = frameSpots(match, goalFrame, false);
+  const ball = goalFrame.ball;
+  const scorer = play.playerId;
+  // Golün atıldığı taraftaki köşe bayrağının biraz içi
+  const flag = at(side, 101, ball.y < MID_Y ? 5 : PITCH_WIDTH - 5);
+  const teammates = [...base].filter(([id, p]) => p.side === side && id !== scorer && match.players[id]?.slot !== 'GK');
+  const toward = (from: Point, to: Point, t: number): Point => ({ x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t });
+
+  const run: SceneFrame = { ball, carrierId: null, carrierSide: side, placed: [], move: 'none', focusId: scorer ?? undefined };
+  const huddle: SceneFrame = { ball, carrierId: null, carrierSide: side, placed: [], move: 'none', focusId: scorer ?? undefined };
+  if (scorer !== null) {
+    run.placed.push({ id: scorer, side, at: flag });
+    huddle.placed.push({ id: scorer, side, at: flag });
+  }
+  teammates.forEach(([id, p], i) => {
+    // İlk karede yolun yarısı; ikinci karede golcünün çevresinde halka (geride kalan stoperler biraz uzakta)
+    run.placed.push({ id, side, at: toward(p.at, flag, 0.55) });
+    const angle = (i / Math.max(1, teammates.length)) * Math.PI * 2 + hash01(match.minute, id) * 0.4;
+    const radius = 2.6 + (i % 3) * 1.1;
+    huddle.placed.push({ id, side, at: { x: flag.x + Math.cos(angle) * radius, y: clamp(flag.y + Math.sin(angle) * radius, 1, PITCH_WIDTH - 1) } });
+  });
+  // Rakip kaleci topu ağlardan alır
+  const keeper = [...base].find(([id, p]) => p.side === opp && match.players[id]?.slot === 'GK');
+  if (keeper) huddle.placed.push({ id: keeper[0], side: opp, at: { x: ball.x + (side === 'home' ? -1.2 : 1.2), y: ball.y } });
+  // Santra: gol yiyen takım başlar
+  const center = { x: PITCH_LENGTH / 2, y: MID_Y };
+  const taker = match[opp].onPitch.find((id) => match.players[id]?.slot === 'ST') ?? nearestTeammate(match, opp, center, new Set());
+  const kickoffFrame: SceneFrame = { ball: center, carrierId: taker, carrierSide: opp, placed: [], move: 'none', kickoff: true };
+  return [run, huddle, kickoffFrame];
+}
+
+/** Sonucun açıklandığı karenin sırası (etiket, skor ve anlatım burada güncellenir). */
+export function revealIndex(scene: readonly SceneFrame[]): number {
+  const i = scene.findIndex((f) => f.result);
+  return i === -1 ? scene.length - 1 : i;
 }
 
 /* ------------------------------------------------------------------ */
@@ -275,7 +328,7 @@ export function sceneDurationMs(scene: readonly SceneFrame[]): number {
 export function frameSpots(match: MatchState, frame: SceneFrame, kickoff: boolean): Map<number, { side: Side; at: Point }> {
   const spots = new Map<number, { side: Side; at: Point }>();
   for (const side of ['home', 'away'] as const) {
-    for (const [id, p] of teamSpots(match, side, frame.ball, kickoff)) spots.set(id, { side, at: p });
+    for (const [id, p] of teamSpots(match, side, frame.ball, kickoff || frame.kickoff === true)) spots.set(id, { side, at: p });
   }
   if (frame.setPiece) {
     for (const [id, point] of setPieceSpots(match, frame.setPiece, frame.setPiece.spot, frame.carrierId)) {

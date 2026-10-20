@@ -15,7 +15,7 @@ import { readableText } from '../colors';
 import { FormationPicker, InstructionsPanel } from '../components/InstructionsPanel';
 import { MatchStatRows } from '../components/MatchStatRows';
 import { PitchView } from '../components/PitchView';
-import { buildScene, isHighlight, QUIET_MINUTE_MS, SCENE_FRAME_MS, sceneDurationMs } from '../pitchScene';
+import { buildScene, isHighlight, QUIET_MINUTE_MS, revealIndex, SCENE_FRAME_MS, sceneDurationMs } from '../pitchScene';
 import { MENTALITY_LABELS, POSITION_LABELS, positionGroup, ratingClass } from '../labels';
 
 /**
@@ -434,8 +434,9 @@ export function MatchScreen() {
     pendingHold.current = null;
     if (!match || !before || !showPitch || !isHighlight(match.lastPlay)) return;
     setHeld(before);
-    const frames = buildScene(match, match.lastPlay, match.minute).length;
-    const timer = setTimeout(() => setHeld(null), (frames - 1) * SCENE_FRAME_MS);
+    // Sonuç karesine gelince (golde sevinçten önce) açıklanır
+    const reveal = revealIndex(buildScene(match, match.lastPlay, match.minute));
+    const timer = setTimeout(() => setHeld(null), reveal * SCENE_FRAME_MS);
     return () => {
       clearTimeout(timer);
       setHeld(null);

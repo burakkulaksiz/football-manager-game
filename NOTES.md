@@ -335,6 +335,11 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
         tabela, golcüler, olay şeridi ("X atakta…") ve anlatımda gösterilir; sahne son karesine gelince açıklanır.
         Motor: lastPlay.injuredId; devre arası/maç sonunda lastPlay silinmez (son dakikanın golü de gösterilsin),
         ikinci yarı başında silinir. Bir maç ~3,5–4 dk sürer.
+  - [x] Gol sevinci: sahnede sonuç karesi (SceneFrame.result; revealIndex) — etiket, kart ve skor burada açıklanır.
+        Golde ardından 3 kare (celebration): golcü yakın köşe bayrağına (hücum yönünde 101 m, kenara 5 m) koşar,
+        takım arkadaşları yolu yarılar → golcünün çevresinde halka, rakip kaleci topu ağlardan alır → santra
+        (SceneFrame.kickoff, gol yiyen takımın forveti topun başında). focusId: adı gösterilen, yeri değişmeyen oyuncu;
+        vurgulananlar en son çizilir (ad kalabalıkta üstte). Gol sahnesi ~6–7 sn.
   - [ ] Sıradaki: FIKIRLER.md'den seçilecek.
 
 ## Açık konular / ileride

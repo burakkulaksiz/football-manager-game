@@ -3,7 +3,7 @@ import { getClub, type MatchState, type Side } from '../../engine';
 import { useWorld } from '../../store/gameStore';
 import { readableText } from '../colors';
 import { colorsClash, PITCH_LENGTH, PITCH_WIDTH } from '../pitch';
-import { buildScene, frameSpots, isHighlight, playLabel, SCENE_FRAME_MS } from '../pitchScene';
+import { buildScene, frameSpots, isHighlight, playLabel, revealIndex, SCENE_FRAME_MS } from '../pitchScene';
 
 /** Şut karesinde top hızlı gider; diğer karelerde oyuncular ve top yavaşça kayar. */
 const SHOT_MOVE_MS = 380;
@@ -110,7 +110,8 @@ export function PitchView({ match }: { match: MatchState }) {
   const maxHeight = useFitHeight(ref, match.period);
   const frame = scene[Math.min(index, scene.length - 1)];
   const previous = index > 0 ? scene[index - 1] : undefined;
-  const isFinal = index >= scene.length - 1;
+  // Sonuç (etiket, kart, sakatlık) sonuç karesinden itibaren görünür; golde ardından sevinç gelir
+  const revealed = scene.length > 0 && index >= revealIndex(scene);
 
   const homeClub = getClub(world, match.home.clubId);
   const awayClub = getClub(world, match.away.clubId);
@@ -124,15 +125,18 @@ export function PitchView({ match }: { match: MatchState }) {
   const ink = (side: Side) => readableText(kits[side].fill, kits[side].stroke);
 
   const style = { '--pitch-move': `${frame?.move === 'shot' ? SHOT_MOVE_MS : MOVE_MS}ms` } as CSSProperties;
-  const label = !kickoff && isFinal ? playLabel(play) : undefined;
-  const card = play && isFinal ? play.card : undefined;
-  const injuredId = isFinal ? frame?.injuredId : undefined;
+  const label = !kickoff && revealed ? playLabel(play) : undefined;
+  const card = play && revealed ? play.card : undefined;
+  const injuredId = revealed ? scene[revealIndex(scene)]?.injuredId : undefined;
 
   const dots = frame
-    ? [...frameSpots(match, frame, kickoff)].map(([id, { side, at }]) => {
+    // Topu taşıyan / vurgulanan en son çizilir: adı kalabalıkta (ör. gol sevinci) üstte kalsın
+    ? [...frameSpots(match, frame, kickoff)]
+      .sort(([a], [b]) => Number(a === frame.carrierId || a === frame.focusId) - Number(b === frame.carrierId || b === frame.focusId))
+      .map(([id, { side, at }]) => {
       const keeper = match.players[id]?.slot === 'GK';
-      const carrier = frame.carrierId === id;
-      // Topu taşıyanın, kart görenin ve sakatlananın adı noktanın altında
+      const carrier = frame.carrierId === id || frame.focusId === id;
+      // Topu taşıyanın (sevinçte golcünün), kart görenin ve sakatlananın adı noktanın altında
       const named = carrier || card?.playerId === id || injuredId === id;
       return (
         <g key={id} className="pitch-player" style={{ transform: `translate(${at.x}px, ${at.y}px)` }}>
@@ -160,7 +164,7 @@ export function PitchView({ match }: { match: MatchState }) {
           {frame && previous && frame.move !== 'none' && (
             <line
               key={`${match.minute}-${index}`}
-              className={`pitch-trail ${frame.move}${play?.kind === 'goal' && isFinal ? ' goal' : ''}`}
+              className={`pitch-trail ${frame.move}${play?.kind === 'goal' && frame.result ? ' goal' : ''}`}
               x1={previous.ball.x}
               y1={previous.ball.y}
               x2={frame.ball.x}

@@ -13,6 +13,7 @@ import {
   formatPlain,
   groupOf,
   preferredYears,
+  squadRanks,
   transferPlayer,
   wageDemand,
   willingToJoin,
@@ -59,6 +60,8 @@ function attemptPurchase(world: GameWorld, buyer: Club, rng: Rng): void {
   const squadSizes = new Map<string, number>();
   for (const p of Object.values(world.players)) if (p.clubId) squadSizes.set(p.clubId, (squadSizes.get(p.clubId) ?? 0) + 1);
 
+  const ranks = squadRanks(world);
+
   const candidates: { player: Player; price: number; score: number }[] = [];
   for (const p of Object.values(world.players)) {
     if (p.clubId === buyer.id || p.clubId === world.playerClubId || p.loan) continue;
@@ -70,7 +73,7 @@ function attemptPurchase(world: GameWorld, buyer: Club, rng: Rng): void {
       if (getClub(world, p.clubId).reputation > buyer.reputation + 5) continue;
       if (!willingToJoin(world, p, buyer.id)) continue;
     }
-    const price = p.clubId ? askingPrice(world, p) : 0;
+    const price = p.clubId ? askingPrice(world, p, ranks) : 0;
     if (price > fin.transferBudget) continue;
     // Yetenek iyi, fiyat bütçeye göre makul olsun
     candidates.push({ player: p, price, score: p.currentAbility - (price / fin.transferBudget) * 15 + rng.float(0, 6) });
@@ -94,8 +97,10 @@ function attemptOfferToUser(world: GameWorld, rng: Rng): void {
   const userSquad = clubPlayers(world, userId);
   if (userSquad.length <= 18) return;
 
+  const squadSizes = new Map<string, number>();
+  for (const p of Object.values(world.players)) if (p.clubId) squadSizes.set(p.clubId, (squadSizes.get(p.clubId) ?? 0) + 1);
   const buyers = world.clubs.filter((c) =>
-    c.id !== userId && c.reputation >= userRep - 15 && clubPlayers(world, c.id).length < MAX_SQUAD);
+    c.id !== userId && c.reputation >= userRep - 15 && (squadSizes.get(c.id) ?? 0) < MAX_SQUAD);
   if (buyers.length === 0) return;
   const buyer = rng.pick(buyers);
   const fin = world.finances[buyer.id]!;

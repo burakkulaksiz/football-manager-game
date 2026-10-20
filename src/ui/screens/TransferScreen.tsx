@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   acceptCounter,
   ageOn,
   ALL_ATTRS,
   askingPrice,
+  squadRanks,
   formatDateTR,
   getClub,
   isActive,
@@ -78,6 +79,8 @@ function PositionChips({ player }: { player: Player }) {
   );
 }
 
+const RESULTS_PAGE = 50;
+
 function SearchTab() {
   const world = useWorld();
   const openPlayer = useGameStore((s) => s.openPlayer);
@@ -90,8 +93,11 @@ function SearchTab() {
   const [clubId, setClubId] = useState('');
   const [affordable, setAffordable] = useState(false);
   const budget = world.finances[world.playerClubId]!.transferBudget;
+  // Uzun liste parça parça çizilir (yüzlerce satır ekranı yavaşlatır).
+  const [limit, setLimit] = useState(RESULTS_PAGE);
 
   const results = useMemo(() => {
+    const ranks = squadRanks(world);
     const rows = Object.values(world.players)
       .filter((p) => p.clubId !== world.playerClubId)
       .filter((p) => !position || (p.positions[position] ?? 0) >= 13)
@@ -102,12 +108,14 @@ function SearchTab() {
       // '__free' = serbest oyuncular
       .filter((p) => !clubId || (clubId === FREE_AGENTS ? p.clubId === null : p.clubId === clubId))
       .filter((p) => !attr || p.attributes[attr] >= attrMin)
-      .map((p) => ({ p, value: marketValue(p, world.date), asking: p.clubId ? askingPrice(world, p) : 0 }))
+      .map((p) => ({ p, value: marketValue(p, world.date), asking: p.clubId ? askingPrice(world, p, ranks) : 0 }))
       .filter((r) => !maxValue || r.value <= maxValue)
       .filter((r) => !affordable || r.asking <= budget)
       .sort((a, b) => b.value - a.value);
     return rows;
   }, [world, position, minAge, maxAge, maxValue, attr, attrMin, clubId, affordable, budget]);
+  // Filtre değişince ilk sayfaya dön
+  useEffect(() => setLimit(RESULTS_PAGE), [position, minAge, maxAge, maxValue, attr, attrMin, clubId, affordable]);
 
   return (
     <>
@@ -157,7 +165,7 @@ function SearchTab() {
           <span>Sadece bütçeme uygun</span>
         </label>
       </div>
-      <div className="panel-note">{results.length} oyuncu bulundu{results.length > 150 ? ' (ilk 150 gösteriliyor)' : ''}. Satıra tıklayınca profil açılır; teklifi profilden yaparsın.</div>
+      <div className="panel-note">{results.length} oyuncu bulundu{results.length > limit ? ` (ilk ${limit} gösteriliyor)` : ''}. Satıra tıklayınca profil açılır; teklifi profilden yaparsın.</div>
       <table className="data-table clickable">
         <thead>
           <tr>
@@ -172,7 +180,7 @@ function SearchTab() {
           </tr>
         </thead>
         <tbody>
-          {results.slice(0, 150).map(({ p, value, asking }) => {
+          {results.slice(0, limit).map(({ p, value, asking }) => {
             const club = p.clubId ? getClub(world, p.clubId) : null;
             return (
               <tr key={p.id} onClick={() => openPlayer(p.id)}>
@@ -192,6 +200,13 @@ function SearchTab() {
           })}
         </tbody>
       </table>
+      {results.length > limit && (
+        <div className="panel-note">
+          <button className="btn btn-small" onClick={() => setLimit(limit + RESULTS_PAGE)}>
+            Daha fazla göster ({Math.min(RESULTS_PAGE, results.length - limit)} oyuncu daha)
+          </button>
+        </div>
+      )}
     </>
   );
 }

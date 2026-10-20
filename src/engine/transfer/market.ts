@@ -56,17 +56,42 @@ export function preferredYears(age: number): [number, number] {
 }
 
 /** Oyuncunun kulübündeki önemi: ilk 11 → 1, rotasyon → 0.5, diğer → 0. */
-export function playerImportance(world: GameWorld, player: Player): number {
+export function playerImportance(world: GameWorld, player: Player, ranks?: SquadRanks): number {
   if (!player.clubId) return 0;
-  const rank = clubPlayers(world, player.clubId)
-    .sort((a, b) => b.currentAbility - a.currentAbility)
-    .findIndex((p) => p.id === player.id);
+  const rank = ranks
+    ? ranks.get(player.id) ?? Infinity
+    : clubPlayers(world, player.clubId)
+      .sort((a, b) => b.currentAbility - a.currentAbility)
+      .findIndex((p) => p.id === player.id);
   return rank < 11 ? 1 : rank < 16 ? 0.5 : 0;
 }
 
+/** Oyuncu id → kulübündeki yetenek sırası (0 = en iyi). */
+export type SquadRanks = ReadonlyMap<number, number>;
+
+/**
+ * Tüm kulüplerin kadro sıralaması tek geçişte. Çok oyuncu için `askingPrice` hesaplanacaksa
+ * (yapay zekâ alımı, Transfer Merkezi listesi) her seferinde kadroyu yeniden sıralamamak için.
+ * Dünya değişince yeniden hesaplanmalı (önbellek değil).
+ */
+export function squadRanks(world: GameWorld): SquadRanks {
+  const byClub = new Map<string, Player[]>();
+  for (const p of Object.values(world.players)) {
+    if (!p.clubId) continue;
+    const list = byClub.get(p.clubId);
+    if (list) list.push(p);
+    else byClub.set(p.clubId, [p]);
+  }
+  const ranks = new Map<number, number>();
+  for (const squad of byClub.values()) {
+    squad.sort((a, b) => b.currentAbility - a.currentAbility).forEach((p, i) => ranks.set(p.id, i));
+  }
+  return ranks;
+}
+
 /** Kulübün satış için istediği bonservis. */
-export function askingPrice(world: GameWorld, player: Player): number {
-  let price = marketValue(player, world.date) * (1.15 + 0.35 * playerImportance(world, player));
+export function askingPrice(world: GameWorld, player: Player, ranks?: SquadRanks): number {
+  let price = marketValue(player, world.date) * (1.15 + 0.35 * playerImportance(world, player, ranks));
   const yearsLeft = (Number(player.contract.expires.slice(0, 4)) - seasonEndYear(world.date)) + 1;
   if (yearsLeft <= 1) price *= 0.8;
   return roundNice(price);

@@ -6,11 +6,10 @@ import type { Player, Position } from './types';
 
 /** Verilen tarihteki tam yaş. */
 export function ageOn(birthDate: GameDate, date: GameDate): number {
-  const [by, bm, bd] = birthDate.split('-').map(Number) as [number, number, number];
-  const [y, m, d] = date.split('-').map(Number) as [number, number, number];
-  let age = y - by;
-  if (m < bm || (m === bm && d < bd)) age--;
-  return age;
+  // Çok sık çağrılır (yapay zekâ taramaları, listeler): Date ya da split yerine sabit konumlardan okunur.
+  // 'YYYY-MM-DD' biçiminde ay+gün metin olarak karşılaştırılabilir.
+  const age = Number(date.slice(0, 4)) - Number(birthDate.slice(0, 4));
+  return date.slice(5) < birthDate.slice(5) ? age - 1 : age;
 }
 
 /** En yüksek yatkınlıktan başlayarak, doğal (18+) pozisyonlar — saha sırasına göre. */

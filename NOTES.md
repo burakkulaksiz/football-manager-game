@@ -290,7 +290,16 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
         Kulüp Bilgisi'nden değiştirilebilir; başlıkta, ana menüde ve kayıt listesinde görünür. Biçim 4 → 5 dönüşümü
         adı "Menajer" yapar, kaydı bu sezonun sonuçlarından ve arşivdeki şampiyonluklardan çıkarır.
   - [x] Denge: gol dağılımı (gol kralı, takımlar arası fark, penaltı) — ayrıntı "Sezon döngüsü" bölümünün sonunda.
-  - [ ] Diğer adaylar: performans.
+  - [x] Performans (ölçüm: puppeteer + CPU 4× yavaşlatma, orta sınıf makine taklidi):
+        - Motor hızlıydı (sezon ~1.6 sn, maç günü ~35 ms). Sıcak nokta: askingPrice → playerImportance her oyuncu için
+          kadroyu yeniden filtreleyip sıralıyordu (yapay zekâ alımı ve Transfer Merkezi'nde O(n²)). Artık
+          `squadRanks(world)` bir kez hesaplanıp `askingPrice(world, p, ranks)`'a verilir (önbellek değil; sonuç aynı).
+        - ageOn Date/split yerine sabit konumlardan okur. Transfer Merkezi araması 50'şer satır çizer ("Daha fazla göster").
+        - Otomatik kayıt 150 ms gecikmeyle başlar (sonuç ekranı önce çizilir); arada canlı maç başladıysa atlanır.
+        - Sonuç (4× yavaş CPU): Transfer Merkezi 835 → ~430 ms, maç sonu rapor 839 → ~480 ms, Devam ~150–190 ms.
+          Canlı maç "Çok Hızlı" hedefi (25 dk/sn) 4× yavaşta da tutuyor. Kalan maliyet ilk açılan ekranda yazı tipi
+          şekillendirme (layout ~45 ms, ikinci açılışta ~8 ms). Paket 541 KB (gzip 166 KB), bölmeye gerek görülmedi.
+  - [ ] Sıradaki: kullanıcının oynarken fark ettikleri.
 
 ## Açık konular / ileride
 - Elle gerçek kadro girişi (ör. `data/squads/<kulüpId>.json`) yok; kullanıcı "şimdilik gerek yok" dedi.
@@ -302,4 +311,4 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
 - Oyuncu "transfer listesine koyma" yok; yapay zekâ ilgisi kendiliğinden geliyor.
 
 ## Sıradaki adım
-10. aşama devam: kullanıcıya sıradaki cila maddesini sor (performans ya da oynarken fark ettikleri).
+10. aşama devam: kullanıcıya sıradaki cila maddesini sor (oynarken fark ettikleri ya da açık konulardan biri).

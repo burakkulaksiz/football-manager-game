@@ -166,18 +166,27 @@ export function hasUnsavedProgress(s: Pick<GameState, 'revision' | 'savedRevisio
 
 let noticeCounter = 0;
 
+/** Otomatik kaydın, sonuç ekranı çizildikten sonra başlaması için gecikme. */
+const AUTOSAVE_DELAY_MS = 150;
+
 export const useGameStore = create<GameState>()((set, get) => {
   /** Dünya değişti: yeni referans (React yeniden çizsin) + kaydedilmemiş ilerleme. */
   const touch = (world: GameWorld) => set((s) => ({ world: { ...world }, revision: s.revision + 1 }));
 
-  /** Maç günü sonrası otomatik kayıt (arka planda; hata olursa bildirim). */
+  /**
+   * Maç günü sonrası otomatik kayıt (arka planda; hata olursa bildirim).
+   * Dünyanın kopyalanması ~1 MB'lık iş: sonuç ekranı önce çizilsin diye kısa bir gecikmeyle başlar.
+   * O arada canlı maç başladıysa atlanır (canlı maç sırasında kayıt yok); sonraki maç günü yine kaydedilir.
+   */
   const runAutosave = () => {
-    const { world, revision } = get();
-    // Kovulduysan otomatik kayıt alınmaz: önceki kayıttan devam edebilmelisin.
-    if (!world || world.gameOver) return;
-    autosave(world)
-      .then(() => set({ savedRevision: revision }))
-      .catch((e: unknown) => get().showNotice(`Otomatik kayıt başarısız: ${String(e)}`, 'error'));
+    setTimeout(() => {
+      const { world, revision, liveMatch } = get();
+      // Kovulduysan otomatik kayıt alınmaz: önceki kayıttan devam edebilmelisin.
+      if (!world || world.gameOver || liveMatch) return;
+      autosave(world)
+        .then(() => set({ savedRevision: revision }))
+        .catch((e: unknown) => get().showNotice(`Otomatik kayıt başarısız: ${String(e)}`, 'error'));
+    }, AUTOSAVE_DELAY_MS);
   };
 
   return {

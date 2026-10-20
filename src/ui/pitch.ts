@@ -161,3 +161,36 @@ export function colorsClash(a: string, b: string): boolean {
   const [r2, g2, b2] = rgb(b);
   return Math.hypot(r1 - r2, g1 - g2, b1 - b2) < 110;
 }
+
+/* ------------------------------------------------------------------ */
+/* Kamera                                                               */
+/* ------------------------------------------------------------------ */
+
+/** Sahanın çizim alanı (SVG viewBox): kaleler ve kenar payı dahil. */
+export const PITCH_VIEW = { x: -3, y: -2, w: PITCH_LENGTH + 6, h: PITCH_WIDTH + 4 } as const;
+
+/** Yakın kameranın büyütmesi. */
+export const CAMERA_ZOOM = 1.9;
+
+export interface CameraTransform {
+  /** Kaydırma, çizim alanının oranı olarak (CSS translate yüzdesi / 100). */
+  tx: number;
+  ty: number;
+  zoom: number;
+}
+
+/**
+ * Hedefi (top ya da golcü) ortalayan kamera; sahanın dışına taşmaz (kenarda durur).
+ * Hedef yoksa ya da büyütme 1 ise tam saha.
+ * CSS: transform-origin 0 0; transform: translate(tx·100%, ty·100%) scale(zoom).
+ */
+export function cameraTransform(target: Point | null, zoom: number): CameraTransform {
+  if (!target || zoom <= 1) return { tx: 0, ty: 0, zoom: 1 };
+  const fx = (target.x - PITCH_VIEW.x) / PITCH_VIEW.w;
+  const fy = (target.y - PITCH_VIEW.y) / PITCH_VIEW.h;
+  return {
+    tx: clamp(0.5 - fx * zoom, 1 - zoom, 0),
+    ty: clamp(0.5 - fy * zoom, 1 - zoom, 0),
+    zoom,
+  };
+}

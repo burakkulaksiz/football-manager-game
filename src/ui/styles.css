@@ -2867,8 +2867,20 @@ select {
 }
 
 /* Saha maç ekranının tam genişliğinde; ekrana sığacak kadar yüksek (oran korunur, ortalanır) */
+/* Sahanın kutusu sahanın en-boy oranında (kamera hesabı için boşluksuz), ortalanmış */
 .pitch-stage {
   position: relative;
+  max-width: 100%;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.pitch-camera {
+  position: relative;
+  transform-origin: 0 0;
+  transition: transform var(--pitch-move, 600ms) ease-in-out;
+  will-change: transform;
 }
 
 .pitch-grass {
@@ -2956,16 +2968,54 @@ select {
   color: var(--accent);
 }
 
-.pitch-hide {
-  position: absolute;
-  top: 14px;
-  right: 16px;
-  z-index: 2;
-  opacity: 0.75;
+/* Saha araçları (kamera, tam ekran, gizle): kontrol satırının sağında */
+.pitch-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
 }
 
-.pitch-hide:hover {
-  opacity: 1;
+/* Tam ekran: koyu zemin, saha ortada, üstte skor şeridi */
+.pitch-panel.fullscreen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-radius: 0;
+  background: #0b160b;
+}
+
+.fs-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 12px 2px;
+}
+
+.fs-team {
+  padding: 3px 14px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.fs-score {
+  min-width: 70px;
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.fs-clock {
+  min-width: 60px;
+  color: var(--slate-200);
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
 }
 
 /* Sahanın altındaki son olay şeridi */

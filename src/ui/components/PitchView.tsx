@@ -2,7 +2,7 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSPr
 import { getClub, type MatchState, type Side } from '../../engine';
 import { useWorld } from '../../store/gameStore';
 import { readableText } from '../colors';
-import { colorsClash, PITCH_LENGTH, PITCH_WIDTH } from '../pitch';
+import { cameraTransform, CAMERA_ZOOM, colorsClash, PITCH_LENGTH, PITCH_VIEW, PITCH_WIDTH } from '../pitch';
 import { buildScene, frameSpots, isHighlight, playLabel, revealIndex, SCENE_FRAME_MS } from '../pitchScene';
 
 /** Şut karesinde top hızlı gider; diğer karelerde oyuncular ve top yavaşça kayar. */
@@ -36,12 +36,13 @@ function PitchMarkings() {
   );
 }
 
-const VIEW_BOX = `-3 -2 ${PITCH_LENGTH + 6} ${PITCH_WIDTH + 4}`;
+const VIEW_BOX = `${PITCH_VIEW.x} ${PITCH_VIEW.y} ${PITCH_VIEW.w} ${PITCH_VIEW.h}`;
+const ASPECT = PITCH_VIEW.w / PITCH_VIEW.h;
 
 /** Çim ve saha çizgileri: değişmez, yalnızca boyut değişince yeniden çizilir. */
-const PitchBackground = memo(function PitchBackground({ maxHeight }: { maxHeight: number }) {
+const PitchBackground = memo(function PitchBackground() {
   return (
-    <svg className="pitch-grass" style={{ maxHeight }} viewBox={VIEW_BOX} role="img" aria-label="2D saha">
+    <svg className="pitch-grass" viewBox={VIEW_BOX} role="img" aria-label="2D saha">
       <defs>
         <pattern id="pitch-stripes" width={PITCH_LENGTH / 9} height={PITCH_WIDTH} patternUnits="userSpaceOnUse">
           <rect width={PITCH_LENGTH / 18} height={PITCH_WIDTH} fill="#2f7a2a" />
@@ -56,15 +57,21 @@ const PitchBackground = memo(function PitchBackground({ maxHeight }: { maxHeight
 
 /** Sahanın altında kalan şerit ve boşluklar (px): saha + şerit ekrana sığsın. */
 const BELOW_PITCH = 64;
+/** Tam ekranda sahanın üstündeki skor şeridi ve altındaki olay şeridi (px). */
+const FULLSCREEN_CHROME = 120;
 
 /**
  * Sahanın en fazla yüksekliği: kaydırma alanının (main.content) görünür yüksekliğinden sahanın
  * üstündeki içerik çıkarılır; böylece saha kaydırmadan bütünüyle görünür (ekran küçülürse en az 320 px).
  */
-function useFitHeight(ref: React.RefObject<HTMLDivElement | null>, layoutKey: string): number {
+function useFitHeight(ref: React.RefObject<HTMLDivElement | null>, layoutKey: string, fullscreen: boolean): number {
   const [height, setHeight] = useState(520);
   useLayoutEffect(() => {
     const measure = () => {
+      if (fullscreen) {
+        setHeight(Math.max(320, window.innerHeight - FULLSCREEN_CHROME));
+        return;
+      }
       const el = ref.current;
       const scroller = el?.closest('main');
       if (!el || !scroller) return;
@@ -75,7 +82,7 @@ function useFitHeight(ref: React.RefObject<HTMLDivElement | null>, layoutKey: st
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
     // layoutKey: üstteki içerik değişince (başlama öncesi notu kalkınca vb.) yeniden ölç
-  }, [ref, layoutKey]);
+  }, [ref, layoutKey, fullscreen]);
   return height;
 }
 
@@ -84,7 +91,9 @@ function useFitHeight(ref: React.RefObject<HTMLDivElement | null>, layoutKey: st
  * kart, sakatlık) kısa bir sahne olarak yavaşça oynar; sakin dakikalarda saha boştur.
  * Maç başlamadan ve devre arasında takımlar başlama dizilişinde görünür.
  */
-export function PitchView({ match }: { match: MatchState }) {
+export type CameraMode = 'full' | 'follow';
+
+export function PitchView({ match, camera, fullscreen }: { match: MatchState; camera: CameraMode; fullscreen: boolean }) {
   const world = useWorld();
   const ref = useRef<HTMLDivElement>(null);
   const play = match.lastPlay;
@@ -107,7 +116,7 @@ export function PitchView({ match }: { match: MatchState }) {
     return () => clearInterval(timer);
   }, [scene]);
 
-  const maxHeight = useFitHeight(ref, match.period);
+  const maxHeight = useFitHeight(ref, match.period, fullscreen);
   const frame = scene[Math.min(index, scene.length - 1)];
   const previous = index > 0 ? scene[index - 1] : undefined;
   // Sonuç (etiket, kart, sakatlık) sonuç karesinden itibaren görünür; golde ardından sevinç gelir
@@ -129,9 +138,16 @@ export function PitchView({ match }: { match: MatchState }) {
   const card = play && revealed ? play.card : undefined;
   const injuredId = revealed ? scene[revealIndex(scene)]?.injuredId : undefined;
 
-  const dots = frame
+  const spots = frame ? frameSpots(match, frame, kickoff) : null;
+  // Yakın kamera: topu (sevinçte golcüyü) takip eder; santra ve sakin dakikada tam saha
+  const target = camera === 'follow' && frame && spots && !kickoff && !frame.kickoff
+    ? (frame.focusId !== undefined ? spots.get(frame.focusId)?.at : undefined) ?? frame.ball
+    : null;
+  const cam = cameraTransform(target, CAMERA_ZOOM);
+
+  const dots = frame && spots
     // Topu taşıyan / vurgulanan en son çizilir: adı kalabalıkta (ör. gol sevinci) üstte kalsın
-    ? [...frameSpots(match, frame, kickoff)]
+    ? [...spots]
       .sort(([a], [b]) => Number(a === frame.carrierId || a === frame.focusId) - Number(b === frame.carrierId || b === frame.focusId))
       .map(([id, { side, at }]) => {
       const keeper = match.players[id]?.slot === 'GK';
@@ -158,8 +174,13 @@ export function PitchView({ match }: { match: MatchState }) {
   return (
     <div className="pitch-view" style={style} ref={ref}>
       {/* İki katman: çim ve çizgiler bir kez çizilir; yalnızca oyuncu katmanı boyanır */}
-      <div className="pitch-stage">
-        <PitchBackground maxHeight={maxHeight} />
+      <div className="pitch-stage" style={{ width: Math.round(maxHeight * ASPECT) }}>
+        {/* Kamera: yalnızca CSS dönüşümü (saha yeniden çizilmez, ekran kartında kayar) */}
+        <div
+          className="pitch-camera"
+          style={{ transform: `translate(${cam.tx * 100}%, ${cam.ty * 100}%) scale(${cam.zoom})` }}
+        >
+        <PitchBackground />
         <svg className="pitch-layer" viewBox={VIEW_BOX} aria-hidden="true">
           {frame && previous && frame.move !== 'none' && (
             <line
@@ -178,6 +199,7 @@ export function PitchView({ match }: { match: MatchState }) {
             </g>
           )}
         </svg>
+        </div>
       </div>
       {label && play && (
         <div

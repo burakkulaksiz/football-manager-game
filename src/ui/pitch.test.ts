@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { clubPlayers, createMatch, createWorld, stepMatch, type MatchState } from '../engine';
 import { autoSelectLineup } from '../engine/match/formation';
 import { gameData } from '../gameData';
-import { ballSpot, blockLine, colorsClash, PITCH_LENGTH, PITCH_WIDTH, shotOrigin, teamSpots } from './pitch';
+import { ballSpot, blockLine, cameraTransform, CAMERA_ZOOM, colorsClash, PITCH_LENGTH, PITCH_VIEW, PITCH_WIDTH, shotOrigin, teamSpots } from './pitch';
 
 const world = createWorld(gameData, 3, 'galatasaray', '2026-07-01');
 
@@ -65,5 +65,28 @@ describe('2D saha geometrisi', () => {
   it('renk çakışması: kırmızıya karşı kırmızı çakışır, kırmızıya karşı lacivert çakışmaz', () => {
     expect(colorsClash('#C8102E', '#B3122E')).toBe(true);
     expect(colorsClash('#C8102E', '#0A2A66')).toBe(false);
+  });
+});
+
+describe('kamera', () => {
+  it('tam sahada kaydırma yok; yakında hedef ortalanır', () => {
+    expect(cameraTransform(null, CAMERA_ZOOM)).toEqual({ tx: 0, ty: 0, zoom: 1 });
+    expect(cameraTransform({ x: 50, y: 34 }, 1)).toEqual({ tx: 0, ty: 0, zoom: 1 });
+    const cam = cameraTransform({ x: 52.5, y: 34 }, 2);
+    // Orta nokta ekranın ortasına düşer: tx + fx·zoom = 0.5
+    const fx = (52.5 - PITCH_VIEW.x) / PITCH_VIEW.w;
+    const fy = (34 - PITCH_VIEW.y) / PITCH_VIEW.h;
+    expect(cam.tx + fx * cam.zoom).toBeCloseTo(0.5, 6);
+    expect(cam.ty + fy * cam.zoom).toBeCloseTo(0.5, 6);
+  });
+
+  it('kenarda durur: köşedeki hedefte görüntü sahanın dışına taşmaz', () => {
+    for (const target of [{ x: 0, y: 0 }, { x: 105, y: 68 }, { x: 106, y: 34 }]) {
+      const cam = cameraTransform(target, CAMERA_ZOOM);
+      expect(cam.tx).toBeLessThanOrEqual(0);
+      expect(cam.tx).toBeGreaterThanOrEqual(1 - CAMERA_ZOOM);
+      expect(cam.ty).toBeLessThanOrEqual(0);
+      expect(cam.ty).toBeGreaterThanOrEqual(1 - CAMERA_ZOOM);
+    }
   });
 });

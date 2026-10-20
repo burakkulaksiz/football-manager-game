@@ -340,6 +340,12 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
         takım arkadaşları yolu yarılar → golcünün çevresinde halka, rakip kaleci topu ağlardan alır → santra
         (SceneFrame.kickoff, gol yiyen takımın forveti topun başında). focusId: adı gösterilen, yeri değişmeyen oyuncu;
         vurgulananlar en son çizilir (ad kalabalıkta üstte). Gol sahnesi ~6–7 sn.
+  - [x] Kamera: "Tam saha" / "Yakın" (localStorage 'fm.pitchCamera') ve tam ekran. Araçlar maç kontrol satırının
+        sağında (PitchTools). pitch.ts cameraTransform (saf, testli): hedefi (top; sevinçte golcü) ortalar, kenarda durur;
+        CAMERA_ZOOM 1.9; santra ve sakin dakikada tam saha. Yalnızca CSS dönüşümü (.pitch-camera: translate % + scale,
+        transform-origin 0 0) — saha yeniden çizilmez. Bunun için .pitch-stage genişliği = yükseklik × en-boy oranı
+        (boşluksuz). Tam ekran: Fullscreen API saha panelinde (useFullscreen); üstte FullscreenBar (skor [gizli sonuçla],
+        saat, Duraklat/Devam, Küçült); yükseklik window.innerHeight − 120.
   - [ ] Sıradaki: FIKIRLER.md'den seçilecek.
 
 ## Açık konular / ileride

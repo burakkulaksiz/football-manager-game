@@ -14,7 +14,7 @@ import { ClubBadge } from '../components/ClubBadge';
 import { readableText } from '../colors';
 import { FormationPicker, InstructionsPanel } from '../components/InstructionsPanel';
 import { MatchStatRows } from '../components/MatchStatRows';
-import { PitchView } from '../components/PitchView';
+import { PitchView, type CameraMode } from '../components/PitchView';
 import { buildScene, isHighlight, QUIET_MINUTE_MS, revealIndex, SCENE_FRAME_MS, sceneDurationMs } from '../pitchScene';
 import { MENTALITY_LABELS, POSITION_LABELS, positionGroup, ratingClass } from '../labels';
 
@@ -180,7 +180,101 @@ function usePitchPref(): [boolean, () => void] {
   return [show, toggle];
 }
 
-function PitchPanel({ match, held, show, toggle }: { match: MatchState; held: Held | null; show: boolean; toggle: () => void }) {
+const CAMERA_PREF_KEY = 'fm.pitchCamera';
+
+/** Kamera tercihi (tam saha / yakın) tarayıcıda hatırlanır. */
+function useCameraPref(): [CameraMode, (mode: CameraMode) => void] {
+  const [mode, setMode] = useState<CameraMode>(() => {
+    try {
+      return localStorage.getItem(CAMERA_PREF_KEY) === 'follow' ? 'follow' : 'full';
+    } catch {
+      return 'full';
+    }
+  });
+  const change = (next: CameraMode) => {
+    setMode(next);
+    try {
+      localStorage.setItem(CAMERA_PREF_KEY, next);
+    } catch {
+      // depolama kapalı: tercih yalnızca bu oturumda geçerli
+    }
+  };
+  return [mode, change];
+}
+
+/** Tam ekranda tabela görünmez: sahanın üstünde skor, saat ve oynat/duraklat. */
+function FullscreenBar({ match, held, running, onToggleRun, onExit }: {
+  match: MatchState;
+  held: Held | null;
+  running: boolean;
+  onToggleRun: () => void;
+  onExit: () => void;
+}) {
+  const world = useWorld();
+  const home = getClub(world, match.home.clubId);
+  const away = getClub(world, match.away.clubId);
+  return (
+    <div className="fs-bar">
+      <span className="fs-team" style={{ background: home.colors.primary, color: readableText(home.colors.primary, home.colors.secondary) }}>{home.name}</span>
+      <span className="fs-score">{held?.home ?? match.score.home} – {held?.away ?? match.score.away}</span>
+      <span className="fs-team" style={{ background: away.colors.primary, color: readableText(away.colors.primary, away.colors.secondary) }}>{away.name}</span>
+      <span className="fs-clock">{clockText(match)}</span>
+      {match.period !== 'full' && (
+        <button className="btn btn-small" onClick={onToggleRun}>{running ? '❚❚ Duraklat' : '▶ Devam'}</button>
+      )}
+      <button className="btn btn-small" onClick={onExit} title="Tam ekrandan çık (Esc)">Küçült</button>
+    </div>
+  );
+}
+
+/** Saha paneli tam ekranda mı (tarayıcının tam ekran olayından). */
+function useFullscreen(ref: React.RefObject<HTMLElement | null>): [boolean, () => void, () => void] {
+  const [fullscreen, setFullscreen] = useState(false);
+  useEffect(() => {
+    const sync = () => setFullscreen(ref.current !== null && document.fullscreenElement === ref.current);
+    document.addEventListener('fullscreenchange', sync);
+    return () => document.removeEventListener('fullscreenchange', sync);
+  }, [ref]);
+  const enter = () => {
+    ref.current?.requestFullscreen().catch(() => undefined);
+  };
+  const exit = () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+  };
+  return [fullscreen, enter, exit];
+}
+
+/** Kontrol satırındaki saha araçları: kamera, tam ekran, gizle. */
+function PitchTools({ camera, setCamera, onFullscreen, onHide }: {
+  camera: CameraMode;
+  setCamera: (mode: CameraMode) => void;
+  onFullscreen: () => void;
+  onHide: () => void;
+}) {
+  return (
+    <div className="pitch-tools">
+      <span className="tabs" role="group" aria-label="Kamera">
+        <button className={`tab${camera === 'full' ? ' active' : ''}`} onClick={() => setCamera('full')} title="Bütün saha">Tam saha</button>
+        <button className={`tab${camera === 'follow' ? ' active' : ''}`} onClick={() => setCamera('follow')} title="Topu takip eden yakın görünüm">Yakın</button>
+      </span>
+      <button className="btn btn-small" onClick={onFullscreen} title="Sahayı tam ekran yap">⛶ Tam ekran</button>
+      <button className="btn btn-small" onClick={onHide} title="2D sahayı gizle">Sahayı gizle</button>
+    </div>
+  );
+}
+
+function PitchPanel({ match, held, show, toggle, running, onToggleRun, camera, fullscreen, onExitFullscreen, panelRef }: {
+  match: MatchState;
+  held: Held | null;
+  show: boolean;
+  toggle: () => void;
+  running: boolean;
+  onToggleRun: () => void;
+  camera: CameraMode;
+  fullscreen: boolean;
+  onExitFullscreen: () => void;
+  panelRef: React.RefObject<HTMLElement | null>;
+}) {
   if (!show) {
     return (
       <section className="panel pitch-panel collapsed">
@@ -190,9 +284,9 @@ function PitchPanel({ match, held, show, toggle }: { match: MatchState; held: He
     );
   }
   return (
-    <section className="panel pitch-panel">
-      <button className="btn btn-small pitch-hide" onClick={toggle} title="2D sahayı gizle">Gizle</button>
-      <PitchView match={match} />
+    <section className={`panel pitch-panel${fullscreen ? ' fullscreen' : ''}`} ref={panelRef}>
+      {fullscreen && <FullscreenBar match={match} held={held} running={running} onToggleRun={onToggleRun} onExit={onExitFullscreen} />}
+      <PitchView match={match} camera={camera} fullscreen={fullscreen} />
       <EventBar match={match} held={held} />
     </section>
   );
@@ -312,12 +406,14 @@ function TeamPanel({ match, side }: { match: MatchState; side: Side }) {
   );
 }
 
-function Controls({ match, running, setRunning, showTactics, setShowTactics }: {
+function Controls({ match, running, setRunning, showTactics, setShowTactics, extra }: {
   match: MatchState;
   running: boolean;
   setRunning: (r: boolean) => void;
   showTactics: boolean;
   setShowTactics: (v: boolean) => void;
+  /** Satırın sağına eklenen araçlar (saha kamerası vb.). */
+  extra?: React.ReactNode;
 }) {
   const world = useWorld();
   const step = useGameStore((s) => s.stepLiveMatch);
@@ -367,6 +463,7 @@ function Controls({ match, running, setRunning, showTactics, setShowTactics }: {
       >
         Anında Sonuçlandır
       </button>
+      {extra}
     </div>
   );
 }
@@ -400,6 +497,9 @@ export function MatchScreen() {
   const [running, setRunning] = useState(false);
   const [showTactics, setShowTactics] = useState(false);
   const [showPitch, togglePitch] = usePitchPref();
+  const [camera, setCamera] = useCameraPref();
+  const pitchRef = useRef<HTMLElement>(null);
+  const [fullscreen, enterFullscreen, exitFullscreen] = useFullscreen(pitchRef);
   const period = match?.period;
   // Saatin attığı son adımdan önceki durum ve önemli an sürerken gizlenen sonuç
   const pendingHold = useRef<Held | null>(null);
@@ -472,6 +572,7 @@ export function MatchScreen() {
         setRunning={setRunning}
         showTactics={showTactics}
         setShowTactics={setShowTactics}
+        extra={showPitch && <PitchTools camera={camera} setCamera={setCamera} onFullscreen={enterFullscreen} onHide={togglePitch} />}
       />
       {showTactics && match.period !== 'full' && <LiveTactics match={match} />}
       {match.period === 'pre' && (
@@ -486,7 +587,26 @@ export function MatchScreen() {
         </div>
       )}
       {match.period === 'half' && <div className="motm">Devre arası — oyuncu değişikliği ve taktik değişikliği yapabilirsin.</div>}
-      <PitchPanel match={match} held={hold} show={showPitch} toggle={togglePitch} />
+      <PitchPanel
+        match={match}
+        held={hold}
+        show={showPitch}
+        toggle={togglePitch}
+        running={running}
+        camera={camera}
+        fullscreen={fullscreen}
+        onExitFullscreen={exitFullscreen}
+        panelRef={pitchRef}
+        onToggleRun={() => {
+          if (running) {
+            setRunning(false);
+            return;
+          }
+          // Başlama ve devre arası bir adımla geçilir (Kontroller'deki "Başlat" ile aynı)
+          if (match.period === 'pre' || match.period === 'half') step();
+          setRunning(true);
+        }}
+      />
       <div className="match-grid">
         <TeamPanel match={match} side="home" />
         <div className="match-center">

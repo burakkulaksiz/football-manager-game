@@ -2911,9 +2911,6 @@ select {
   fill: rgba(255, 255, 255, 0.75);
 }
 
-.pitch-lines .goal {
-  fill: rgba(255, 255, 255, 0.15);
-}
 
 /* Oyuncular ve top bir dakikadan diğerine kayarak geçer */
 .pitch-player,
@@ -2921,13 +2918,55 @@ select {
   transition: transform var(--pitch-move, 300ms) ease-in-out;
 }
 
-.pitch-player circle {
-  stroke-width: 0.32;
+/* Oyuncu: gölge, forma + şort, ince koyu kenar (topu taşıyanda sarı halka) */
+.pitch-player .pitch-shadow {
+  fill: rgba(0, 0, 0, 0.32);
 }
 
-.pitch-player circle.involved {
+.pitch-player .pitch-outline {
+  fill: none;
+  stroke: rgba(0, 0, 0, 0.55);
+  stroke-width: 0.2;
+}
+
+.pitch-player .pitch-outline.involved {
   stroke: var(--accent);
   stroke-width: 0.5;
+}
+
+/* Kale: file ve direkler */
+.pitch-net {
+  transform-box: fill-box;
+}
+
+.pitch-net.right { transform-origin: left center; }
+.pitch-net.left { transform-origin: right center; }
+
+/* Gol: file dışarı doğru şişip sallanır */
+.pitch-net.ripple {
+  animation: pitch-net-ripple 0.9s ease-out;
+}
+
+@keyframes pitch-net-ripple {
+  0% { transform: scaleX(1); }
+  25% { transform: scale(1.45, 1.04); }
+  50% { transform: scaleX(0.9); }
+  75% { transform: scaleX(1.12); }
+  100% { transform: scaleX(1); }
+}
+
+.pitch-posts {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 0.22;
+}
+
+.pitch-post {
+  fill: #fff;
+}
+
+.pitch-ball-shadow {
+  fill: rgba(0, 0, 0, 0.35);
 }
 
 .pitch-player text {

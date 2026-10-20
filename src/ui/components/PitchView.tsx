@@ -5,6 +5,10 @@ import { readableText } from '../colors';
 import { cameraTransform, CAMERA_ZOOM, colorsClash, PITCH_LENGTH, PITCH_VIEW, PITCH_WIDTH } from '../pitch';
 import { buildScene, frameSpots, isHighlight, playLabel, revealIndex, SCENE_FRAME_MS } from '../pitchScene';
 
+/** Oyuncu noktasının alt kısmı (şort): yarıçap 1.3, merkezin 0.5 altındaki kirişten aşağısı. */
+const SHORTS_PATH = 'M -1.2 0.5 A 1.3 1.3 0 0 0 1.2 0.5 Z';
+const KEEPER_KIT = '#1d1f24';
+
 /** Şut karesinde top hızlı gider; diğer karelerde oyuncular ve top yavaşça kayar. */
 const SHOT_MOVE_MS = 380;
 const MOVE_MS = Math.round(SCENE_FRAME_MS * 0.8);
@@ -29,9 +33,11 @@ function PitchMarkings() {
       {/* Ceza sahası yayları */}
       <path d={`M 16.5 ${W / 2 - 7.31} A 9.15 9.15 0 0 1 16.5 ${W / 2 + 7.31}`} />
       <path d={`M ${L - 16.5} ${W / 2 - 7.31} A 9.15 9.15 0 0 0 ${L - 16.5} ${W / 2 + 7.31}`} />
-      {/* Kaleler */}
-      <rect x={-1.8} y={W / 2 - 3.66} width={1.8} height={7.32} className="goal" />
-      <rect x={L} y={W / 2 - 3.66} width={1.8} height={7.32} className="goal" />
+      {/* Köşe yayları */}
+      <path d={`M 0 1 A 1 1 0 0 0 1 0`} />
+      <path d={`M ${L - 1} 0 A 1 1 0 0 0 ${L} 1`} />
+      <path d={`M 0 ${W - 1} A 1 1 0 0 1 1 ${W}`} />
+      <path d={`M ${L - 1} ${W} A 1 1 0 0 1 ${L} ${W - 1}`} />
     </g>
   );
 }
@@ -48,12 +54,52 @@ const PitchBackground = memo(function PitchBackground() {
           <rect width={PITCH_LENGTH / 18} height={PITCH_WIDTH} fill="#2f7a2a" />
           <rect x={PITCH_LENGTH / 18} width={PITCH_LENGTH / 18} height={PITCH_WIDTH} fill="#2a6f25" />
         </pattern>
+        <linearGradient id="pitch-shade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#000" stopOpacity="0.28" />
+          <stop offset="0.22" stopColor="#000" stopOpacity="0.1" />
+          <stop offset="0.34" stopColor="#000" stopOpacity="0" />
+        </linearGradient>
+        <radialGradient id="pitch-sun" cx="0.62" cy="0.78" r="0.75">
+          <stop offset="0" stopColor="#fff8d0" stopOpacity="0.09" />
+          <stop offset="1" stopColor="#fff8d0" stopOpacity="0" />
+        </radialGradient>
       </defs>
       <rect x={0} y={0} width={PITCH_LENGTH} height={PITCH_WIDTH} fill="url(#pitch-stripes)" />
+      {/* Işık: üst tribünün gölgesi ve karşıdan vuran hafif güneş */}
+      <rect x={PITCH_VIEW.x} y={PITCH_VIEW.y} width={PITCH_VIEW.w} height={PITCH_VIEW.h} fill="url(#pitch-shade)" />
+      <rect x={PITCH_VIEW.x} y={PITCH_VIEW.y} width={PITCH_VIEW.w} height={PITCH_VIEW.h} fill="url(#pitch-sun)" />
       <PitchMarkings />
     </svg>
   );
 });
+
+const GOAL_DEPTH = 2.2;
+const GOAL_HALF = 3.66;
+
+/** Kale: file (çapraz örgü) ve direkler. Gol anında file dışarı doğru sallanır. */
+function GoalNet({ end, ripple }: { end: 'left' | 'right'; ripple: string | null }) {
+  const x = end === 'left' ? -GOAL_DEPTH : PITCH_LENGTH;
+  const lineX = end === 'left' ? 0 : PITCH_LENGTH;
+  const backX = end === 'left' ? -GOAL_DEPTH : PITCH_LENGTH + GOAL_DEPTH;
+  const top = PITCH_WIDTH / 2 - GOAL_HALF;
+  return (
+    <g>
+      <rect
+        key={ripple ?? 'calm'}
+        className={`pitch-net ${end}${ripple ? ' ripple' : ''}`}
+        x={x}
+        y={top}
+        width={GOAL_DEPTH}
+        height={GOAL_HALF * 2}
+        fill="url(#pitch-net)"
+      />
+      {/* Kale çerçevesi ve direkler */}
+      <path className="pitch-posts" d={`M ${lineX} ${top} H ${backX} V ${top + GOAL_HALF * 2} H ${lineX}`} />
+      <circle className="pitch-post" cx={lineX} cy={top} r={0.28} />
+      <circle className="pitch-post" cx={lineX} cy={top + GOAL_HALF * 2} r={0.28} />
+    </g>
+  );
+}
 
 /** Sahanın altında kalan şerit ve boşluklar (px): saha + şerit ekrana sığsın. */
 const BELOW_PITCH = 64;
@@ -144,6 +190,8 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
     ? (frame.focusId !== undefined ? spots.get(frame.focusId)?.at : undefined) ?? frame.ball
     : null;
   const cam = cameraTransform(target, CAMERA_ZOOM);
+  // Gol karesi ve sevinç: golün girdiği file sallanır (santrada durur)
+  const goalRipple = play?.kind === 'goal' && revealed && !frame?.kickoff ? play.side : null;
 
   const dots = frame && spots
     // Topu taşıyan / vurgulanan en son çizilir: adı kalabalıkta (ör. gol sevinci) üstte kalsın
@@ -156,13 +204,12 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
       const named = carrier || card?.playerId === id || injuredId === id;
       return (
         <g key={id} className="pitch-player" style={{ transform: `translate(${at.x}px, ${at.y}px)` }}>
-          <circle
-            r={1.3}
-            fill={keeper ? '#1d1f24' : kits[side].fill}
-            stroke={keeper ? kits[side].fill : kits[side].stroke}
-            className={carrier ? 'involved' : undefined}
-          />
-          <text y={0.48} fill={keeper ? '#fff' : ink(side)}>{world.players[id]?.squadNumber ?? ''}</text>
+          <circle className="pitch-shadow" cx={0.3} cy={0.4} r={1.3} />
+          {/* Forma (üst) ve şort (alt); kalecinin forması takım renginde kenarlı */}
+          <circle r={1.3} fill={keeper ? KEEPER_KIT : kits[side].fill} />
+          <path d={SHORTS_PATH} fill={keeper ? kits[side].fill : kits[side].stroke} />
+          <circle r={1.3} className={`pitch-outline${carrier ? ' involved' : ''}`} />
+          <text y={0.25} fill={keeper ? '#fff' : ink(side)}>{world.players[id]?.squadNumber ?? ''}</text>
           {named && <text className="pitch-name" y={3.1}>{world.players[id]?.lastName ?? ''}</text>}
           {card?.playerId === id && <rect className={`pitch-card ${card.type}`} x={0.7} y={-3} width={1.05} height={1.45} rx={0.15} />}
           {injuredId === id && <text className="pitch-injury" x={-1.6} y={-1.6}>✚</text>}
@@ -182,6 +229,14 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
         >
         <PitchBackground />
         <svg className="pitch-layer" viewBox={VIEW_BOX} aria-hidden="true">
+          <defs>
+            <pattern id="pitch-net" width={0.55} height={0.55} patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <path d="M 0 0 H 0.55 M 0 0 V 0.55" stroke="rgba(255,255,255,0.55)" strokeWidth={0.07} />
+            </pattern>
+          </defs>
+          {/* Ev sahibi sağa hücum eder: ev sahibinin golü sağ kaleye */}
+          <GoalNet end="left" ripple={goalRipple === 'away' ? `${match.minute}` : null} />
+          <GoalNet end="right" ripple={goalRipple === 'home' ? `${match.minute}` : null} />
           {frame && previous && frame.move !== 'none' && (
             <line
               key={`${match.minute}-${index}`}
@@ -195,6 +250,7 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
           {dots}
           {frame && (
             <g className="pitch-ball" style={{ transform: `translate(${frame.ball.x}px, ${frame.ball.y}px)` }}>
+              <ellipse className="pitch-ball-shadow" cx={0.35} cy={0.5} rx={0.62} ry={0.4} />
               <circle r={0.62} />
             </g>
           )}

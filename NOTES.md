@@ -346,6 +346,9 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
         transform-origin 0 0) — saha yeniden çizilmez. Bunun için .pitch-stage genişliği = yükseklik × en-boy oranı
         (boşluksuz). Tam ekran: Fullscreen API saha panelinde (useFullscreen); üstte FullscreenBar (skor [gizli sonuçla],
         saat, Duraklat/Devam, Küçült); yükseklik window.innerHeight − 120.
+  - [x] Görsel cila: iki renkli oyuncu (forma = birinci renk, şort = ikinci; renk çakışmasında ters), oyuncu ve top
+        gölgesi, kale fileleri (çapraz örgü deseni, direkler; oyuncu katmanında) ve golde file sallanması (.pitch-net.ripple,
+        golün girdiği kale), köşe yayları, çimde tribün gölgesi ve hafif güneş (sabit arka plan katmanında).
   - [ ] Sıradaki: FIKIRLER.md'den seçilecek.
 
 ## Açık konular / ileride

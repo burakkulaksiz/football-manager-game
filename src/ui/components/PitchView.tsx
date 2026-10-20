@@ -1,7 +1,8 @@
-import type { CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { getClub, type MatchState, type PlayKind, type Side } from '../../engine';
 import { useWorld } from '../../store/gameStore';
-import { ballSpot, colorsClash, PITCH_LENGTH, PITCH_WIDTH, shotOrigin, teamSpots } from '../pitch';
+import { colorsClash, PITCH_LENGTH, PITCH_WIDTH } from '../pitch';
+import { buildScene, frameSpots, framesForDuration } from '../pitchScene';
 
 /** Sahanın üstünde kısa süre görünen etiket. */
 const PLAY_LABELS: Partial<Record<PlayKind, string>> = {
@@ -42,16 +43,34 @@ function PitchMarkings() {
 }
 
 /**
- * Canlı maçın 2D görünümü: oyuncular dizilişteki yerlerinden topu takip ederek kayar,
- * top dakikanın anına göre (atak, şut, korner, gol…) hareket eder.
- * `durationMs`: bir dakikalık geçiş animasyonu (maç hızına göre).
+ * Canlı maçın 2D görünümü. Her dakika kısa bir sahne olarak oynar (pas → pas → asist → şut → sonuç):
+ * top kare kare takım arkadaşları arasında dolaşır, oyuncular topa göre kayar.
+ * `minuteMs`: maçta bir dakikanın süresi (hıza göre); hızlı modda yalnızca son kare gösterilir.
  */
-export function PitchView({ match, durationMs }: { match: MatchState; durationMs: number }) {
+export function PitchView({ match, minuteMs }: { match: MatchState; minuteMs: number }) {
   const world = useWorld();
   const play = match.lastPlay;
-  const ball = ballSpot(play, match.minute);
-  const origin = shotOrigin(play, match.minute);
   const kickoff = play === null;
+  const scene = useMemo(() => framesForDuration(buildScene(match, play, match.minute), minuteMs), [match, play, minuteMs]);
+
+  // Sahne kare kare ilerler; yeni dakikada baştan başlar (eski sahnenin karesi gösterilmez).
+  const [step, setStep] = useState({ scene, index: 0 });
+  const index = step.scene === scene ? step.index : 0;
+  const frameMs = (minuteMs * 0.9) / scene.length;
+  useEffect(() => {
+    if (scene.length <= 1) return;
+    let i = 0;
+    const timer = setInterval(() => {
+      i++;
+      setStep({ scene, index: i });
+      if (i >= scene.length - 1) clearInterval(timer);
+    }, frameMs);
+    return () => clearInterval(timer);
+  }, [scene, frameMs]);
+
+  const frame = scene[Math.min(index, scene.length - 1)]!;
+  const previous = index > 0 ? scene[index - 1] : undefined;
+  const isFinal = index >= scene.length - 1;
 
   const homeClub = getClub(world, match.home.clubId);
   const awayClub = getClub(world, match.away.clubId);
@@ -63,29 +82,26 @@ export function PitchView({ match, durationMs }: { match: MatchState; durationMs
   };
 
   // Çok kısa geçiş göze görünmez ama her karede SVG'yi yeniden boyatır: hızlı modda kapalı.
-  const style = { '--pitch-move': durationMs < 100 ? '0ms' : `${durationMs}ms` } as CSSProperties;
-  const label = play ? PLAY_LABELS[play.kind] : undefined;
-  const labelKit = play ? kits[play.side] : undefined;
+  const moveMs = scene.length > 1 ? frameMs * 0.85 : minuteMs < 100 ? 0 : minuteMs * 0.85;
+  const style = { '--pitch-move': `${Math.round(moveMs)}ms` } as CSSProperties;
+  const label = play && isFinal ? PLAY_LABELS[play.kind] : undefined;
+  const card = play && isFinal ? play.card : undefined;
 
-  const dots = (['home', 'away'] as const).flatMap((side) => {
-    const spots = teamSpots(match, side, ball, kickoff);
-    return [...spots.entries()].map(([id, p]) => {
-      const ps = match.players[id]!;
-      const keeper = ps.slot === 'GK';
-      // Şutu çeken oyuncu şutun çıktığı yerde görünür
-      const at = origin && play?.playerId === id ? origin : p;
-      return (
-        <g key={id} className="pitch-player" style={{ transform: `translate(${at.x}px, ${at.y}px)` }}>
-          <circle
-            r={1.85}
-            fill={keeper ? '#1d1f24' : kits[side].fill}
-            stroke={keeper ? kits[side].fill : kits[side].stroke}
-            className={play?.playerId === id ? 'involved' : undefined}
-          />
-          <text y={0.62} fill={keeper ? '#fff' : kits[side].stroke}>{world.players[id]?.squadNumber ?? ''}</text>
-        </g>
-      );
-    });
+  const dots = [...frameSpots(match, frame, kickoff)].map(([id, { side, at }]) => {
+    const keeper = match.players[id]?.slot === 'GK';
+    const carrier = frame.carrierId === id;
+    return (
+      <g key={id} className="pitch-player" style={{ transform: `translate(${at.x}px, ${at.y}px)` }}>
+        <circle
+          r={1.85}
+          fill={keeper ? '#1d1f24' : kits[side].fill}
+          stroke={keeper ? kits[side].fill : kits[side].stroke}
+          className={carrier ? 'involved' : undefined}
+        />
+        <text y={0.62} fill={keeper ? '#fff' : kits[side].stroke}>{world.players[id]?.squadNumber ?? ''}</text>
+        {card?.playerId === id && <rect className={`pitch-card ${card.type}`} x={0.9} y={-3.9} width={1.4} height={1.9} rx={0.2} />}
+      </g>
+    );
   });
 
   return (
@@ -99,26 +115,26 @@ export function PitchView({ match, durationMs }: { match: MatchState; durationMs
         </defs>
         <rect x={0} y={0} width={PITCH_LENGTH} height={PITCH_WIDTH} fill="url(#pitch-stripes)" />
         <PitchMarkings />
-        {origin && (
+        {previous && frame.move !== 'none' && (
           <line
-            key={`shot-${match.minute}`}
-            className={`pitch-shot${play?.kind === 'goal' ? ' goal' : ''}`}
-            x1={origin.x}
-            y1={origin.y}
-            x2={ball.x}
-            y2={ball.y}
+            key={`${match.minute}-${index}`}
+            className={`pitch-trail ${frame.move}${play?.kind === 'goal' && isFinal ? ' goal' : ''}`}
+            x1={previous.ball.x}
+            y1={previous.ball.y}
+            x2={frame.ball.x}
+            y2={frame.ball.y}
           />
         )}
         {dots}
-        <g className="pitch-ball" style={{ transform: `translate(${ball.x}px, ${ball.y}px)` }}>
+        <g className="pitch-ball" style={{ transform: `translate(${frame.ball.x}px, ${frame.ball.y}px)` }}>
           <circle r={0.9} />
         </g>
       </svg>
-      {label && labelKit && (
+      {label && play && (
         <div
-          key={`${match.minute}-${play?.kind}`}
-          className={`pitch-label${play?.kind === 'goal' ? ' goal' : ''}`}
-          style={{ background: labelKit.fill, color: labelKit.stroke }}
+          key={`${match.minute}-${play.kind}`}
+          className={`pitch-label${play.kind === 'goal' ? ' goal' : ''}`}
+          style={{ background: kits[play.side].fill, color: kits[play.side].stroke }}
         >
           {label}
         </div>

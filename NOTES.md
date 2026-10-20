@@ -306,6 +306,14 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
         topa göre blok çizgisi; ceza sahası yakınında doluşma; ızgara görünmesin diye küçük kayma), colorsClash
         (renkler yakınsa deplasman ikinci rengini giyer). PitchView SVG; geçiş süresi maç hızına göre, < 100 ms ise kapalı
         (SVG geçişleri ana iş parçacığında boyanır). "Çok Hızlı" 4× yavaş CPU'da 22 dk/sn (hedef 25).
+  - [x] 2D saha sahneleri: lastPlay'e gerçek oyuncular eklendi (assistId, keeperId, defenderId = bloke eden / topu
+        kapan / faul yapan, card = dakikanın kartı; recordPlay öncelikli olanı tutar, kartı korur).
+        ui/pitchScene.ts (saf, testli): buildScene dakikayı 2–5 kareye çevirir (oyun kurma pasları → asist → şut → sonuç;
+        korner, faul/serbest vuruş, penaltı [ceza sahası boşaltılır], top kapma). Pas hedefine en yakın takım arkadaşı
+        topla buluşur; son kare her zaman ballSpot ile aynı. frameSpots: yerleşim + topu taşıyan + özel yerleşimler.
+        framesForDuration: dakika < 300 ms ise yalnızca son kare, yoksa en fazla ⌊ms/110⌋ (2–5) kare.
+        PitchView kareleri dakika süresinin %90'ına yayar; pas izi kesik, şut izi düz çizgi; kart oyuncunun üstünde.
+        Duraklatılmışken sahne Normal hız süresiyle oynar. "Çok Hızlı" 4× yavaş CPU'da 24 dk/sn.
   - [ ] Sıradaki: FIKIRLER.md'den seçilecek.
 
 ## Açık konular / ileride

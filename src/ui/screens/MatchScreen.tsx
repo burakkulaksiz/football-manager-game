@@ -127,7 +127,7 @@ function readPitchPref(): boolean {
   }
 }
 
-function PitchPanel({ match, durationMs }: { match: MatchState; durationMs: number }) {
+function PitchPanel({ match, minuteMs }: { match: MatchState; minuteMs: number }) {
   const [show, setShow] = useState(readPitchPref);
   const toggle = () => {
     setShow(!show);
@@ -143,7 +143,7 @@ function PitchPanel({ match, durationMs }: { match: MatchState; durationMs: numb
         <span>Saha</span>
         <button className="btn btn-small" onClick={toggle}>{show ? 'Gizle' : 'Göster'}</button>
       </h2>
-      {show && <PitchView match={match} durationMs={durationMs} />}
+      {show && <PitchView match={match} minuteMs={minuteMs} />}
     </section>
   );
 }
@@ -420,7 +420,7 @@ export function MatchScreen() {
       <div className="match-grid">
         <TeamPanel match={match} side="home" />
         <div className="match-center">
-          <PitchPanel match={match} durationMs={Math.min(650, SPEEDS[speed]!.ms * 0.85)} />
+          <PitchPanel match={match} minuteMs={running ? SPEEDS[speed]!.ms : SPEEDS[1]!.ms} />
           <StatsPanel match={match} />
           <Commentary match={match} />
         </div>

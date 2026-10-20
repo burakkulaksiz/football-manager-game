@@ -4,6 +4,25 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
 
 ## Maç
 - [x] 2D saha görünümü (top ve oyuncu noktaları)
+  - [x] **Dakika içi akış:** her dakikayı tek karede değil, 3–5 adımlık kısa bir sahne olarak oynatmak
+        (pas → pas → orta → şut). Topun izlediği yol görünür, oyun "akıyor" hissi verir.
+  - [x] **Top taşıyıcı:** topun her an bir oyuncuda olması; top o oyuncunun ayağında durur, pas çizgisiyle diğerine geçer.
+  - [x] **Olay oyuncuları gerçek:** faul yapan, kart gören, asist yapan, kurtarış yapan kaleci sahada vurgulanır
+        (motordan oyuncu kimlikleri de `lastPlay`'e eklenir).
+  - [ ] **Duran top sahneleri:** korner ve serbest vuruşta oyuncular kurulu pozisyona geçer (baraj, kale önü kalabalığı),
+        penaltıda herkes ceza sahası dışında bekler.
+  - [ ] **Gol sonrası:** golü atan oyuncu köşe bayrağına koşar, takım arkadaşları toplanır; ardından santra dizilişi.
+  - [ ] **Taktiğe göre şekil:** mentalite (hücum/defans), savunma çizgisi, genişlik ve pres talimatları blok derinliğini
+        ve genişliği değiştirir; kullanıcı taktiğinin etkisi sahada görünür.
+  - [ ] **Kart / sakatlık / değişiklik görselleri:** oyuncunun üstünde sarı/kırmızı kart simgesi, atılan oyuncu sahadan
+        çıkar, sakat oyuncu yerde, değişiklikte yeni numara kenardan girer.
+  - [ ] **Oyuncu üzerine gelince bilgi:** isim, mevki, kondisyon ve maç puanı; tıklayınca değişiklik seçimi.
+  - [ ] **Isı haritası / şut haritası:** maç içinde ve maç raporunda, takımın şutları (gol/isabet/aut) ve top hakimiyeti bölgeleri.
+  - [ ] **Kamera seçenekleri:** tam saha / topu takip eden yakın görünüm; büyük ekranda sahayı genişletme (tam ekran saha modu).
+  - [ ] **Görsel cila:** forma renginde iki renkli nokta (forma + şort), kale fileleri, top gölgesi, gol anında ağ sallanması,
+        çim desenine güneş/gölge.
+  - [ ] **Sadece önemli anlar modu:** FM'deki gibi sakin dakikaları atlayıp atak, şut ve duran topları sahada göstermek.
+  - [ ] **Performans:** oyuncuları HTML katmanında (GPU'da hareket eden) çizmek; yavaş makinede bile akıcı geçiş.
 - [ ] Ses (kodla üretilen + gerçek kayıtlar; düdük, gol, uğultu, açma/kapama)
 - [ ] Maç ortasında kayıt
 - [ ] Devre arası konuşması (moral etkisi)

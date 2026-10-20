@@ -52,6 +52,14 @@ export interface MatchPlay {
   playerId: number | null;
   /** Şut penaltıdan mı (top penaltı noktasından çıkar). */
   fromPenalty?: boolean;
+  /** Golün asistini yapan. */
+  assistId?: number | null;
+  /** Şutu karşılayan kaleci (kurtarış / gol / penaltı). */
+  keeperId?: number | null;
+  /** Anın savunmacısı: şutu bloke eden, topu kapan ya da faulü yapan. */
+  defenderId?: number | null;
+  /** Bu dakika gösterilen kart (anın türünden bağımsız). */
+  card?: { playerId: number; type: 'yellow' | 'red' };
 }
 
 export interface MatchEvent {

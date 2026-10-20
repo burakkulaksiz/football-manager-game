@@ -2918,15 +2918,30 @@ select {
   filter: drop-shadow(0 0.3px 0.4px rgba(0, 0, 0, 0.6));
 }
 
-.pitch-shot {
-  stroke: rgba(255, 255, 255, 0.6);
-  stroke-width: 0.3;
-  stroke-dasharray: 0.9 0.7;
-  animation: pitch-fade 1.2s ease-out forwards;
+/* Topun son hareketi: pas ince kesik çizgi, şut kalın */
+.pitch-trail {
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 0.25;
+  stroke-dasharray: 0.8 0.8;
+  animation: pitch-fade 0.9s ease-out forwards;
 }
 
-.pitch-shot.goal {
+.pitch-trail.shot {
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 0.4;
+  stroke-dasharray: none;
+}
+
+.pitch-trail.goal {
   stroke: var(--accent);
+}
+
+.pitch-card.yellow { fill: #ffd43b; }
+.pitch-card.red { fill: #ef4444; }
+
+.pitch-card {
+  stroke: rgba(0, 0, 0, 0.5);
+  stroke-width: 0.15;
 }
 
 @keyframes pitch-fade {

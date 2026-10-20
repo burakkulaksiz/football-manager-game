@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   displayMinute,
   formatMinute,
@@ -15,15 +15,26 @@ import { readableText } from '../colors';
 import { FormationPicker, InstructionsPanel } from '../components/InstructionsPanel';
 import { MatchStatRows } from '../components/MatchStatRows';
 import { PitchView } from '../components/PitchView';
+import { buildScene, isHighlight, QUIET_MINUTE_MS, SCENE_FRAME_MS, sceneDurationMs } from '../pitchScene';
 import { MENTALITY_LABELS, POSITION_LABELS, positionGroup, ratingClass } from '../labels';
 
-/** Dakika başına bekleme süresi (ms). */
-const SPEEDS = [
-  { label: 'Yavaş', ms: 1000 },
-  { label: 'Normal', ms: 450 },
-  { label: 'Hızlı', ms: 150 },
-  { label: 'Çok Hızlı', ms: 40 },
-];
+/**
+ * Önemli an oynarken sonucu (skor, golcü, anlatım) erken göstermemek için anın öncesindeki durum.
+ * Sahne sonuç karesine gelince açıklanır.
+ */
+interface Held {
+  home: number;
+  away: number;
+  goals: number;
+  events: number;
+}
+
+function snapshot(m: MatchState): Held {
+  return { home: m.score.home, away: m.score.away, goals: m.goals.length, events: m.events.length };
+}
+
+/** Gösterilecek olaylar: önemli an sürerken sonuç olayları gizli. */
+const shownEvents = (match: MatchState, held: Held | null) => (held ? match.events.slice(0, held.events) : match.events);
 
 function clockText(match: MatchState): string {
   switch (match.period) {
@@ -38,10 +49,10 @@ function clockText(match: MatchState): string {
 }
 
 /** Tabela altındaki golcü listesi: "Yılmaz 23', 67' (P)" */
-function scorerLines(world: GameWorld, match: MatchState, side: Side): string[] {
+function scorerLines(world: GameWorld, match: MatchState, side: Side, held: Held | null): string[] {
   const clubId = match[side].clubId;
   const byPlayer = new Map<number, string[]>();
-  for (const g of match.goals) {
+  for (const g of held ? match.goals.slice(0, held.goals) : match.goals) {
     if (g.clubId !== clubId) continue;
     const label = formatMinute(g.minute, g.extra) + (g.kind === 'penalty' ? ' (P)' : '');
     byPlayer.set(g.playerId, [...(byPlayer.get(g.playerId) ?? []), label]);
@@ -49,7 +60,7 @@ function scorerLines(world: GameWorld, match: MatchState, side: Side): string[] 
   return [...byPlayer.entries()].map(([id, mins]) => `${world.players[id]?.lastName ?? '?'} ${mins.join(', ')}`);
 }
 
-function Scoreboard({ match }: { match: MatchState }) {
+function Scoreboard({ match, held }: { match: MatchState; held: Held | null }) {
   const world = useWorld();
   const home = getClub(world, match.home.clubId);
   const away = getClub(world, match.away.clubId);
@@ -62,11 +73,11 @@ function Scoreboard({ match }: { match: MatchState }) {
           <ClubBadge club={home} size={30} />
           <span>{home.name}</span>
         </div>
-        <div className="sb-scorers">{scorerLines(world, match, 'home').map((l) => <div key={l}>{l}</div>)}</div>
+        <div className="sb-scorers">{scorerLines(world, match, 'home', held).map((l) => <div key={l}>{l}</div>)}</div>
       </div>
       <div className="sb-center">
         <div className="sb-score">
-          {match.score.home}<span className="sb-dash">–</span>{match.score.away}
+          {held?.home ?? match.score.home}<span className="sb-dash">–</span>{held?.away ?? match.score.away}
         </div>
         <div className={`sb-clock${live ? ' live' : ''}`}>{clockText(match)}</div>
       </div>
@@ -75,7 +86,7 @@ function Scoreboard({ match }: { match: MatchState }) {
           <span>{away.name}</span>
           <ClubBadge club={away} size={30} />
         </div>
-        <div className="sb-scorers">{scorerLines(world, match, 'away').map((l) => <div key={l}>{l}</div>)}</div>
+        <div className="sb-scorers">{scorerLines(world, match, 'away', held).map((l) => <div key={l}>{l}</div>)}</div>
       </div>
     </div>
   );
@@ -129,9 +140,19 @@ function readPitchPref(): boolean {
 }
 
 /** Sahanın altında son olay (FM'deki yorum şeridi gibi). */
-function EventBar({ match }: { match: MatchState }) {
+function EventBar({ match, held }: { match: MatchState; held: Held | null }) {
   const world = useWorld();
-  const last = [...match.events].reverse().find((e) => e.type !== 'info');
+  // Önemli an oynarken: kimin atakta olduğu (sonuç sahnede görülecek)
+  if (held && match.lastPlay) {
+    const club = getClub(world, match[match.lastPlay.side].clubId);
+    return (
+      <div className="event-bar" style={{ borderLeftColor: club.colors.primary }}>
+        <span className="ev-minute">{formatMinute(displayMinute(match).minute, displayMinute(match).extra)}</span>
+        <span>{club.name} atakta…</span>
+      </div>
+    );
+  }
+  const last = [...shownEvents(match, held)].reverse().find((e) => e.type !== 'info');
   if (!last) return <div className="event-bar muted">Maç başlamadı.</div>;
   const club = last.side ? getClub(world, match[last.side].clubId) : null;
   return (
@@ -159,7 +180,7 @@ function usePitchPref(): [boolean, () => void] {
   return [show, toggle];
 }
 
-function PitchPanel({ match, minuteMs, show, toggle }: { match: MatchState; minuteMs: number; show: boolean; toggle: () => void }) {
+function PitchPanel({ match, held, show, toggle }: { match: MatchState; held: Held | null; show: boolean; toggle: () => void }) {
   if (!show) {
     return (
       <section className="panel pitch-panel collapsed">
@@ -171,21 +192,22 @@ function PitchPanel({ match, minuteMs, show, toggle }: { match: MatchState; minu
   return (
     <section className="panel pitch-panel">
       <button className="btn btn-small pitch-hide" onClick={toggle} title="2D sahayı gizle">Gizle</button>
-      <PitchView match={match} minuteMs={minuteMs} />
-      <EventBar match={match} />
+      <PitchView match={match} />
+      <EventBar match={match} held={held} />
     </section>
   );
 }
 
-function Commentary({ match }: { match: MatchState }) {
-  const events = [...match.events].reverse();
+function Commentary({ match, held }: { match: MatchState; held: Held | null }) {
+  const visible = shownEvents(match, held);
+  const events = [...visible].reverse();
   return (
     <section className="panel">
       <h2 className="panel-title">Anlatım</h2>
       <div className="commentary">
         {events.length === 0 && <div className="muted commentary-empty">Maç henüz başlamadı.</div>}
         {events.map((e, i) => (
-          <div key={match.events.length - i} className={`ev ev-${e.type}${e.side ? ` ev-${e.side}` : ''}`}>
+          <div key={visible.length - i} className={`ev ev-${e.type}${e.side ? ` ev-${e.side}` : ''}`}>
             <span className="ev-minute">{e.type === 'kickoff' ? '' : formatMinute(e.minute, e.extra)}</span>
             <span className="ev-text">{e.text}</span>
           </div>
@@ -290,12 +312,10 @@ function TeamPanel({ match, side }: { match: MatchState; side: Side }) {
   );
 }
 
-function Controls({ match, running, setRunning, speed, setSpeed, showTactics, setShowTactics }: {
+function Controls({ match, running, setRunning, showTactics, setShowTactics }: {
   match: MatchState;
   running: boolean;
   setRunning: (r: boolean) => void;
-  speed: number;
-  setSpeed: (s: number) => void;
   showTactics: boolean;
   setShowTactics: (v: boolean) => void;
 }) {
@@ -326,14 +346,6 @@ function Controls({ match, running, setRunning, speed, setSpeed, showTactics, se
           <span className="btn-continue-arrow">›</span>
         </button>
       )}
-
-      <div className="tabs" role="group" aria-label="Maç hızı">
-        {SPEEDS.map((s, i) => (
-          <button key={s.label} className={`tab${speed === i ? ' active' : ''}`} onClick={() => setSpeed(i)}>
-            {s.label}
-          </button>
-        ))}
-      </div>
 
       <button
         className={`btn tactics-toggle${showTactics ? ' active' : ''}`}
@@ -386,26 +398,49 @@ export function MatchScreen() {
   const refreshPreMatch = useGameStore((s) => s.refreshPreMatch);
   const world = useWorld();
   const [running, setRunning] = useState(false);
-  const [speed, setSpeed] = useState(1);
   const [showTactics, setShowTactics] = useState(false);
   const [showPitch, togglePitch] = usePitchPref();
   const period = match?.period;
+  // Saatin attığı son adımdan önceki durum ve önemli an sürerken gizlenen sonuç
+  const pendingHold = useRef<Held | null>(null);
+  const [held, setHeld] = useState<Held | null>(null);
 
   // Başlama öncesi Taktik ekranına gidilip dönüldüyse maçı güncel kadroyla yeniden kur.
   useEffect(() => {
     refreshPreMatch();
   }, [refreshPreMatch]);
 
-  // Saat: çalışırken her tikte bir dakika. Devre arası ve maç sonunda kendiliğinden durur.
+  // Saat: sakin dakika 1 sn; önemli an sahada oynanırken (saha açıksa) sahne bitene kadar bekler.
+  // Devre arası ve maç sonunda kendiliğinden durur.
   useEffect(() => {
-    if (!running) return;
+    if (!running || !match) return;
     if (period === 'half' || period === 'full') {
       setRunning(false);
       return;
     }
-    const timer = setInterval(step, SPEEDS[speed]!.ms);
-    return () => clearInterval(timer);
-  }, [running, speed, period, step]);
+    const delay = showPitch && isHighlight(match.lastPlay)
+      ? sceneDurationMs(buildScene(match, match.lastPlay, match.minute))
+      : QUIET_MINUTE_MS;
+    const timer = setTimeout(() => {
+      pendingHold.current = snapshot(match);
+      step();
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [running, match, period, step, showPitch]);
+
+  // Önemli an: skor ve anlatım sahne sonuç karesine gelince açıklanır.
+  useEffect(() => {
+    const before = pendingHold.current;
+    pendingHold.current = null;
+    if (!match || !before || !showPitch || !isHighlight(match.lastPlay)) return;
+    setHeld(before);
+    const frames = buildScene(match, match.lastPlay, match.minute).length;
+    const timer = setTimeout(() => setHeld(null), (frames - 1) * SCENE_FRAME_MS);
+    return () => {
+      clearTimeout(timer);
+      setHeld(null);
+    };
+  }, [match, showPitch]);
 
   if (!match) {
     return (
@@ -416,6 +451,10 @@ export function MatchScreen() {
     );
   }
 
+  // Adımdan hemen sonraki ilk çizimde de sonuç gizli kalsın (efekt held'i bir çizim sonra kurar)
+  const pending = pendingHold.current;
+  const hold = held ?? (pending && showPitch && isHighlight(match.lastPlay) ? pending : null);
+
   const motm =
     match.period === 'full'
       ? Object.values(match.players).filter((p) => p.minuteIn !== null).sort((a, b) => b.rating - a.rating)[0]
@@ -423,15 +462,13 @@ export function MatchScreen() {
 
   return (
     <div className="match-screen">
-      <Scoreboard match={match} />
+      <Scoreboard match={match} held={hold} />
       {/* Saha açıkken baskı çubuğu gereksiz: yer sahaya kalsın */}
       {!showPitch && <MomentumBar match={match} />}
       <Controls
         match={match}
         running={running}
         setRunning={setRunning}
-        speed={speed}
-        setSpeed={setSpeed}
         showTactics={showTactics}
         setShowTactics={setShowTactics}
       />
@@ -448,12 +485,12 @@ export function MatchScreen() {
         </div>
       )}
       {match.period === 'half' && <div className="motm">Devre arası — oyuncu değişikliği ve taktik değişikliği yapabilirsin.</div>}
-      <PitchPanel match={match} minuteMs={running ? SPEEDS[speed]!.ms : SPEEDS[1]!.ms} show={showPitch} toggle={togglePitch} />
+      <PitchPanel match={match} held={hold} show={showPitch} toggle={togglePitch} />
       <div className="match-grid">
         <TeamPanel match={match} side="home" />
         <div className="match-center">
           <StatsPanel match={match} />
-          <Commentary match={match} />
+          <Commentary match={match} held={hold} />
         </div>
         <TeamPanel match={match} side="away" />
       </div>

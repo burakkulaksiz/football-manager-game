@@ -28,6 +28,8 @@ export interface SceneFrame {
   move: FrameMove;
   /** Duran top dizilişi: `side` kullanan (hücum eden) taraf. */
   setPiece?: SetPiece;
+  /** Sakatlanan oyuncu (yerde, işaretli). */
+  injuredId?: number;
 }
 
 export interface SetPiece {
@@ -206,7 +208,64 @@ export function buildScene(match: MatchState, play: MatchPlay | null, minute: nu
       last.placed.push({ id: play.card.playerId, side: cardSide, at: { x: last.ball.x + (cardSide === 'home' ? -1.8 : 1.8), y: last.ball.y - 1.4 } });
     }
   }
+  // Sakatlık: son karede oyuncu yerde (değişiklikle çıkmış olsa da o an görünür)
+  if (play.injuredId !== undefined) {
+    const last = lastFrame();
+    last.injuredId = play.injuredId;
+    const injuredSide = match.players[play.injuredId]?.side ?? side;
+    if (!match[injuredSide].onPitch.includes(play.injuredId) && !last.placed.some((p) => p.id === play.injuredId)) {
+      last.placed.push({ id: play.injuredId, side: injuredSide, at: { x: last.ball.x + (injuredSide === 'home' ? -3 : 3), y: last.ball.y + 2 } });
+    }
+  }
   return frames.slice(-5);
+}
+
+/* ------------------------------------------------------------------ */
+/* Önemli anlar ve zamanlama                                            */
+/* ------------------------------------------------------------------ */
+
+/** Sahnenin her karesi (ms): yavaş, izlenebilir akış. */
+export const SCENE_FRAME_MS = 750;
+/** Son kare (etiketiyle) ekranda kalma süresi (ms). */
+export const SCENE_HOLD_MS = 1500;
+/** Sakin dakikanın süresi (ms). */
+export const QUIET_MINUTE_MS = 1000;
+
+const HIGHLIGHT_KINDS: ReadonlySet<MatchPlay['kind']> = new Set(['goal', 'save', 'miss', 'blocked', 'penalty', 'corner', 'freekick']);
+
+/**
+ * 2D sahada gösterilen önemli an mı: şutlar, gol, penaltı, korner, serbest vuruş, kart, sakatlık.
+ * Kartsız orta saha faulleri ve şutsuz ataklar sakin dakika sayılır.
+ */
+export function isHighlight(play: MatchPlay | null): boolean {
+  if (!play) return false;
+  return HIGHLIGHT_KINDS.has(play.kind) || play.card !== undefined || play.injuredId !== undefined;
+}
+
+const KIND_LABELS: Partial<Record<MatchPlay['kind'], string>> = {
+  goal: 'GOL!',
+  save: 'Kurtarış',
+  miss: 'Dışarı',
+  blocked: 'Bloke',
+  corner: 'Korner',
+  freekick: 'Serbest vuruş',
+  penalty: 'Penaltı kaçtı',
+};
+
+/** Sahanın üstündeki etiket: anın türü; yoksa kart ya da sakatlık. */
+export function playLabel(play: MatchPlay | null): string | undefined {
+  if (!play) return undefined;
+  if (play.kind === 'goal' && play.fromPenalty) return 'GOL! (Penaltı)';
+  const kind = KIND_LABELS[play.kind];
+  if (kind) return kind;
+  if (play.card) return play.card.type === 'red' ? 'Kırmızı kart' : 'Sarı kart';
+  if (play.injuredId !== undefined) return 'Sakatlık';
+  return undefined;
+}
+
+/** Önemli anın sahada süreceği zaman: kareler + son karede bekleme. */
+export function sceneDurationMs(scene: readonly SceneFrame[]): number {
+  return Math.max(0, scene.length - 1) * SCENE_FRAME_MS + SCENE_HOLD_MS;
 }
 
 /**
@@ -319,9 +378,3 @@ export function setPieceSpots(match: MatchState, sp: SetPiece, ball: Point, take
   return out;
 }
 
-/** Maç hızına göre gösterilecek kare sayısı: hızlı modda yalnızca son kare (zaman yetmez). */
-export function framesForDuration(scene: readonly SceneFrame[], minuteMs: number): SceneFrame[] {
-  if (minuteMs < 300) return scene.slice(-1);
-  const count = clamp(Math.floor(minuteMs / 110), 2, 5);
-  return scene.slice(-count);
-}

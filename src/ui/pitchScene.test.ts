@@ -3,7 +3,7 @@ import { clubPlayers, createMatch, createWorld, stepMatch, type MatchPlay, type 
 import { autoSelectLineup } from '../engine/match/formation';
 import { gameData } from '../gameData';
 import { ballSpot, PITCH_LENGTH, PITCH_WIDTH } from './pitch';
-import { buildScene, frameSpots, framesForDuration } from './pitchScene';
+import { buildScene, frameSpots, isHighlight, playLabel, SCENE_FRAME_MS, SCENE_HOLD_MS, sceneDurationMs } from './pitchScene';
 
 const world = createWorld(gameData, 3, 'galatasaray', '2026-07-01');
 
@@ -124,12 +124,36 @@ describe('2D saha sahnesi', () => {
     expect(Math.hypot(t.x - last.ball.x, t.y - last.ball.y)).toBeLessThan(2);
   });
 
-  it('hızlı modda yalnızca son kare, yavaşta en fazla 5 kare', () => {
-    const scene = buildScene(plays[0]!.state, plays.find((p) => p.play.kind === 'goal')!.play, 20);
-    expect(framesForDuration(scene, 40)).toHaveLength(1);
-    expect(framesForDuration(scene, 150)).toHaveLength(1);
-    expect(framesForDuration(scene, 450).length).toBeLessThanOrEqual(4);
-    expect(framesForDuration(scene, 1000).length).toBeLessThanOrEqual(5);
-    expect(framesForDuration(scene, 1000).at(-1)).toBe(scene.at(-1));
+  it('önemli anlar: şutlar, duran toplar, kart ve sakatlık; kartsız faul ve şutsuz atak değil', () => {
+    const base = { side: 'home' as const, playerId: null };
+    for (const kind of ['goal', 'save', 'miss', 'blocked', 'penalty', 'corner', 'freekick'] as const) {
+      expect(isHighlight({ ...base, kind })).toBe(true);
+    }
+    expect(isHighlight({ ...base, kind: 'foul' })).toBe(false);
+    expect(isHighlight({ ...base, kind: 'attack' })).toBe(false);
+    expect(isHighlight({ ...base, kind: 'hold' })).toBe(false);
+    expect(isHighlight({ ...base, kind: 'foul', card: { playerId: 1, type: 'yellow' } })).toBe(true);
+    expect(isHighlight({ ...base, kind: 'hold', injuredId: 4 })).toBe(true);
+    expect(isHighlight(null)).toBe(false);
+    expect(playLabel({ ...base, kind: 'foul', card: { playerId: 1, type: 'red' } })).toBe('Kırmızı kart');
+    expect(playLabel({ ...base, kind: 'attack', injuredId: 4 })).toBe('Sakatlık');
+    expect(playLabel({ ...base, kind: 'goal', fromPenalty: true })).toBe('GOL! (Penaltı)');
+  });
+
+  it('bir maçta önemli anlar dakikaların yaklaşık yarısından azı; sahne süresi kare sayısıyla artar', () => {
+    const all = playAll(match(12));
+    const highlights = all.filter((p) => isHighlight(p.play)).length;
+    expect(highlights).toBeGreaterThan(10);
+    expect(highlights / all.length).toBeLessThan(0.6);
+    const scene = buildScene(all[0]!.state, all.find((p) => p.play.kind === 'goal' || p.play.kind === 'save')!.play, 20);
+    expect(sceneDurationMs(scene)).toBe((scene.length - 1) * SCENE_FRAME_MS + SCENE_HOLD_MS);
+  });
+
+  it('sakatlanan oyuncu son karede işaretli ve görünür', () => {
+    const m = match();
+    const injured = m.away.onPitch.find((id) => m.players[id]!.slot === 'DC')!;
+    const last = buildScene(m, { side: 'home', kind: 'hold', playerId: null, injuredId: injured }, 40).at(-1)!;
+    expect(last.injuredId).toBe(injured);
+    expect(frameSpots(m, last, false).has(injured)).toBe(true);
   });
 });

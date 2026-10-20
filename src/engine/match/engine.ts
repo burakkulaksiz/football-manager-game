@@ -715,6 +715,7 @@ function checkInjury(ctx: Ctx, side: Side): void {
   const id = healthy[rng.weightedIndex(healthy.map((h) => lookup[h]!.hidden.injuryProneness + 2))]!;
   state.players[id]!.injured = true;
   state.injuries.push({ ...displayMinute(state), clubId: team.clubId, playerId: id });
+  if (state.lastPlay) state.lastPlay.injuredId = id;
   emit(ctx, 'injury', side, 'injury', { player: nameOf(ctx, id) });
 }
 
@@ -893,17 +894,17 @@ export function stepMatch(state: MatchState, lookup: PlayerLookup): void {
   } else if (state.period === 'half') {
     state.period = 'second';
     state.minute = 45;
+    // İkinci yarı santrasıyla başlar (2D sahada başlama dizilişi)
+    state.lastPlay = null;
     emit(ctx, 'secondhalf', null, 'secondhalf');
   } else {
     state.minute++;
     simulateMinute(ctx);
     if (state.period === 'first' && state.minute >= 45 + state.addedTime[0]) {
       state.period = 'half';
-      state.lastPlay = null;
       emit(ctx, 'halftime', null, 'halftime', vars());
     } else if (state.period === 'second' && state.minute >= 90 + state.addedTime[1]) {
       state.period = 'full';
-      state.lastPlay = null;
       finalizeRatings(ctx);
       emit(ctx, 'fulltime', null, 'fulltime', vars());
     }

@@ -3018,6 +3018,14 @@ select {
   stroke: var(--accent);
 }
 
+.pitch-player text.pitch-injury {
+  font-size: 1.8px;
+  fill: #ff5a4e;
+  stroke: #fff;
+  stroke-width: 0.25px;
+  paint-order: stroke;
+}
+
 .pitch-card.yellow { fill: #ffd43b; }
 .pitch-card.red { fill: #ef4444; }
 

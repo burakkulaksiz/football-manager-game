@@ -327,6 +327,14 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
         (PitchBackground); her dakika yalnızca oyuncu katmanı boyanır; .match-grid content-visibility: auto.
         ui/colors.ts readableText: ikinci renk zeminde okunmuyorsa beyaz/siyah (tabela, başlık hapı, saha numaraları).
         DİKKAT: `.pitch-bg` uygulamanın çim zemin sınıfı; saha SVG'si `.pitch-grass`.
+  - [x] Maç hızı seçenekleri kaldırıldı; "önemli anlar" modu (kullanıcı isteği). Sakin dakika QUIET_MINUTE_MS = 1000;
+        önemli an (pitchScene.isHighlight: şutlar, gol, penaltı, korner, serbest vuruş, kart, sakatlık — kartsız faul ve
+        şutsuz atak değil) sahada SCENE_FRAME_MS = 750 ms/kare oynar, son kare SCENE_HOLD_MS = 1500 ms kalır; saat o sürece
+        bekler (MatchScreen setTimeout zinciri). Sakin dakikalarda saha boş; maç/ikinci yarı başında başlama dizilişi.
+        Saha gizliyse her dakika 1 sn. Sonuç gizleme: saatin adımından önceki skor/olay sayısı (Held) önemli an sürerken
+        tabela, golcüler, olay şeridi ("X atakta…") ve anlatımda gösterilir; sahne son karesine gelince açıklanır.
+        Motor: lastPlay.injuredId; devre arası/maç sonunda lastPlay silinmez (son dakikanın golü de gösterilsin),
+        ikinci yarı başında silinir. Bir maç ~3,5–4 dk sürer.
   - [ ] Sıradaki: FIKIRLER.md'den seçilecek.
 
 ## Açık konular / ileride

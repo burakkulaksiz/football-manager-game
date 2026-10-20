@@ -64,6 +64,8 @@ export interface MatchPlay {
   defenderId?: number | null;
   /** Bu dakika gösterilen kart (anın türünden bağımsız). */
   card?: { playerId: number; type: 'yellow' | 'red' };
+  /** Bu dakika sakatlanan oyuncu. */
+  injuredId?: number;
 }
 
 export interface MatchEvent {
@@ -148,7 +150,7 @@ export interface MatchState {
   possessionTicks: { home: number; away: number };
   /** Son dakikaların baskısı: +1 ev sahibi atağı, −1 deplasman atağı, 0 sakin. */
   momentum: number[];
-  /** Son oynanan dakikanın en önemli anı (2D saha); maç başlamadıysa ya da aradaysa null. */
+  /** Son oynanan dakikanın en önemli anı (2D saha); maç / ikinci yarı başlarken null (santra). */
   lastPlay: MatchPlay | null;
   rngState: number;
 }

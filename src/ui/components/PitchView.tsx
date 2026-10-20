@@ -1,20 +1,13 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { getClub, type MatchState, type PlayKind, type Side } from '../../engine';
+import { getClub, type MatchState, type Side } from '../../engine';
 import { useWorld } from '../../store/gameStore';
 import { readableText } from '../colors';
 import { colorsClash, PITCH_LENGTH, PITCH_WIDTH } from '../pitch';
-import { buildScene, frameSpots, framesForDuration } from '../pitchScene';
+import { buildScene, frameSpots, isHighlight, playLabel, SCENE_FRAME_MS } from '../pitchScene';
 
-/** Sahanın üstünde kısa süre görünen etiket. */
-const PLAY_LABELS: Partial<Record<PlayKind, string>> = {
-  goal: 'GOL!',
-  save: 'Kurtarış',
-  miss: 'Dışarı',
-  blocked: 'Bloke',
-  corner: 'Korner',
-  freekick: 'Serbest vuruş',
-  penalty: 'Penaltı kaçtı',
-};
+/** Şut karesinde top hızlı gider; diğer karelerde oyuncular ve top yavaşça kayar. */
+const SHOT_MOVE_MS = 380;
+const MOVE_MS = Math.round(SCENE_FRAME_MS * 0.8);
 
 function PitchMarkings() {
   const L = PITCH_LENGTH;
@@ -87,21 +80,22 @@ function useFitHeight(ref: React.RefObject<HTMLDivElement | null>, layoutKey: st
 }
 
 /**
- * Canlı maçın 2D görünümü. Her dakika kısa bir sahne olarak oynar (pas → pas → asist → şut → sonuç):
- * top kare kare takım arkadaşları arasında dolaşır, oyuncular topa göre kayar.
- * `minuteMs`: maçta bir dakikanın süresi (hıza göre); hızlı modda yalnızca son kare gösterilir.
+ * Canlı maçın 2D görünümü (FM'deki "önemli anlar" gibi): yalnızca önemli anlar (şut, gol, duran top,
+ * kart, sakatlık) kısa bir sahne olarak yavaşça oynar; sakin dakikalarda saha boştur.
+ * Maç başlamadan ve devre arasında takımlar başlama dizilişinde görünür.
  */
-export function PitchView({ match, minuteMs }: { match: MatchState; minuteMs: number }) {
+export function PitchView({ match }: { match: MatchState }) {
   const world = useWorld();
   const ref = useRef<HTMLDivElement>(null);
   const play = match.lastPlay;
   const kickoff = play === null;
-  const scene = useMemo(() => framesForDuration(buildScene(match, play, match.minute), minuteMs), [match, play, minuteMs]);
+  const visible = kickoff || isHighlight(play);
+  // Sahne yalnızca yeni anda yeniden kurulur (değişiklik vb. ile maç nesnesi değişse de baştan başlamaz)
+  const scene = useMemo(() => (visible ? buildScene(match, play, match.minute) : []), [play, match.minute, match.period, visible]);
 
-  // Sahne kare kare ilerler; yeni dakikada baştan başlar (eski sahnenin karesi gösterilmez).
+  // Sahne kare kare ilerler; yeni anda baştan başlar (eski sahnenin karesi gösterilmez).
   const [step, setStep] = useState({ scene, index: 0 });
   const index = step.scene === scene ? step.index : 0;
-  const frameMs = (minuteMs * 0.9) / scene.length;
   useEffect(() => {
     if (scene.length <= 1) return;
     let i = 0;
@@ -109,12 +103,12 @@ export function PitchView({ match, minuteMs }: { match: MatchState; minuteMs: nu
       i++;
       setStep({ scene, index: i });
       if (i >= scene.length - 1) clearInterval(timer);
-    }, frameMs);
+    }, SCENE_FRAME_MS);
     return () => clearInterval(timer);
-  }, [scene, frameMs]);
+  }, [scene]);
 
   const maxHeight = useFitHeight(ref, match.period);
-  const frame = scene[Math.min(index, scene.length - 1)]!;
+  const frame = scene[Math.min(index, scene.length - 1)];
   const previous = index > 0 ? scene[index - 1] : undefined;
   const isFinal = index >= scene.length - 1;
 
@@ -129,52 +123,56 @@ export function PitchView({ match, minuteMs }: { match: MatchState; minuteMs: nu
   // Numara ve etiket yazısı formanın üstünde okunmalı
   const ink = (side: Side) => readableText(kits[side].fill, kits[side].stroke);
 
-  // Çok kısa geçiş göze görünmez ama her karede SVG'yi yeniden boyatır: hızlı modda kapalı.
-  const moveMs = scene.length > 1 ? frameMs * 0.85 : minuteMs < 100 ? 0 : minuteMs * 0.85;
-  const style = { '--pitch-move': `${Math.round(moveMs)}ms` } as CSSProperties;
-  const label = play && isFinal ? PLAY_LABELS[play.kind] : undefined;
+  const style = { '--pitch-move': `${frame?.move === 'shot' ? SHOT_MOVE_MS : MOVE_MS}ms` } as CSSProperties;
+  const label = !kickoff && isFinal ? playLabel(play) : undefined;
   const card = play && isFinal ? play.card : undefined;
+  const injuredId = isFinal ? frame?.injuredId : undefined;
 
-  const dots = [...frameSpots(match, frame, kickoff)].map(([id, { side, at }]) => {
-    const keeper = match.players[id]?.slot === 'GK';
-    const carrier = frame.carrierId === id;
-    // Topu taşıyanın ve kart görenin adı noktanın altında
-    const named = carrier || card?.playerId === id;
-    return (
-      <g key={id} className="pitch-player" style={{ transform: `translate(${at.x}px, ${at.y}px)` }}>
-        <circle
-          r={1.3}
-          fill={keeper ? '#1d1f24' : kits[side].fill}
-          stroke={keeper ? kits[side].fill : kits[side].stroke}
-          className={carrier ? 'involved' : undefined}
-        />
-        <text y={0.48} fill={keeper ? '#fff' : ink(side)}>{world.players[id]?.squadNumber ?? ''}</text>
-        {named && <text className="pitch-name" y={3.1}>{world.players[id]?.lastName ?? ''}</text>}
-        {card?.playerId === id && <rect className={`pitch-card ${card.type}`} x={0.7} y={-3} width={1.05} height={1.45} rx={0.15} />}
-      </g>
-    );
-  });
+  const dots = frame
+    ? [...frameSpots(match, frame, kickoff)].map(([id, { side, at }]) => {
+      const keeper = match.players[id]?.slot === 'GK';
+      const carrier = frame.carrierId === id;
+      // Topu taşıyanın, kart görenin ve sakatlananın adı noktanın altında
+      const named = carrier || card?.playerId === id || injuredId === id;
+      return (
+        <g key={id} className="pitch-player" style={{ transform: `translate(${at.x}px, ${at.y}px)` }}>
+          <circle
+            r={1.3}
+            fill={keeper ? '#1d1f24' : kits[side].fill}
+            stroke={keeper ? kits[side].fill : kits[side].stroke}
+            className={carrier ? 'involved' : undefined}
+          />
+          <text y={0.48} fill={keeper ? '#fff' : ink(side)}>{world.players[id]?.squadNumber ?? ''}</text>
+          {named && <text className="pitch-name" y={3.1}>{world.players[id]?.lastName ?? ''}</text>}
+          {card?.playerId === id && <rect className={`pitch-card ${card.type}`} x={0.7} y={-3} width={1.05} height={1.45} rx={0.15} />}
+          {injuredId === id && <text className="pitch-injury" x={-1.6} y={-1.6}>✚</text>}
+        </g>
+      );
+    })
+    : null;
 
   return (
     <div className="pitch-view" style={style} ref={ref}>
-      {/* İki katman: çim ve çizgiler bir kez çizilir; her dakika yalnızca oyuncu katmanı boyanır */}
+      {/* İki katman: çim ve çizgiler bir kez çizilir; yalnızca oyuncu katmanı boyanır */}
       <div className="pitch-stage">
         <PitchBackground maxHeight={maxHeight} />
         <svg className="pitch-layer" viewBox={VIEW_BOX} aria-hidden="true">
-        {previous && frame.move !== 'none' && (
-          <line
-            key={`${match.minute}-${index}`}
-            className={`pitch-trail ${frame.move}${play?.kind === 'goal' && isFinal ? ' goal' : ''}`}
-            x1={previous.ball.x}
-            y1={previous.ball.y}
-            x2={frame.ball.x}
-            y2={frame.ball.y}
-          />
-        )}
-        {dots}
-        <g className="pitch-ball" style={{ transform: `translate(${frame.ball.x}px, ${frame.ball.y}px)` }}>
-          <circle r={0.62} />
-        </g>
+          {frame && previous && frame.move !== 'none' && (
+            <line
+              key={`${match.minute}-${index}`}
+              className={`pitch-trail ${frame.move}${play?.kind === 'goal' && isFinal ? ' goal' : ''}`}
+              x1={previous.ball.x}
+              y1={previous.ball.y}
+              x2={frame.ball.x}
+              y2={frame.ball.y}
+            />
+          )}
+          {dots}
+          {frame && (
+            <g className="pitch-ball" style={{ transform: `translate(${frame.ball.x}px, ${frame.ball.y}px)` }}>
+              <circle r={0.62} />
+            </g>
+          )}
         </svg>
       </div>
       {label && play && (

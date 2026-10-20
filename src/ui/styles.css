@@ -2854,3 +2854,114 @@ select {
   align-items: center;
   gap: 10px;
 }
+
+/* ================= 2D saha ================= */
+.pitch-view {
+  position: relative;
+  padding: 8px 10px 10px;
+  /* Her dakika değişir: stil/düzen/boyama sayfanın geri kalanına taşmasın */
+  contain: layout paint style;
+}
+
+.pitch-view svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  background: #23601f;
+}
+
+.pitch-lines rect,
+.pitch-lines line,
+.pitch-lines circle,
+.pitch-lines path {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.75);
+  stroke-width: 0.25;
+}
+
+.pitch-lines .spot {
+  fill: rgba(255, 255, 255, 0.75);
+}
+
+.pitch-lines .goal {
+  fill: rgba(255, 255, 255, 0.15);
+}
+
+/* Oyuncular ve top bir dakikadan diğerine kayarak geçer */
+.pitch-player,
+.pitch-ball {
+  transition: transform var(--pitch-move, 300ms) ease-in-out;
+}
+
+.pitch-player circle {
+  stroke-width: 0.45;
+}
+
+.pitch-player circle.involved {
+  stroke: var(--accent);
+  stroke-width: 0.7;
+}
+
+.pitch-player text {
+  font-family: var(--font-display);
+  font-size: 1.9px;
+  font-weight: 700;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.pitch-ball circle {
+  fill: #fff;
+  stroke: #111;
+  stroke-width: 0.25;
+  filter: drop-shadow(0 0.3px 0.4px rgba(0, 0, 0, 0.6));
+}
+
+.pitch-shot {
+  stroke: rgba(255, 255, 255, 0.6);
+  stroke-width: 0.3;
+  stroke-dasharray: 0.9 0.7;
+  animation: pitch-fade 1.2s ease-out forwards;
+}
+
+.pitch-shot.goal {
+  stroke: var(--accent);
+}
+
+@keyframes pitch-fade {
+  from { opacity: 1; }
+  to { opacity: 0.15; }
+}
+
+.pitch-label {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 12px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+  animation: pitch-label-in 0.25s ease-out;
+  pointer-events: none;
+}
+
+.pitch-label.goal {
+  font-size: 22px;
+  padding: 2px 18px;
+}
+
+@keyframes pitch-label-in {
+  from { opacity: 0; transform: translate(-50%, -4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pitch-player,
+  .pitch-ball {
+    transition: none;
+  }
+}

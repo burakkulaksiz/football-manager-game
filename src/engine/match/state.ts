@@ -31,6 +31,29 @@ export type MatchEventType =
   | 'tackle'
   | 'info';
 
+/** 2D saha için: dakikanın en önemli anı (motor sonucu etkilemez, yalnızca gösterim). */
+export type PlayKind =
+  | 'hold' // top orta alanda dolaşıyor
+  | 'foul'
+  | 'attack' // şuta dönüşmeyen atak
+  | 'corner'
+  | 'freekick'
+  | 'blocked'
+  | 'miss'
+  | 'save'
+  | 'penalty' // kaçan / kurtarılan penaltı
+  | 'goal';
+
+export interface MatchPlay {
+  /** Anı yaşayan (topa sahip / şutu çeken / faulden yararlanan) taraf. */
+  side: Side;
+  kind: PlayKind;
+  /** Şutu çeken ya da golü atan oyuncu. */
+  playerId: number | null;
+  /** Şut penaltıdan mı (top penaltı noktasından çıkar). */
+  fromPenalty?: boolean;
+}
+
 export interface MatchEvent {
   minute: number;
   extra: number;
@@ -113,6 +136,8 @@ export interface MatchState {
   possessionTicks: { home: number; away: number };
   /** Son dakikaların baskısı: +1 ev sahibi atağı, −1 deplasman atağı, 0 sakin. */
   momentum: number[];
+  /** Son oynanan dakikanın en önemli anı (2D saha); maç başlamadıysa ya da aradaysa null. */
+  lastPlay: MatchPlay | null;
   rngState: number;
 }
 

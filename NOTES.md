@@ -299,16 +299,22 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
         - Sonuç (4× yavaş CPU): Transfer Merkezi 835 → ~430 ms, maç sonu rapor 839 → ~480 ms, Devam ~150–190 ms.
           Canlı maç "Çok Hızlı" hedefi (25 dk/sn) 4× yavaşta da tutuyor. Kalan maliyet ilk açılan ekranda yazı tipi
           şekillendirme (layout ~45 ms, ikinci açılışta ~8 ms). Paket 541 KB (gzip 166 KB), bölmeye gerek görülmedi.
-  - [ ] Sıradaki: kullanıcının oynarken fark ettikleri.
+  - [x] 2D saha (maç ekranı orta sütun, "Gizle/Göster" localStorage 'fm.showPitch'). Motor koordinat tutmaz:
+        stepMatch her dakika `MatchState.lastPlay` yazar (side, kind: hold/foul/attack/corner/freekick/blocked/miss/
+        save/penalty/goal, playerId, fromPenalty) — öncelikli olan kalır (recordPlay), rng kullanmaz, sonucu etkilemez.
+        ui/pitch.ts (saf, testli): ballSpot (anın yeri; dakikaya bağlı sabit hash), shotOrigin, teamSpots (dizilişten,
+        topa göre blok çizgisi; ceza sahası yakınında doluşma; ızgara görünmesin diye küçük kayma), colorsClash
+        (renkler yakınsa deplasman ikinci rengini giyer). PitchView SVG; geçiş süresi maç hızına göre, < 100 ms ise kapalı
+        (SVG geçişleri ana iş parçacığında boyanır). "Çok Hızlı" 4× yavaş CPU'da 22 dk/sn (hedef 25).
+  - [ ] Sıradaki: FIKIRLER.md'den seçilecek.
 
 ## Açık konular / ileride
 - Elle gerçek kadro girişi (ör. `data/squads/<kulüpId>.json`) yok; kullanıcı "şimdilik gerek yok" dedi.
 - Duran top özellikleri (penaltı, korner) mevkiyle ilgisizse düşük çıkabiliyor — 10. aşamada denge.
 - Beraberlik %25.4 (hedef %27; Süper Lig gerçeği ~%25). Daha fazlası gol ortalamasını düşürüyor.
-- 2D saha görünümü: kullanıcı "henüz gerekmez" dedi.
 - Belki ileride (kullanıcı "sonra ekleriz belki" dedi): maç ortasında kayıt (liveMatch'i de yazmak).
 
 - Oyuncu "transfer listesine koyma" yok; yapay zekâ ilgisi kendiliğinden geliyor.
 
 ## Sıradaki adım
-10. aşama devam: kullanıcıya sıradaki cila maddesini sor (oynarken fark ettikleri ya da açık konulardan biri).
+10. aşama devam: kullanıcı FIKIRLER.md listesinden sıradaki maddeyi seçer (yapılanlar orada [x] işaretlenir).

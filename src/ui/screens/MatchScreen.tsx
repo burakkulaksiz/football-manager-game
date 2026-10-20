@@ -13,6 +13,7 @@ import { useGameStore, userSide, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { FormationPicker, InstructionsPanel } from '../components/InstructionsPanel';
 import { MatchStatRows } from '../components/MatchStatRows';
+import { PitchView } from '../components/PitchView';
 import { MENTALITY_LABELS, POSITION_LABELS, positionGroup, ratingClass } from '../labels';
 
 /** Dakika başına bekleme süresi (ms). */
@@ -111,6 +112,38 @@ function StatsPanel({ match }: { match: MatchState }) {
         home={{ ...match.home.counters, possession: possHome }}
         away={{ ...match.away.counters, possession: 100 - possHome }}
       />
+    </section>
+  );
+}
+
+const PITCH_PREF_KEY = 'fm.showPitch';
+
+/** Tercih tarayıcıda hatırlanır; depolama kapalıysa varsayılan açık. */
+function readPitchPref(): boolean {
+  try {
+    return localStorage.getItem(PITCH_PREF_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
+
+function PitchPanel({ match, durationMs }: { match: MatchState; durationMs: number }) {
+  const [show, setShow] = useState(readPitchPref);
+  const toggle = () => {
+    setShow(!show);
+    try {
+      localStorage.setItem(PITCH_PREF_KEY, show ? '0' : '1');
+    } catch {
+      // depolama kapalı: tercih yalnızca bu oturumda geçerli
+    }
+  };
+  return (
+    <section className="panel">
+      <h2 className="panel-title panel-title-row">
+        <span>Saha</span>
+        <button className="btn btn-small" onClick={toggle}>{show ? 'Gizle' : 'Göster'}</button>
+      </h2>
+      {show && <PitchView match={match} durationMs={durationMs} />}
     </section>
   );
 }
@@ -387,6 +420,7 @@ export function MatchScreen() {
       <div className="match-grid">
         <TeamPanel match={match} side="home" />
         <div className="match-center">
+          <PitchPanel match={match} durationMs={Math.min(650, SPEEDS[speed]!.ms * 0.85)} />
           <StatsPanel match={match} />
           <Commentary match={match} />
         </div>

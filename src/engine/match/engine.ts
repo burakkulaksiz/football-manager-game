@@ -33,6 +33,7 @@ import {
   type MatchState,
   type Mentality,
   type PlayerMatchState,
+  type PlayKind,
   type Side,
   type TeamState,
 } from './state';
@@ -299,6 +300,7 @@ export function createMatch(setup: MatchSetup, lookup: PlayerLookup): MatchState
     injuries: [],
     possessionTicks: { home: 0, away: 0 },
     momentum: [],
+    lastPlay: null,
     rngState: rng.getState(),
   };
 }
@@ -314,6 +316,18 @@ interface Ctx {
   rng: Rng;
   /** Bu dakikanın taktik etkileri (dakika dışı işlemlerde etkisiz). */
   effects: Record<Side, InstructionEffects>;
+}
+
+/** 2D saha için dakikanın anlarının önemi: aynı dakikada daha önemli olan gösterilir. */
+const PLAY_PRIORITY: Record<PlayKind, number> = {
+  hold: 0, foul: 1, attack: 2, corner: 3, freekick: 3, blocked: 4, miss: 4, save: 4, penalty: 5, goal: 6,
+};
+
+/** Dakikanın anını kaydeder (yalnızca gösterim; rng kullanmaz, sonucu etkilemez). */
+function recordPlay(ctx: Ctx, side: Side, kind: PlayKind, playerId: number | null = null, fromPenalty = false): void {
+  const current = ctx.state.lastPlay;
+  if (current && PLAY_PRIORITY[current.kind] > PLAY_PRIORITY[kind]) return;
+  ctx.state.lastPlay = fromPenalty ? { side, kind, playerId, fromPenalty } : { side, kind, playerId };
 }
 
 function makeCtx(state: MatchState, lookup: PlayerLookup): Ctx {
@@ -450,8 +464,10 @@ function resolveShot(ctx: Ctx, side: Side, shooterId: number, kind: GoalKind, th
   shooter.shots++;
   const name = nameOf(ctx, shooterId);
 
+  const penalty = kind === 'penalty';
   // Engellenen şut (penaltı ve serbest vuruş hariç)
   if (kind !== 'penalty' && kind !== 'freekick' && rng.chance(TUNING.blockChance)) {
+    recordPlay(ctx, side, 'blocked', shooterId);
     const blocker = pickOnPitch(ctx, oppSide, (ps, p) => SLOT_WEIGHTS[ps.slot!].def * (p.attributes.bravery + p.attributes.positioning));
     if (blocker !== null) {
       addRating(ctx, blocker, 0.15);
@@ -471,6 +487,7 @@ function resolveShot(ctx: Ctx, side: Side, shooterId: number, kind: GoalKind, th
   const pOnTarget = kind === 'penalty' ? 0.85
     : Math.max(0.1, Math.min(0.75, TUNING.onTargetBase * (0.5 + skill / 24) * KIND_ON_TARGET[kind] * quality));
   if (!rng.chance(pOnTarget)) {
+    recordPlay(ctx, side, penalty ? 'penalty' : 'miss', shooterId, penalty);
     addRating(ctx, shooterId, kind === 'penalty' ? -0.6 : -0.05);
     if (kind === 'penalty') emit(ctx, 'penaltyMiss', side, 'penaltyMiss', { player: name, keeper: keeperName });
     else emit(ctx, 'miss', side, kind === 'long' ? 'missLong' : kind === 'header' ? 'missHeader' : 'miss', { player: name });
@@ -485,9 +502,11 @@ function resolveShot(ctx: Ctx, side: Side, shooterId: number, kind: GoalKind, th
       TUNING.goalBase * (skill / Math.max(gk, 3)) ** TUNING.finishingExponent * KIND_GOAL[kind] * threat ** 0.3 * quality * conceded));
 
   if (rng.chance(pGoal)) {
+    recordPlay(ctx, side, 'goal', shooterId, penalty);
     scoreGoal(ctx, side, shooterId, kind);
     return;
   }
+  recordPlay(ctx, side, penalty ? 'penalty' : 'save', shooterId, penalty);
   addRating(ctx, shooterId, kind === 'penalty' ? -0.6 : 0.1);
   if (keeperId !== null) addRating(ctx, keeperId, kind === 'penalty' ? 0.8 : 0.3);
   if (kind === 'penalty') emit(ctx, 'penaltyMiss', side, 'penaltyMiss', { player: name, keeper: keeperName });
@@ -498,6 +517,7 @@ function resolveShot(ctx: Ctx, side: Side, shooterId: number, kind: GoalKind, th
 function awardCorner(ctx: Ctx, side: Side): void {
   const team = teamOf(ctx.state, side);
   team.counters.corners++;
+  recordPlay(ctx, side, 'corner');
   emit(ctx, 'corner', side, 'corner', { team: team.name });
   if (!ctx.rng.chance(TUNING.cornerShotChance)) return;
   const shooter = pickOnPitch(ctx, side, (ps, p) => {
@@ -522,6 +542,7 @@ function resolveAttack(ctx: Ctx, side: Side, units: Record<Side, Units>): void {
     TUNING.shotChance * threat ** TUNING.threatExponent *
       ctx.effects[side].shotChance * ctx.effects[oppSide].oppShotChance));
 
+  recordPlay(ctx, side, 'attack');
   if (!rng.chance(pShot)) {
     if (rng.chance(TUNING.cornerFromAttack)) {
       awardCorner(ctx, side);
@@ -583,6 +604,7 @@ function resolveFoul(ctx: Ctx, attackingSide: Side): void {
     (SLOT_WEIGHTS[ps.slot!].def + 0.3) * (p.attributes.aggression + 5));
   if (foulerId === null) return;
   team.counters.fouls++;
+  recordPlay(ctx, victimSide, 'foul');
   addRating(ctx, foulerId, -0.05);
   const fouler = state.players[foulerId]!;
   const aggression = lookup[foulerId]!.attributes.aggression;
@@ -621,6 +643,7 @@ function resolveFoul(ctx: Ctx, attackingSide: Side): void {
     } else if (rng.chance(0.12) && rng.chance(0.45)) {
       const taker = designatedTaker(ctx, victimSide, victims.freeKickTakerId, (p) => p.attributes.freeKicks);
       if (taker === null) return;
+      recordPlay(ctx, victimSide, 'freekick', taker);
       emit(ctx, 'freekick', victimSide, 'freekick', { player: nameOf(ctx, taker) });
       resolveShot(ctx, victimSide, taker, 'freekick', 1);
     }
@@ -776,6 +799,7 @@ function simulateMinute(ctx: Ctx): void {
   const pe = TUNING.possessionExponent;
   const side: Side = rng.chance(mh ** pe / (mh ** pe + ma ** pe)) ? 'home' : 'away';
   state.possessionTicks[side]++;
+  state.lastPlay = { side, kind: 'hold', playerId: null };
 
   const eventsBefore = state.events.length;
   let attacked = false;
@@ -841,9 +865,11 @@ export function stepMatch(state: MatchState, lookup: PlayerLookup): void {
     simulateMinute(ctx);
     if (state.period === 'first' && state.minute >= 45 + state.addedTime[0]) {
       state.period = 'half';
+      state.lastPlay = null;
       emit(ctx, 'halftime', null, 'halftime', vars());
     } else if (state.period === 'second' && state.minute >= 90 + state.addedTime[1]) {
       state.period = 'full';
+      state.lastPlay = null;
       finalizeRatings(ctx);
       emit(ctx, 'fulltime', null, 'fulltime', vars());
     }

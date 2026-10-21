@@ -121,6 +121,7 @@ export interface TeamState {
   /** Mentalite dahil takım talimatları (yapay zekâ takımında mentalite skora göre değişir). */
   instructions: TeamInstructions;
   captainId: number | null;
+  viceCaptainId: number | null;
   penaltyTakerId: number | null;
   freeKickTakerId: number | null;
   /** true: değişiklik ve taktiği kullanıcı yönetir (sakatlık değişikliği yine otomatik). */

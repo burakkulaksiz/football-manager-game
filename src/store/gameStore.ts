@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import {
   advance,
+  applyCaptainChange,
   changeTactics,
   clubPlayers,
   createWorld,
@@ -9,6 +10,7 @@ import {
   simulateToEnd,
   startUserMatch,
   stepMatch,
+  teamHierarchy,
   substitute,
   type FormationId,
   type GameWorld,
@@ -29,6 +31,7 @@ export type ScreenId =
   | 'tactics'
   | 'training'
   | 'academy'
+  | 'dynamics'
   | 'club'
   | 'finance'
   | 'transfers'
@@ -353,6 +356,12 @@ export const useGameStore = create<GameState>()((set, get) => {
       const current = world.tactics[clubId];
       if (!current) return;
       const next = fn(current, clubPlayers(world, clubId));
+      // Kaptan / yardımcı kaptan değiştiyse moral etkileri (hiyerarşi eski rollerle hesaplanır)
+      if (next.captainId !== current.captainId || next.viceCaptainId !== current.viceCaptainId) {
+        const before = teamHierarchy(world, clubId);
+        applyCaptainChange(world, 'captain', current.captainId, next.captainId, before);
+        applyCaptainChange(world, 'vice', current.viceCaptainId, next.viceCaptainId, before);
+      }
       touch({ ...world, tactics: { ...world.tactics, [clubId]: next } });
     },
 

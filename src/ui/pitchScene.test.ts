@@ -44,13 +44,15 @@ describe('2D saha sahnesi', () => {
   });
 
   it('gol sahnesi: asist yapan pası verir, golü atan şutu çeker, sonra top ağlarda', () => {
-    const goals = plays.filter((p) => p.play.kind === 'goal' && !p.play.fromPenalty && p.play.assistId != null);
+    // Akan oyundan asistli goller (kornerde ortayı kullanan oyuncu yapar, asist ayrı seçilebilir)
+    const goals = plays.filter((p) => p.play.kind === 'goal' && !p.play.fromPenalty && !p.play.fromCorner && p.play.assistId != null);
     expect(goals.length).toBeGreaterThan(0);
     for (const { minute, play, state } of goals) {
       const scene = buildScene(state, play, minute);
       const carriers = scene.map((f) => f.carrierId);
-      const shot = carriers.indexOf(play.playerId);
-      expect(shot).toBeGreaterThan(0);
+      // Şut, sonuç karesinden hemen önceki karede (golcü oyun kurulumunda da topla buluşmuş olabilir)
+      const shot = revealIndex(scene) - 1;
+      expect(carriers[shot]).toBe(play.playerId);
       expect(carriers[shot - 1]).toBe(play.assistId);
       expect(scene[revealIndex(scene)]!.move).toBe('shot');
     }

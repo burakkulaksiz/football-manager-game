@@ -100,6 +100,8 @@ export interface Player {
   lastTalk?: GameDate;
   /** Moral uzun süre düşükse başladığı gün (ayrılık talebi için). */
   unhappySince?: GameDate;
+  /** Kulübe katılış tarihi (hiyerarşide kulüpteki süre); oyun başından beri kulüpteyse yok. */
+  joined?: GameDate;
 }
 
 export type RequestTopic = 'playingTime' | 'contract' | 'transfer';

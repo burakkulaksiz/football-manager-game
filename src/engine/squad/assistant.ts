@@ -14,6 +14,7 @@ import { FORMATIONS, slotFit } from '../match/formation';
 import { ageOn, isAvailable, primaryPosition } from '../player';
 import type { GameWorld, Player, Position } from '../types';
 import { academyPlayers, isOverAge } from './academy';
+import { leadersMorale, teamHierarchy } from './hierarchy';
 import { PROMISE_MATCHES, promiseAtRisk } from './talks';
 
 export type AdviceSeverity = 'high' | 'medium' | 'low';
@@ -35,7 +36,9 @@ export type AdviceKind =
   | 'squadTooSmall'
   | 'wagesOver'
   | 'playerRequest'
-  | 'promiseAtRisk';
+  | 'promiseAtRisk'
+  | 'captainNotLeader'
+  | 'leadersUnhappy';
 
 export interface Advice {
   /** React anahtarı ve tekrarları ayıklamak için. */
@@ -204,6 +207,18 @@ export function assistantAdvice(world: GameWorld): Advice[] {
     if (byId.has(pr.playerId) && promiseAtRisk(pr)) {
       add({ kind: 'promiseAtRisk', severity: 'medium', playerIds: [pr.playerId], value: PROMISE_MATCHES - pr.matches });
     }
+  }
+
+  /* ---------------- Kaptanlık ve hiyerarşi ---------------- */
+  const hierarchy = teamHierarchy(world, user);
+  const captainEntry = hierarchy.find((e) => e.playerId === tactics?.captainId);
+  const topLeader = hierarchy.find((e) => e.level === 'leader' && e.playerId !== tactics?.captainId);
+  if (captainEntry && topLeader && (captainEntry.level === 'respected' || captainEntry.level === 'other')) {
+    add({ kind: 'captainNotLeader', severity: 'low', playerIds: [captainEntry.playerId, topLeader.playerId] });
+  }
+  const mood = leadersMorale(world, user);
+  if (mood !== null && mood <= 35) {
+    add({ kind: 'leadersUnhappy', severity: 'medium', playerIds: hierarchy.filter((e) => e.level === 'leader').map((e) => e.playerId) });
   }
 
   /* ---------------- Kadro ve maaş ---------------- */

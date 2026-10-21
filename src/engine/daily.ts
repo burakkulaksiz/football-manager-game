@@ -21,6 +21,7 @@ import { recoverCondition } from './squad/condition';
 import { weeklyDevelopment } from './squad/development';
 import { healInjuries, trainingInjuries } from './squad/injuries';
 import { moraleDrift } from './squad/morale';
+import { leadersInfluence } from './squad/hierarchy';
 import { expireRequests, playerRequests } from './squad/talks';
 import type { GameWorld } from './types';
 
@@ -73,5 +74,6 @@ export function processDay(world: GameWorld, rng: Rng, data: GameData): void {
   if (weekday(world.date) === 1) {
     weeklyDevelopment(world, rng);
     playerRequests(world);
+    leadersInfluence(world);
   }
 }

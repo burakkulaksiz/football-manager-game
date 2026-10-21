@@ -3,6 +3,7 @@ import { hasUnsavedProgress, useGameStore, type ScreenId } from '../../store/gam
 import { GameOverOverlay } from '../components/GameOverOverlay';
 import { AcademyScreen } from '../screens/AcademyScreen';
 import { ClubInfoScreen } from '../screens/ClubInfoScreen';
+import { DynamicsScreen } from '../screens/DynamicsScreen';
 import { FinanceScreen } from '../screens/FinanceScreen';
 import { FixturesScreen } from '../screens/FixturesScreen';
 import { InboxScreen } from '../screens/InboxScreen';
@@ -35,6 +36,7 @@ function ScreenContent({ screen }: { screen: ScreenId }) {
     case 'tactics': return <TacticsScreen />;
     case 'training': return <TrainingScreen />;
     case 'academy': return <AcademyScreen />;
+    case 'dynamics': return <DynamicsScreen />;
     case 'transfers': return <TransferScreen />;
     case 'finance': return <FinanceScreen />;
     default: return <PlaceholderScreen screen={screen} />;

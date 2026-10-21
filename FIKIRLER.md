@@ -35,7 +35,7 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
 - [x] Altyapı ekranı ve genç oyuncu takibi (ayrı U19 takımı, gelişim grafikleri, ligdeki gençler + takip listesi)
 - [x] Yardımcı antrenör tavsiyeleri ("şu mevkide eksiğin var")
 - [x] Oyuncu görüşmeleri (moral, şikâyet, kontrat isteği; ayrılık talebi, forma sözü takibi)
-- [ ] Kaptanlık ve takım içi hiyerarşi
+- [x] Kaptanlık ve takım içi hiyerarşi (yardımcı kaptan, Takım Dinamikleri ekranı)
 - [ ] Oyuncu geçmişi (sezon sezon maç/gol, eski kulüpler)
 
 ## Transfer

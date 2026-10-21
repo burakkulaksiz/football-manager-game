@@ -66,6 +66,16 @@ function describe(a: Advice, name: (id: number) => ReactNode): AdviceView {
         text: <>{name(a.playerIds[0]!)} için verdiğin forma sözü tehlikede: kalan {a.value} maçın hepsinde ilk 11'de başlamalı.</>,
         action: tactics,
       };
+    case 'captainNotLeader':
+      return {
+        text: <>Kaptanın {name(a.playerIds[0]!)} takımın liderlerinden değil; soyunma odası {name(a.playerIds[1]!)} gibi bir lideri dinliyor.</>,
+        action: { label: 'Takım Dinamikleri', screen: 'dynamics' },
+      };
+    case 'leadersUnhappy':
+      return {
+        text: <>Takımın liderleri mutsuz ({names(a.playerIds)}); havaları takıma yayılıyor.</>,
+        action: { label: 'Takım Dinamikleri', screen: 'dynamics' },
+      };
     case 'wagesOver':
       return { text: <>Maaş bütçesi aşıldı (kullanım %{a.value}); yönetim harcamalara dikkat edilmesini ister.</>, action: { label: 'Finans', screen: 'finance' } };
   }

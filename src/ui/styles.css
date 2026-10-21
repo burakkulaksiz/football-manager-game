@@ -3359,3 +3359,44 @@ select {
 .talk-request .talk-buttons {
   margin-top: 8px;
 }
+
+/* ================= Takım dinamikleri ================= */
+.level-badge {
+  display: inline-block;
+  min-width: 96px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.level-leader { background: rgba(246, 207, 60, 0.35); color: #fff2c2; }
+.level-influential { background: rgba(47, 116, 208, 0.4); color: #dbe8ff; }
+.level-respected { background: rgba(23, 160, 106, 0.35); color: #d4f7e6; }
+.level-other { background: rgba(255, 255, 255, 0.1); color: var(--text-muted); }
+
+.data-table tr.row-leader td {
+  background: rgba(246, 207, 60, 0.06);
+}
+
+.influence-bar {
+  display: inline-block;
+  width: 120px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.influence-bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.tag-role {
+  background: var(--accent);
+  color: var(--accent-ink);
+}

@@ -43,6 +43,8 @@ export interface Tactics {
   lineup: (number | null)[];
   bench: number[];
   captainId: number | null;
+  /** Kaptan sahada değilse liderlik etkisini yardımcı kaptan verir. */
+  viceCaptainId: number | null;
   penaltyTakerId: number | null;
   freeKickTakerId: number | null;
   instructions: TeamInstructions;
@@ -166,13 +168,16 @@ export function defaultTactics(squad: readonly Player[], formation: FormationId 
   const lineup = assignToFormation(available, FORMATIONS[formation]);
   const xi = lineup.filter((id): id is number => id !== null);
   const xiPlayers = available.filter((p) => xi.includes(p.id));
-  const best = (score: (p: Player) => number) =>
-    [...xiPlayers].filter((p) => p.positions.GK === undefined).sort((a, b) => score(b) - score(a))[0]?.id ?? null;
+  const ranked = (score: (p: Player) => number) =>
+    [...xiPlayers].filter((p) => p.positions.GK === undefined).sort((a, b) => score(b) - score(a));
+  const best = (score: (p: Player) => number) => ranked(score)[0]?.id ?? null;
+  const secondBest = (score: (p: Player) => number) => ranked(score)[1]?.id ?? null;
   return {
     formation,
     lineup,
     bench: autoBench(available, new Set(xi)),
     captainId: best((p) => p.attributes.leadership * 2 + p.currentAbility / 20),
+    viceCaptainId: secondBest((p) => p.attributes.leadership * 2 + p.currentAbility / 20),
     penaltyTakerId: best((p) => p.attributes.penaltyTaking),
     freeKickTakerId: best((p) => p.attributes.freeKicks),
     instructions: { ...DEFAULT_INSTRUCTIONS },

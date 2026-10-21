@@ -54,11 +54,12 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
                        gelen tekliflere yanıt, günlük teklif işleme (processOffers).
   transfer/ai.ts       Yapay zekâ alımları ve kullanıcıya teklifler (aiTransferDay).
   transfer/listing.ts  Transfer / kiralık listesi: listPlayer, unlistPlayer, listedOffersDay, refreshAiListings.
-  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 8; migrateWorld GameData de alır).
+  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 9; migrateWorld GameData de alır).
   squad/training.ts    Antrenman odağı/yoğunluğu ve etkileri (INTENSITY_EFFECTS, FOCUS_ATTRS).
   squad/injuries.ts    Sakatlık türleri, maç/antrenman sakatlığı, günlük iyileşme.
   squad/discipline.ts  Kart cezaları (maç sonrası).
   squad/morale.ts      Maç sonrası moral, günlük ortalamaya dönüş.
+  squad/hierarchy.ts   Takım hiyerarşisi (etki, seviyeler), kaptan değişikliği etkileri, liderlerin havası.
   squad/talks.ts       Oyuncu görüşmeleri: talepler (playerRequests), yanıtlar, menajer görüşmeleri, forma sözü takibi.
   squad/development.ts Haftalık gelişim/gerileme (pazartesi).
   squad/condition.ts   Günlük kondisyon toparlanması.
@@ -157,7 +158,7 @@ Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
 - **Kayıt** (IndexedDB, Dexie şema sürümü 2): `saves` = SaveSlot `{ id, name, careerId, clubId, clubName,
   gameDate, season, isAutosave, createdAt, updatedAt, formatVersion, managerName? }`; `saveData` = `{ id, world: GameWorld }`
   (aynı id). GameWorld olduğu gibi yazılır (düz veri), kayıt anında `structuredClone` ile kopyalanır.
-  `SAVE_FORMAT_VERSION = CURRENT_WORLD_VERSION` (şu an 8). GameWorld yapısı değişince sürümü artır ve
+  `SAVE_FORMAT_VERSION = CURRENT_WORLD_VERSION` (şu an 9). GameWorld yapısı değişince sürümü artır ve
   `engine/migrate.ts`'e dönüşüm ekle; `loadGame` eski kayıtları otomatik dönüştürür, daha yeni sürümü reddeder.
   Sezon sonu kaydı ~1.7 MB (+ haberler/teklifler).
 - **careerId** = `${seed}-${playerClubId}`. Otomatik kayıt kariyer başına tek slot; elle kayıt sınırsız.
@@ -428,3 +429,19 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
 - Forma sözü (trackPromises, maç sonrası): oynayabildiği 5 maçın ≥ 3'ünde ilk 11 → +8; değilse −20 ve mutsuz sayılır.
   Sakat/cezalıyken oynanan maç sayılmaz. Yardımcı antrenör: bekleyen talep (acil), tehlikedeki söz (önemli).
 - Arayüz: profilde Görüşme paneli (TalkPanel), kadroda "Görüşmek istiyor" etiketi. Biçim 8: requests, promises.
+
+## Kaptanlık ve hiyerarşi
+- Etki = liderlik ×1.5 + tecrübe (18 yaş sonrası yıllar, en fazla 14) ×0.8 + kadrodaki önem (yetenekte ilk 12) ×0.8 +
+  kulüpte süre (en fazla 6 yıl) ×1.2 + kaptan 6 / yardımcı kaptan 3. Sıralama: ilk 2 takım lideri, 3 etkili, 5 saygın.
+- Kulüpte süre: Player.joined (transfer / altyapıya katılış); oyun başından beri kulüpte olanlar oyuncuya göre sabit
+  1–6 yıl (17 yaşından önceye gitmez) + oyun başından beri geçen süre (oyun başı = world.manager.joined).
+- Tactics.viceCaptainId (biçim 9). Maçta kaptan sahada değilse yardımcı kaptanın liderliği (±%3); kaptan / yardımcı
+  boşsa (otomatik, yapay zekâ dahil) ilk 11'in en yüksek liderlikli iki oyuncusu.
+- Kaptan değişikliği (store.updateTactics → applyCaptainChange): eski kaptan −6 (lider/etkiliyse −12) ve haber; yeni
+  kaptan +8; liderler varken saygın / diğer seviyesinden kaptan → her lider −4. Yardımcı kaptanda yarısı.
+  Taktik ekranındaki "En iyi 11" kaptanları korur.
+- Haftalık leadersInfluence: liderlerin moral ortalaması ≥ 70 → diğerleri +1; ≤ 35 → −2.
+- Yardımcı antrenör: kaptan lider değil (öneri), liderler mutsuz (önemli). Arayüz: Takım Dinamikleri ekranı
+  (kaptan / yardımcı seçimi, takımın havası, hiyerarşi tablosu); Taktik ekranında yardımcı kaptan seçimi.
+- Not: kaptan değişikliği gol dağılımını değiştirmedi (40 sezon: gol kralı ort. 25.8, önce 25.6); istatistik testi
+  15 sezonda en fazla bir 38+ uç sezona izin verir.

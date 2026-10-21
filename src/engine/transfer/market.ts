@@ -171,6 +171,7 @@ export function transferPlayer(world: GameWorld, player: Player, buyerId: string
 
   player.clubId = buyerId;
   player.loan = null;
+  player.joined = world.date;
   // Alan kulübün A takımına katılır (altyapıdan alınsa da); eski kulübün listesi düşer
   delete player.academy;
   delete player.listing;

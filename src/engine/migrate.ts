@@ -2,7 +2,7 @@
  * Eski kayıtları güncel GameWorld biçimine dönüştürür.
  * Biçim sürümü: 1 = aşama 6 (finans/transfer yok), 2 = aşama 7, 3 = aşama 8 (ceza, gelişim, antrenman),
  * 4 = aşama 9 (1. Lig, yönetim, sezon arşivi), 5 = menajer kartı, 6 = altyapı (U19) ve gelişim geçmişi,
- * 7 = transfer / kiralık listesi, 8 = oyuncu görüşmeleri.
+ * 7 = transfer / kiralık listesi, 8 = oyuncu görüşmeleri, 9 = yardımcı kaptan.
  */
 import type { GameData } from './data';
 import { initFinance, initFinances, payMonthly } from './finance/finance';
@@ -15,7 +15,7 @@ import { initialBoard } from './season/expectation';
 import { DEFAULT_TRAINING } from './squad/training';
 import type { GameWorld } from './types';
 
-export const CURRENT_WORLD_VERSION = 8;
+export const CURRENT_WORLD_VERSION = 9;
 
 /** `raw` eski biçimdeki dünya; dönüştürülmüş dünya döner (yerinde değiştirir). */
 export function migrateWorld(raw: unknown, fromVersion: number, data: GameData): GameWorld {
@@ -95,6 +95,9 @@ export function migrateWorld(raw: unknown, fromVersion: number, data: GameData):
     world.requests ??= [];
     world.nextRequestId ??= 1;
     world.promises ??= [];
+  }
+  if (fromVersion < 9) {
+    for (const t of Object.values(world.tactics)) t.viceCaptainId ??= null;
   }
   return world;
 }

@@ -152,10 +152,10 @@ const ATTACKING_SLOTS: ReadonlySet<Position> = new Set(['AMR', 'AMC', 'AML', 'ST
 
 const average = (xs: number[], fallback: number) => (xs.length === 0 ? fallback : xs.reduce((a, b) => a + b, 0) / xs.length);
 
-/** Kaptan sahadaysa liderliğine göre takıma küçük bir çarpan (±%3). */
+/** Kaptan (sahada değilse yardımcı kaptan) liderliğine göre takıma küçük bir çarpan (±%3). */
 function captainBonus(team: TeamState, lookup: PlayerLookup): number {
-  const id = team.captainId;
-  if (id === null || !team.onPitch.includes(id)) return 1;
+  const id = [team.captainId, team.viceCaptainId].find((x) => x !== null && team.onPitch.includes(x));
+  if (id === undefined || id === null) return 1;
   return 1 + (lookup[id]!.attributes.leadership - 10) * 0.003;
 }
 
@@ -221,7 +221,9 @@ export interface TeamSetup {
   userControlled?: boolean;
   formation?: FormationId;
   instructions?: TeamInstructions;
+  /** Boşsa (otomatik) ilk 11'in en yüksek liderlikli oyuncusu; yardımcı kaptan ikincisi. */
   captainId?: number | null;
+  viceCaptainId?: number | null;
   penaltyTakerId?: number | null;
   freeKickTakerId?: number | null;
 }
@@ -257,6 +259,11 @@ function newPlayerState(rng: Rng, p: Player, side: Side, slot: Position | null):
 }
 
 function newTeam(rng: Rng, setup: TeamSetup, side: Side, lookup: PlayerLookup, players: MatchState['players']): TeamState {
+  // Otomatik kaptan / yardımcı kaptan: ilk 11'in en yüksek liderlikli iki oyuncusu
+  const autoLeaders = setup.lineup.starters
+    .map((s) => s.playerId)
+    .sort((a, b) => lookup[b]!.attributes.leadership - lookup[a]!.attributes.leadership);
+  const captainId = setup.captainId ?? autoLeaders[0] ?? null;
   for (const { playerId, slot } of setup.lineup.starters) {
     players[playerId] = newPlayerState(rng, lookup[playerId]!, side, slot);
   }
@@ -271,7 +278,8 @@ function newTeam(rng: Rng, setup: TeamSetup, side: Side, lookup: PlayerLookup, p
     subsUsed: 0,
     formation,
     instructions: { ...(setup.instructions ?? DEFAULT_INSTRUCTIONS) },
-    captainId: setup.captainId ?? null,
+    captainId,
+    viceCaptainId: setup.viceCaptainId ?? autoLeaders.find((id) => id !== captainId) ?? null,
     penaltyTakerId: setup.penaltyTakerId ?? null,
     freeKickTakerId: setup.freeKickTakerId ?? null,
     userControlled: setup.userControlled ?? false,

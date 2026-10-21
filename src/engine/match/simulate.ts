@@ -30,6 +30,7 @@ function teamSetup(world: GameWorld, clubId: string): TeamSetup {
       formation: tactics.formation,
       instructions: tactics.instructions,
       captainId: tactics.captainId,
+      viceCaptainId: tactics.viceCaptainId,
       penaltyTakerId: tactics.penaltyTakerId,
       freeKickTakerId: tactics.freeKickTakerId,
     };

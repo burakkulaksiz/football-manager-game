@@ -125,6 +125,7 @@ export function academyIntake(world: GameWorld, rng: Rng, data: GameData): void 
       const youth = generateYouthPlayer(rng, data, club, world.date, world.nextPlayerId++, [15, 16]);
       youth.academy = true;
       youth.squadNumber = null;
+      youth.joined = world.date;
       world.players[youth.id] = youth;
       intake.push(youth);
     }

@@ -117,7 +117,7 @@ export function TacticsScreen() {
     const p = id === null ? undefined : byId.get(id);
     return p ? [p] : [];
   });
-  const roleSelect = (label: string, key: 'captainId' | 'penaltyTakerId' | 'freeKickTakerId') => {
+  const roleSelect = (label: string, key: 'captainId' | 'viceCaptainId' | 'penaltyTakerId' | 'freeKickTakerId') => {
     const chosenId = tactics[key];
     // Seçili oyuncu ilk 11'den çıktıysa listede yine görünsün, durumu yazsın.
     const chosenOutside = chosenId !== null && !tactics.lineup.includes(chosenId) ? byId.get(chosenId) : undefined;
@@ -157,7 +157,13 @@ export function TacticsScreen() {
               className="btn"
               title="Bu diziliş için en iyi 11'i ve yedekleri seçer; talimatlar korunur"
               onClick={() => {
-                updateTactics((t, sq) => ({ ...defaultTactics(sq, t.formation), instructions: t.instructions }));
+                // Talimatlar ve kaptanlar korunur (kaptanlığı otomatik seçim yüzünden değiştirmek oyuncuları kırar)
+                updateTactics((t, sq) => ({
+                  ...defaultTactics(sq, t.formation),
+                  instructions: t.instructions,
+                  captainId: t.captainId,
+                  viceCaptainId: t.viceCaptainId,
+                }));
                 setSelection(null);
               }}
             >
@@ -330,9 +336,13 @@ export function TacticsScreen() {
             <h2 className="panel-title">Kaptan ve Duran Toplar</h2>
             <div className="panel-body">
               {roleSelect('Kaptan', 'captainId')}
+              {roleSelect('Yardımcı Kaptan', 'viceCaptainId')}
               {roleSelect('Penaltıcı', 'penaltyTakerId')}
               {roleSelect('Serbest Vuruşçu', 'freeKickTakerId')}
-              <div className="panel-note">Seçilen oyuncu sahada değilse en iyi vurucu kullanır. Kaptanın liderliği takımı biraz etkiler.</div>
+              <div className="panel-note">
+                Seçilen oyuncu sahada değilse en iyi vurucu kullanır. Kaptanın (sahada değilse yardımcı kaptanın) liderliği takımı
+                biraz etkiler. Kaptan değişikliği oyuncuların moralini etkiler; hiyerarşiyi Takım Dinamikleri ekranında görebilirsin.
+              </div>
             </div>
           </section>
           <section className="panel">

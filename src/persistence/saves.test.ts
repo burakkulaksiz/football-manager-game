@@ -158,6 +158,17 @@ describe('kayıt sistemi', () => {
     expect(loaded.promises).toEqual([]);
   });
 
+  it('yardımcı kaptansız (biçim 8) kayıt dönüştürülür', async () => {
+    const world = createWorld(gameData, 15, 'kasimpasa', START);
+    const old = structuredClone(world);
+    for (const t of Object.values(old.tactics)) delete (t as { viceCaptainId?: number | null }).viceCaptainId;
+    const id = await saveGame(world, 'Biçim 8');
+    await db.saveData.put({ id, world: old });
+    await db.saves.update(id, { formatVersion: 8 });
+    const loaded = await loadGame(id);
+    expect(loaded.tactics.kasimpasa!.viceCaptainId).toBeNull();
+  });
+
   it('yüklenen oyun, hiç kaydedilmemiş gibi aynı sonuçlarla devam eder', async () => {
     const original = createWorld(gameData, 8, 'samsunspor', START);
     playRounds(original, 3);

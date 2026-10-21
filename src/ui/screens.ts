@@ -18,6 +18,7 @@ export const MENU: MenuGroup[] = [
     items: [
       { id: 'inbox', label: 'Gelen Kutusu', stage: 9 },
       { id: 'squad', label: 'Kadro', stage: 2 },
+      { id: 'dynamics', label: 'Takım Dinamikleri', stage: 10 },
       { id: 'tactics', label: 'Taktik', stage: 5 },
       { id: 'training', label: 'Antrenman', stage: 8 },
       { id: 'academy', label: 'Altyapı', stage: 10 },

@@ -3400,3 +3400,9 @@ select {
   background: var(--accent);
   color: var(--accent-ink);
 }
+
+/* ================= Kariyer ================= */
+.data-table tr.total-row td {
+  border-top: 2px solid rgba(255, 255, 255, 0.18);
+  font-weight: 700;
+}

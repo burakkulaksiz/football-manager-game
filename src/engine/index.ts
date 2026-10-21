@@ -36,6 +36,7 @@ export * from './squad/academy';
 export * from './squad/assistant';
 export * from './squad/talks';
 export * from './squad/hierarchy';
+export * from './squad/career';
 export * from './season/expectation';
 export * from './season/board';
 export * from './season/seasonEnd';

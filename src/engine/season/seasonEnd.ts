@@ -11,6 +11,7 @@ import { addNews } from '../news';
 import { ageOn, primaryPosition } from '../player';
 import type { Rng } from '../rng';
 import type { GameWorld, SeasonAward, SeasonSummary } from '../types';
+import { recordSeasonCareers } from '../squad/career';
 import { sack } from './board';
 import { divisionOf } from './expectation';
 
@@ -111,6 +112,7 @@ export function endSeason(world: GameWorld, rng: Rng): SeasonSummary {
     awards: seasonAwards(world),
   };
   world.history.push(summary);
+  recordSeasonCareers(world);
   world.seasonState = 'ended';
 
   const champion = getClub(world, summary.championId).name;

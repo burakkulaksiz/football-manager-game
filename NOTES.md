@@ -59,6 +59,7 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
   squad/injuries.ts    Sakatlık türleri, maç/antrenman sakatlığı, günlük iyileşme.
   squad/discipline.ts  Kart cezaları (maç sonrası).
   squad/morale.ts      Maç sonrası moral, günlük ortalamaya dönüş.
+  squad/career.ts      Oyuncu kariyeri: sezon satırları (kulüp başına), kulüp hareketleri, toplamlar.
   squad/hierarchy.ts   Takım hiyerarşisi (etki, seviyeler), kaptan değişikliği etkileri, liderlerin havası.
   squad/talks.ts       Oyuncu görüşmeleri: talepler (playerRequests), yanıtlar, menajer görüşmeleri, forma sözü takibi.
   squad/development.ts Haftalık gelişim/gerileme (pazartesi).
@@ -445,3 +446,13 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
   (kaptan / yardımcı seçimi, takımın havası, hiyerarşi tablosu); Taktik ekranında yardımcı kaptan seçimi.
 - Not: kaptan değişikliği gol dağılımını değiştirmedi (40 sezon: gol kralı ort. 25.8, önce 25.6); istatistik testi
   15 sezonda en fazla bir 38+ uç sezona izin verir.
+
+## Oyuncu geçmişi
+- Player.career: sezon sonu (endSeason → recordSeasonCareers) her oyuncunun o sezon forma giydiği her kulüp için bir
+  satır (maç, ilk 11, gol, asist, MA, kartlar, ort. puan; kiralıksa loan). Bu sezon canlı (currentSeasonRows).
+  seasonStatsByClub fikstürü tek geçişte toplar. Oyun başından önceki kariyer yok (kurgusal dünya).
+- Player.moves (en fazla 30): transfer (bedel) / serbest imza / kiralık (bedel) / kiralık dönüşü / serbest bırakılma /
+  U19'dan A takıma — market.ts (transferPlayer, loanPlayer, returnLoans, releasePlayer) ve promoteToFirstTeam yazar.
+- Profil: "İstatistikler" yerine tam genişlikte "Kariyer" (sezonlar + toplam) ve "Kulüp Geçmişi" paneli; kulüp adına
+  tıklayınca o kulübün kadrosu. Biçim değişmedi (alanlar isteğe bağlı). Kayıt sezon başına ~50 KB büyür.
+- Not: git stash / checkout core.autocrlf=true ile dosyaları CRLF yazabiliyor; düzenleme betikleri LF bekler.

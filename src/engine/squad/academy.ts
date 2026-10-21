@@ -16,6 +16,7 @@ import { ageOn } from '../player';
 import type { Rng } from '../rng';
 import type { GameWorld, Player } from '../types';
 import { cancelOffersFor, contractExpiry, freeSquadNumber } from '../transfer/market';
+import { recordMove } from './career';
 
 /** Bu yaşa giren oyuncu U19'da kalamaz (yaş sınırı). */
 export const ACADEMY_AGE_LIMIT = 19;
@@ -40,6 +41,7 @@ export function isOverAge(p: Player, date: string): boolean {
 export function promoteToFirstTeam(world: GameWorld, p: Player): boolean {
   if (!p.clubId || !p.academy) return false;
   delete p.academy;
+  recordMove(p, { date: world.date, kind: 'promoted', fromClubId: p.clubId, toClubId: p.clubId, fee: 0 });
   p.squadNumber = freeSquadNumber(world, p, p.clubId);
   return true;
 }

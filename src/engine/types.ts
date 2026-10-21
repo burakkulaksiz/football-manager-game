@@ -1,5 +1,6 @@
 import type { Attributes, HiddenAttributes } from './attributes';
 import type { GameDate } from './date';
+import type { CareerMove, CareerSeason } from './squad/career';
 import type { Tactics } from './match/tactics';
 
 export type Position =
@@ -102,6 +103,9 @@ export interface Player {
   unhappySince?: GameDate;
   /** Kulübe katılış tarihi (hiyerarşide kulüpteki süre); oyun başından beri kulüpteyse yok. */
   joined?: GameDate;
+  /** Kariyer: geçmiş sezonlar (kulüp başına) ve kulüp hareketleri (oyun başından itibaren). */
+  career?: CareerSeason[];
+  moves?: CareerMove[];
 }
 
 export type RequestTopic = 'playingTime' | 'contract' | 'transfer';

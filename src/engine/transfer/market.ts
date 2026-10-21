@@ -6,6 +6,7 @@ import { addExpense, addIncome, SALE_TO_BUDGET } from '../finance/finance';
 import { clubPlayers, getClub } from '../generation/worldGenerator';
 import { removePlayer } from '../match/tactics';
 import { addNews } from '../news';
+import { recordMove } from '../squad/career';
 import { ageOn, baseWage, marketValue, primaryPosition, roundNice } from '../player';
 import type { GameWorld, Player, Position } from '../types';
 
@@ -169,6 +170,7 @@ export function transferPlayer(world: GameWorld, player: Player, buyerId: string
     detachFromClub(world, player, sellerId);
   }
 
+  recordMove(player, { date: world.date, kind: sellerId ? 'transfer' : 'free', fromClubId: sellerId, toClubId: buyerId, fee });
   player.clubId = buyerId;
   player.loan = null;
   player.joined = world.date;
@@ -202,6 +204,7 @@ export function loanPlayer(world: GameWorld, player: Player, toClubId: string, f
   addIncome(world.finances[fromClubId]!, 'transfersIn', fee);
   detachFromClub(world, player, fromClubId);
 
+  recordMove(player, { date: world.date, kind: 'loan', fromClubId, toClubId, fee });
   player.clubId = toClubId;
   delete player.academy;
   delete player.listing;
@@ -228,6 +231,7 @@ export function returnLoans(world: GameWorld): void {
     const borrower = player.clubId!;
     const owner = player.loan.fromClubId;
     detachFromClub(world, player, borrower);
+    recordMove(player, { date: world.date, kind: 'loanEnd', fromClubId: borrower, toClubId: owner, fee: 0 });
     player.clubId = owner;
     player.loan = null;
     player.squadNumber = freeSquadNumber(world, player, owner);
@@ -275,7 +279,10 @@ export function formatPlain(amount: number): string {
 
 /** Oyuncuyu serbest bırakır (sözleşme bitti / kadro fazlası). */
 export function releasePlayer(world: GameWorld, player: Player): void {
-  if (player.clubId) detachFromClub(world, player, player.clubId);
+  if (player.clubId) {
+    recordMove(player, { date: world.date, kind: 'release', fromClubId: player.clubId, toClubId: null, fee: 0 });
+    detachFromClub(world, player, player.clubId);
+  }
   cancelOffersFor(world, player.id);
   player.clubId = null;
   player.squadNumber = null;

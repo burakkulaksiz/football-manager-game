@@ -36,7 +36,7 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
 - [x] Yardımcı antrenör tavsiyeleri ("şu mevkide eksiğin var")
 - [x] Oyuncu görüşmeleri (moral, şikâyet, kontrat isteği; ayrılık talebi, forma sözü takibi)
 - [x] Kaptanlık ve takım içi hiyerarşi (yardımcı kaptan, Takım Dinamikleri ekranı)
-- [ ] Oyuncu geçmişi (sezon sezon maç/gol, eski kulüpler)
+- [x] Oyuncu geçmişi (sezon sezon maç/gol, eski kulüpler)
 
 ## Transfer
 - [ ] Gözlemci sistemi (bilinmeyen oyuncuların özellikleri gizli, gözlemciyle açılır)

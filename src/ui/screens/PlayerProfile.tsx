@@ -240,7 +240,7 @@ export function PlayerProfile() {
                 <PositionBoxes player={player} />
               </div>
             </div>
-            <Row label="Kulüp">{club ? `${club.name}${player.academy ? ' · U19' : ''}` : 'Serbest'}</Row>
+            <Row label="Kulüp">{club ? `${club.name}${player.academy ? ' · U19' : ''}${club.country ? ` (${nationName(club.country)})` : ''}` : 'Serbest'}</Row>
             <Row label="Tercih Ettiği Ayak">{FOOT_LABELS[player.foot]}</Row>
             <Row label="Piyasa Değeri">{formatMoney(marketValue(player, world.date))}</Row>
             <Row label="Maaş">{formatMoney(player.contract.wage)} / yıl</Row>

@@ -25,7 +25,7 @@ export interface Club {
   city: string;
   stadium: string;
   capacity: number;
-  /** 1–100; kadro gücünü, maaşları ve ileride transfer çekiciliğini belirler. */
+  /** 1–100 (yurtdışı devlerinde 130'a kadar); kadro gücünü, maaşları ve transfer çekiciliğini belirler. */
   reputation: number;
   /** Transfer bütçesi (€). */
   budget: number;
@@ -33,8 +33,10 @@ export interface Club {
   wageBudget: number;
   fanExpectation: FanExpectation;
   colors: { primary: string; secondary: string };
-  /** 1 = Süper Lig, 2 = (kurgusal) 1. Lig. JSON'da yoksa 1 sayılır. */
+  /** 1 = Süper Lig, 2 = (kurgusal) 1. Lig. JSON'da yoksa 1 sayılır. Yurtdışı kulübünde anlamsız. */
   division?: 1 | 2;
+  /** Yurtdışı kulübü: ülke kodu (nations.json). Yoksa Türkiye. Yurtdışı kulüpleri maç oynamaz. */
+  country?: string;
 }
 
 export interface Contract {

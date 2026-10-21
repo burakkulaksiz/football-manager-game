@@ -12,6 +12,7 @@ import { recordGrowth } from '../squad/growth';
 import { refreshAiListings } from '../transfer/listing';
 import { emptyScouting } from '../transfer/scouting';
 import { DEFAULT_TRAINING } from '../squad/training';
+import { addForeignClubs, FOREIGN_SEED_SALT } from './foreign';
 
 /** Altyapı üretiminin ayrı rng'si için tohum tuzu. */
 export const ACADEMY_SEED_SALT = 0xa11ce5;
@@ -74,10 +75,17 @@ function homeChance(role: Role, reputation: number): number {
   return 0.65 - (reputation / 100) * 0.25;
 }
 
-function pickNationality(rng: Rng, data: GameData, role: Role, reputation: number): string {
-  if (rng.chance(homeChance(role, reputation))) return HOME_NATION;
-  const foreign = data.nations.filter((n) => n.code !== HOME_NATION && n.weight > 0);
-  return foreign[rng.weightedIndex(foreign.map((n) => n.weight))]!.code;
+function pickNationality(rng: Rng, data: GameData, role: Role, reputation: number, country?: string): string {
+  if (country === undefined) {
+    if (rng.chance(homeChance(role, reputation))) return HOME_NATION;
+    const foreign = data.nations.filter((n) => n.code !== HOME_NATION && n.weight > 0);
+    return foreign[rng.weightedIndex(foreign.map((n) => n.weight))]!.code;
+  }
+  // Yurtdışı kulübü: büyükleri daha çok yabancı oynatır. Yabancılar her ülkeden (Türkler az).
+  const home = role === 'youth' ? 0.85 : role === 'backup' ? 0.6 : Math.max(0.3, 0.55 - (reputation - 90) / 100);
+  if (rng.chance(home)) return country;
+  const pool = data.nations.filter((n) => n.code !== country);
+  return pool[rng.weightedIndex(pool.map((n) => (n.code === HOME_NATION ? 1 : n.weight || 3)))]!.code;
 }
 
 function assignSquadNumbers(squad: { player: Player; role: Role; position: Position }[]): void {
@@ -166,6 +174,7 @@ export function createWorld(
     scouting: emptyScouting(),
   };
   fillAcademies(world, data, new Rng((seed ^ ACADEMY_SEED_SALT) >>> 0));
+  addForeignClubs(world, data, new Rng((seed ^ FOREIGN_SEED_SALT) >>> 0));
   recordGrowth(world);
   refreshAiListings(world);
   addNews(world, {
@@ -190,7 +199,7 @@ export function generateClubSquad(rng: Rng, data: GameData, club: Club, date: Ga
       position,
       level: levelForRole(rng, base, role),
       age: ageForRole(rng, role),
-      nationality: pickNationality(rng, data, role, club.reputation),
+      nationality: pickNationality(rng, data, role, club.reputation, club.country),
       clubId: club.id,
       wageFactor,
       extraPotential: role === 'youth' ? rng.int(5, 30) : 0,
@@ -220,7 +229,7 @@ export function generateYouthPlayer(
     position,
     level: clubBaseLevel(club.reputation) - 4.5 + rng.normal(0, 1),
     age: rng.int(ages[0], ages[1]),
-    nationality: pickNationality(rng, data, 'youth', club.reputation),
+    nationality: pickNationality(rng, data, 'youth', club.reputation, club.country),
     clubId: club.id,
     wageFactor: 0.6 + club.reputation / 100,
     // Gençlerin çoğu sıradan; arada bir gerçek cevher çıkar (yaşa bağlı büyüme payı zaten generatePotential'da)
@@ -249,6 +258,7 @@ export const INITIAL_ACADEMY_SIZE: readonly [number, number] = [7, 9];
  */
 export function fillAcademies(world: GameWorld, data: GameData, rng: Rng): void {
   for (const club of world.clubs) {
+    if (club.country !== undefined) continue; // yurtdışı kulüplerinin U19'u yok
     const count = rng.int(INITIAL_ACADEMY_SIZE[0], INITIAL_ACADEMY_SIZE[1]);
     for (let i = 0; i < count; i++) {
       const youth = generateYouthPlayer(rng, data, club, world.date, world.nextPlayerId++, [15, 18]);
@@ -259,8 +269,19 @@ export function fillAcademies(world: GameWorld, data: GameData, rng: Rng): void 
   }
 }
 
+/**
+ * id → kulüp önbelleği. Kulüp listesi yalnızca büyür (yeni lig verisi, kayıt dönüşümü); uzunluk değişince
+ * yeniden kurulur. Transfer döngüleri binlerce oyuncu için kulüp aradığından doğrusal arama pahalıydı.
+ */
+const clubIndex = new WeakMap<Club[], { size: number; byId: Map<string, Club> }>();
+
 export function getClub(world: GameWorld, clubId: string): Club {
-  const club = world.clubs.find((c) => c.id === clubId);
+  let index = clubIndex.get(world.clubs);
+  if (!index || index.size !== world.clubs.length) {
+    index = { size: world.clubs.length, byId: new Map(world.clubs.map((c) => [c.id, c])) };
+    clubIndex.set(world.clubs, index);
+  }
+  const club = index.byId.get(clubId);
   if (!club) throw new Error(`Bilinmeyen kulüp: ${clubId}`);
   return club;
 }

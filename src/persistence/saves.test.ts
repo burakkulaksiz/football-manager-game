@@ -126,7 +126,7 @@ describe('kayıt sistemi', () => {
     const loaded = await loadGame(id);
     expect(loaded.youthWatch).toEqual([]);
     const academy = Object.values(loaded.players).filter((p) => p.academy);
-    expect(academy.length).toBeGreaterThanOrEqual(7 * loaded.clubs.length);
+    expect(academy.length).toBeGreaterThanOrEqual(7 * loaded.clubs.filter((c) => !c.country).length);
     // Mevcut oyuncular A takımda kalır
     expect(Object.values(loaded.players).filter((p) => !p.academy)).toHaveLength(firstTeam);
     expect(academy.every((p) => p.growth?.ca.length === 1)).toBe(true);

@@ -22,7 +22,7 @@ describe('altyapı (U19)', () => {
   const world = createWorld(gameData, 21, 'besiktas', START);
 
   it('her kulübün 7–9 kişilik U19 kadrosu var: 15–18 yaş, forma numarasız, A takım kadrosunda değil', () => {
-    for (const club of world.clubs) {
+    for (const club of world.clubs.filter((c) => !c.country)) {
       const academy = academyPlayers(world, club.id);
       expect(academy.length).toBeGreaterThanOrEqual(7);
       expect(academy.length).toBeLessThanOrEqual(9);
@@ -105,7 +105,8 @@ describe('altyapı sezon döngüsü', () => {
 
   it('1 Temmuz: her kulübe 4–6 kişilik yeni grup (15–16 yaş) U19\'a katılır; kullanıcıya haber', () => {
     const newcomers = Object.values(world.players).filter((p) => p.academy && !before.has(p.id));
-    for (const club of world.clubs) {
+    // Yurtdışı kulüplerinin U19'u yok (gençler doğrudan A takıma: foreign.test)
+    for (const club of world.clubs.filter((c) => !c.country)) {
       const intake = newcomers.filter((p) => p.clubId === club.id);
       expect(intake.length).toBeGreaterThanOrEqual(4);
       expect(intake.length).toBeLessThanOrEqual(6);

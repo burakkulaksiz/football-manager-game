@@ -9,8 +9,9 @@ export const EXPECTATION_TARGET: Record<FanExpectation, number> = {
   avoid_relegation: 15,
 };
 
-/** Kulübün ligi (JSON'da yoksa Süper Lig). */
-export function divisionOf(club: Club): 1 | 2 {
+/** Kulübün ligi (JSON'da yoksa Süper Lig); 0 = yurtdışı (Türkiye liglerinde değil). */
+export function divisionOf(club: Club): 0 | 1 | 2 {
+  if (club.country !== undefined) return 0;
   return club.division ?? 1;
 }
 

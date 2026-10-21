@@ -22,5 +22,7 @@
   { "code": "POL", "name": "Polonya", "namePool": "pl", "weight": 2 },
   { "code": "SWE", "name": "İsveç", "namePool": "nordic", "weight": 2 },
   { "code": "NOR", "name": "Norveç", "namePool": "nordic", "weight": 1 },
-  { "code": "DEN", "name": "Danimarka", "namePool": "nordic", "weight": 1 }
+  { "code": "DEN", "name": "Danimarka", "namePool": "nordic", "weight": 1 },
+  { "code": "ENG", "name": "İngiltere", "namePool": "en", "weight": 0 },
+  { "code": "ITA", "name": "İtalya", "namePool": "it", "weight": 0 }
 ]

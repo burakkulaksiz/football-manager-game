@@ -13,6 +13,7 @@
 import { ALL_ATTRS, type AttributeKey } from '../attributes';
 import { addDays, type GameDate } from '../date';
 import { addExpense } from '../finance/finance';
+import { inRegion, type Region } from '../generation/foreign';
 import { addNews } from '../news';
 import { ageOn, marketValue, primaryPosition } from '../player';
 import type { Rng } from '../rng';
@@ -31,8 +32,8 @@ export const MAX_REPORTS = 30;
 export type ScoutTarget =
   | { kind: 'player'; playerId: number }
   | { kind: 'club'; clubId: string }
-  /** Arama: mevki (yoksa hepsi), en fazla yaş, en fazla piyasa değeri (0 = sınırsız). */
-  | { kind: 'search'; position: Position | null; maxAge: number; maxValue: number };
+  /** Arama: mevki (yoksa hepsi), en fazla yaş, en fazla piyasa değeri (0 = sınırsız), bölge (yoksa hepsi). */
+  | { kind: 'search'; position: Position | null; maxAge: number; maxValue: number; region?: Region };
 
 export type ScoutTargetKind = ScoutTarget['kind'];
 
@@ -216,7 +217,8 @@ function searchPool(world: GameWorld, t: Extract<ScoutTarget, { kind: 'search' }
       p.clubId !== world.playerClubId &&
       (t.position === null || (p.positions[t.position] ?? 0) >= 13) &&
       ageOn(p.birthDate, world.date) <= t.maxAge &&
-      (t.maxValue === 0 || marketValue(p, world.date) <= t.maxValue),
+      (t.maxValue === 0 || marketValue(p, world.date) <= t.maxValue) &&
+      inRegion(world, p, t.region ?? null),
   );
 }
 

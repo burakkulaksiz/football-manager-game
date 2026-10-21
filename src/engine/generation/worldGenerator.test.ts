@@ -82,7 +82,9 @@ describe('dünya üretimi', () => {
   });
 
   it('oyuncuların çoğu yerli, ama yabancılar da var', () => {
-    const home = allPlayers.filter((p) => p.nationality === HOME_NATION).length / allPlayers.length;
+    // Türkiye kulüpleri (yurtdışı kadroları kendi ülkesi ağırlıklı: foreign.test)
+    const turkish = allPlayers.filter((p) => p.clubId && !world.clubs.find((c) => c.id === p.clubId)!.country);
+    const home = turkish.filter((p) => p.nationality === HOME_NATION).length / turkish.length;
     expect(home).toBeGreaterThan(0.55);
     expect(home).toBeLessThan(0.85);
   });

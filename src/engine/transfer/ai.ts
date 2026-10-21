@@ -15,6 +15,7 @@ import {
   preferredYears,
   squadRanks,
   transferPlayer,
+  type SquadRanks,
   wageDemand,
   willingToJoin,
   type PositionGroup,
@@ -29,6 +30,23 @@ export const MAX_SQUAD = 28;
 
 /** Günlük alım girişimi olasılığı (yaz / devre arası). */
 const BUY_CHANCE = { summer: 0.05, winter: 0.03 };
+/**
+ * Yurtdışı kulüplerinin alım sıklığı çarpanı: maç oynamadıkları için kadro ihtiyaçları daha az; aralarındaki
+ * transferler kullanıcıyı ilgilendirmez (hem kalabalık hem işlemci yükü).
+ */
+const FOREIGN_BUY_FACTOR = 0.4;
+
+/** Günün transfer işlerinde paylaşılan bilgiler (her denemede tüm oyuncuları yeniden taramamak için). */
+interface DayContext {
+  squadSizes: Map<string, number>;
+  ranks: SquadRanks;
+}
+
+function dayContext(world: GameWorld): DayContext {
+  const squadSizes = new Map<string, number>();
+  for (const p of Object.values(world.players)) if (p.clubId) squadSizes.set(p.clubId, (squadSizes.get(p.clubId) ?? 0) + 1);
+  return { squadSizes, ranks: squadRanks(world) };
+}
 /** Kullanıcıya günlük teklif gelme olasılığı. */
 const OFFER_CHANCE = { summer: 0.06, winter: 0.04 };
 
@@ -49,18 +67,15 @@ function neededGroup(rng: Rng, squad: readonly Player[]): PositionGroup {
 }
 
 /** Bir yapay zekâ kulübünün alım girişimi. */
-function attemptPurchase(world: GameWorld, buyer: Club, rng: Rng): void {
-  const squad = clubPlayers(world, buyer.id);
-  if (squad.length >= MAX_SQUAD) return;
+function attemptPurchase(world: GameWorld, buyer: Club, rng: Rng, ctx: DayContext): void {
   const fin = world.finances[buyer.id]!;
   if (fin.transferBudget < 250_000) return;
+  const squad = clubPlayers(world, buyer.id);
+  if (squad.length >= MAX_SQUAD) return;
 
   const group = neededGroup(rng, squad);
   const level = topElevenAverage(squad);
-  const squadSizes = new Map<string, number>();
-  for (const p of Object.values(world.players)) if (p.clubId) squadSizes.set(p.clubId, (squadSizes.get(p.clubId) ?? 0) + 1);
-
-  const ranks = squadRanks(world);
+  const { squadSizes, ranks } = ctx;
 
   const candidates: { player: Player; price: number; score: number }[] = [];
   for (const p of Object.values(world.players)) {
@@ -83,6 +98,9 @@ function attemptPurchase(world: GameWorld, buyer: Club, rng: Rng): void {
   const pick = candidates[Math.min(candidates.length - 1, rng.int(0, 2))]!;
   const fee = Math.min(fin.transferBudget, roundNice(pick.price * rng.float(0.9, 1.08)));
   const [minYears, maxYears] = preferredYears(ageOn(pick.player.birthDate, world.date));
+  const sellerId = pick.player.clubId;
+  if (sellerId) squadSizes.set(sellerId, (squadSizes.get(sellerId) ?? 1) - 1);
+  squadSizes.set(buyer.id, (squadSizes.get(buyer.id) ?? 0) + 1);
   transferPlayer(world, pick.player, buyer.id, fee, {
     wage: wageDemand(world, pick.player, buyer.id),
     years: rng.int(minYears, maxYears),
@@ -149,9 +167,11 @@ export function aiTransferDay(world: GameWorld, rng: Rng): void {
   const window = transferWindow(world.date);
   if (!window.open) return;
   const season = window.name === 'Yaz' ? 'summer' : 'winter';
+  let ctx: DayContext | null = null;
   for (const club of world.clubs) {
     if (club.id === world.playerClubId) continue;
-    if (rng.chance(BUY_CHANCE[season])) attemptPurchase(world, club, rng);
+    const chance = BUY_CHANCE[season] * (club.country !== undefined ? FOREIGN_BUY_FACTOR : 1);
+    if (rng.chance(chance)) attemptPurchase(world, club, rng, (ctx ??= dayContext(world)));
   }
   if (rng.chance(OFFER_CHANCE[season])) attemptOfferToUser(world, rng);
 }

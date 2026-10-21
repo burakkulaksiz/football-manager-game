@@ -25,6 +25,8 @@ export interface GameData {
   clubs: Club[];
   /** Kurgusal 1. Lig kulüpleri (data/lower_league.json): küme düşen yerine çıkanlar buradan. */
   lowerClubs: Club[];
+  /** Yurtdışı kulüpleri (data/foreign_clubs.json): maç oynamaz, transfer pazarında yer alır. */
+  foreignClubs: Club[];
   nations: Nation[];
   namePools: Record<string, NamePool>;
 }
@@ -49,6 +51,7 @@ function isNonEmptyStringArray(v: unknown): v is string[] {
 export function validateGameData(raw: {
   clubs: unknown;
   lowerClubs?: unknown;
+  foreignClubs?: unknown;
   nations: unknown;
   namePools: Record<string, unknown>;
 }): GameData {
@@ -65,7 +68,7 @@ export function validateGameData(raw: {
 
   // --- Kulüpler (iki dosyada da kimlikler benzersiz olmalı) ---
   const ids = new Set<string>();
-  const validateClubs = (list: unknown, file: string) => {
+  const validateClubs = (list: unknown, file: string, maxReputation = 100) => {
     if (!Array.isArray(list)) {
       errors.push(`${file} bir dizi olmalı`);
       return;
@@ -78,7 +81,7 @@ export function validateGameData(raw: {
       }
       for (const k of ['id', 'name', 'shortName', 'city', 'stadium']) str(c, k, where);
       num(c, 'capacity', where, 1000, 200_000);
-      num(c, 'reputation', where, 1, 100);
+      num(c, 'reputation', where, 1, maxReputation);
       num(c, 'budget', where, 0, 1e10);
       num(c, 'wageBudget', where, 0, 1e10);
       if (!FAN_EXPECTATIONS.includes(c.fanExpectation as FanExpectation)) {
@@ -97,6 +100,16 @@ export function validateGameData(raw: {
   validateClubs(raw.lowerClubs ?? [], 'lower_league.json');
   if (Array.isArray(raw.lowerClubs) && raw.lowerClubs.length < 3) {
     errors.push('lower_league.json: küme düşenlerin yerine çıkacak en az 3 kulüp olmalı');
+  }
+  validateClubs(raw.foreignClubs ?? [], 'foreign_clubs.json', 130);
+  const nationCodes = new Set(Array.isArray(raw.nations) ? raw.nations.map((n) => (isObj(n) ? n.code : null)) : []);
+  if (Array.isArray(raw.foreignClubs)) {
+    raw.foreignClubs.forEach((c, i) => {
+      if (!isObj(c)) return;
+      if (typeof c.country !== 'string' || !nationCodes.has(c.country) || c.country === HOME_NATION) {
+        errors.push(`foreign_clubs.json[${i}]: 'country' nations.json'daki bir ülke kodu olmalı (Türkiye hariç)`);
+      }
+    });
   }
 
   // --- İsim havuzları ---
@@ -130,5 +143,5 @@ export function validateGameData(raw: {
   if (errors.length > 0) {
     throw new Error(`Oyun verisi hatalı:\n- ${errors.join('\n- ')}`);
   }
-  return { ...raw, lowerClubs: raw.lowerClubs ?? [] } as unknown as GameData;
+  return { ...raw, lowerClubs: raw.lowerClubs ?? [], foreignClubs: raw.foreignClubs ?? [] } as unknown as GameData;
 }

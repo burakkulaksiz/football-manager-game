@@ -186,6 +186,8 @@ export function transferPlayer(world: GameWorld, player: Player, buyerId: string
   const from = sellerId ? getClub(world, sellerId).name : 'serbest';
   const to = getClub(world, buyerId).name;
   const involvesUser = buyerId === world.playerClubId || sellerId === world.playerClubId;
+  const abroad = (id: string | null) => id === null || getClub(world, id).country !== undefined;
+  if (abroad(buyerId) && abroad(sellerId)) return;
   addNews(world, {
     category: 'transfer',
     title: `${player.firstName} ${player.lastName} ${to} yolunda`,

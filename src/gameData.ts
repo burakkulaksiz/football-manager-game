@@ -5,6 +5,7 @@
  */
 import clubs from '../data/clubs.json';
 import lowerClubs from '../data/lower_league.json';
+import foreignClubs from '../data/foreign_clubs.json';
 import nations from '../data/nations.json';
 import { validateGameData, type GameData } from './engine/data';
 
@@ -19,4 +20,4 @@ for (const [path, pool] of Object.entries(poolModules)) {
   namePools[key] = pool;
 }
 
-export const gameData: GameData = validateGameData({ clubs, lowerClubs, nations, namePools });
+export const gameData: GameData = validateGameData({ clubs, lowerClubs, foreignClubs, nations, namePools });

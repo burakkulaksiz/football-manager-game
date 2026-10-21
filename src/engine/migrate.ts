@@ -2,7 +2,8 @@
  * Eski kayıtları güncel GameWorld biçimine dönüştürür.
  * Biçim sürümü: 1 = aşama 6 (finans/transfer yok), 2 = aşama 7, 3 = aşama 8 (ceza, gelişim, antrenman),
  * 4 = aşama 9 (1. Lig, yönetim, sezon arşivi), 5 = menajer kartı, 6 = altyapı (U19) ve gelişim geçmişi,
- * 7 = transfer / kiralık listesi, 8 = oyuncu görüşmeleri, 9 = yardımcı kaptan, 10 = gözlemciler.
+ * 7 = transfer / kiralık listesi, 8 = oyuncu görüşmeleri, 9 = yardımcı kaptan, 10 = gözlemciler,
+ * 11 = yurtdışı kulüpleri.
  */
 import type { GameData } from './data';
 import { initFinance, initFinances, payMonthly } from './finance/finance';
@@ -11,12 +12,13 @@ import { recordGrowth } from './squad/growth';
 import { refreshAiListings } from './transfer/listing';
 import { isWindowOpen } from './transfer/window';
 import { emptyScouting } from './transfer/scouting';
+import { addForeignClubs, FOREIGN_SEED_SALT } from './generation/foreign';
 import { Rng } from './rng';
 import { initialBoard } from './season/expectation';
 import { DEFAULT_TRAINING } from './squad/training';
 import type { GameWorld } from './types';
 
-export const CURRENT_WORLD_VERSION = 10;
+export const CURRENT_WORLD_VERSION = 11;
 
 /** `raw` eski biçimdeki dünya; dönüştürülmüş dünya döner (yerinde değiştirir). */
 export function migrateWorld(raw: unknown, fromVersion: number, data: GameData): GameWorld {
@@ -106,6 +108,11 @@ export function migrateWorld(raw: unknown, fromVersion: number, data: GameData):
     for (const fin of Object.values(world.finances)) {
       for (const r of [fin.current, ...fin.history]) r.expense.scouting ??= 0;
     }
+  }
+  if (fromVersion < 11) {
+    // Yurtdışı kulüpleri kadrolarıyla (ayrı rng); gelişim geçmişi bu aydan başlar
+    addForeignClubs(world, data, new Rng((world.seed ^ FOREIGN_SEED_SALT) >>> 0));
+    recordGrowth(world);
   }
   return world;
 }

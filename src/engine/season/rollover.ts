@@ -8,6 +8,7 @@ import { clubPlayers, getClub, leagueClubs } from '../generation/worldGenerator'
 import { academyIntake, manageAcademies, renewAcademyContracts } from '../squad/academy';
 import { generateSeason, seasonLabel } from '../league/schedule';
 import { addNews } from '../news';
+import { foreignFinanceShares, foreignIntake, isForeign } from '../generation/foreign';
 import { pruneKnowledge } from '../transfer/scouting';
 import { ageOn } from '../player';
 import type { Rng } from '../rng';
@@ -168,6 +169,13 @@ function newSeasonFinances(world: GameWorld): void {
   for (const club of world.clubs) {
     const fin = world.finances[club.id]!;
     const top = divisionOf(club) === 1;
+    if (isForeign(club)) {
+      foreignFinanceShares(fin);
+      fin.sponsorIncome = Math.round(fin.wageBudget * 0.3);
+      const surplus = Math.max(0, fin.balance - fin.wageBudget / 4);
+      fin.transferBudget = Math.round(club.budget + surplus * 0.3);
+      continue;
+    }
     fin.tvIncome = Math.round(fin.wageBudget * (top ? 0.45 : 0.3));
     fin.sponsorIncome = Math.round(fin.wageBudget * 0.3);
     fin.ticketPrice = Math.round(8 + club.reputation * 0.3);
@@ -186,6 +194,7 @@ export function startNewSeason(world: GameWorld, rng: Rng, data: GameData): void
   // Altyapı: yaş sınırını geçenler (yapay zekâ alır ya da bırakır), sonra yeni grup U19'a
   manageAcademies(world);
   academyIntake(world, rng, data);
+  foreignIntake(world, rng, data);
   trimAiSquads(world);
   newSeasonFinances(world);
 

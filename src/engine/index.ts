@@ -38,6 +38,7 @@ export * from './squad/talks';
 export * from './squad/hierarchy';
 export * from './squad/career';
 export * from './transfer/scouting';
+export * from './generation/foreign';
 export * from './season/expectation';
 export * from './season/board';
 export * from './season/seasonEnd';

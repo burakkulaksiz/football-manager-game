@@ -5,6 +5,7 @@ import {
   ALL_ATTRS,
   askingPrice,
   attributeEstimate,
+  inRegion,
   knowledgeOf,
   squadRanks,
   formatDateTR,
@@ -26,6 +27,8 @@ import {
 } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
+import { ClubCountry } from '../components/ClubCountry';
+import { ClubOptions, RegionOptions } from '../components/ClubOptions';
 import { ScoutingTab } from '../components/ScoutingTab';
 import { AbilityStars, KnowledgeBar } from '../components/ScoutViews';
 import { ContractDialog, CounterDialog, ListDialog } from '../components/TransferDialogs';
@@ -101,6 +104,7 @@ function SearchTab() {
   const [clubId, setClubId] = useState('');
   const [affordable, setAffordable] = useState(false);
   const [listed, setListed] = useState<ListingKind | ''>('');
+  const [region, setRegion] = useState('');
   const budget = world.finances[world.playerClubId]!.transferBudget;
   // Uzun liste parça parça çizilir (yüzlerce satır ekranı yavaşlatır).
   const [limit, setLimit] = useState(RESULTS_PAGE);
@@ -119,14 +123,15 @@ function SearchTab() {
       // Görünen (tahmini) değerle: tanınmayan oyuncunun gerçek değeri sızmasın
       .filter((p) => !attr || attributeEstimate(world, p, attr) >= attrMin)
       .filter((p) => !listed || p.listing?.kind === listed)
+      .filter((p) => inRegion(world, p, region || null))
       .map((p) => ({ p, value: marketValue(p, world.date), asking: p.clubId ? askingPrice(world, p, ranks) : 0, knowledge: knowledgeOf(world, p) }))
       .filter((r) => !maxValue || r.value <= maxValue)
       .filter((r) => !affordable || r.asking <= budget)
       .sort((a, b) => b.value - a.value);
     return rows;
-  }, [world, position, minAge, maxAge, maxValue, attr, attrMin, clubId, affordable, budget, listed]);
+  }, [world, position, minAge, maxAge, maxValue, attr, attrMin, clubId, affordable, budget, listed, region]);
   // Filtre değişince ilk sayfaya dön
-  useEffect(() => setLimit(RESULTS_PAGE), [position, minAge, maxAge, maxValue, attr, attrMin, clubId, affordable, listed]);
+  useEffect(() => setLimit(RESULTS_PAGE), [position, minAge, maxAge, maxValue, attr, attrMin, clubId, affordable, listed, region]);
 
   return (
     <>
@@ -168,7 +173,13 @@ function SearchTab() {
           <select value={clubId} onChange={(e) => setClubId(e.target.value)}>
             <option value="">Tümü</option>
             <option value={FREE_AGENTS}>Serbest oyuncular</option>
-            {world.clubs.filter((c) => c.id !== world.playerClubId).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            <ClubOptions world={world} exclude={world.playerClubId} />
+          </select>
+        </label>
+        <label>
+          <span>Bölge</span>
+          <select value={region} onChange={(e) => setRegion(e.target.value)}>
+            <RegionOptions world={world} />
           </select>
         </label>
         <label>
@@ -210,7 +221,7 @@ function SearchTab() {
                   {p.loan && <span className="tag">Kiralık</span>}
                   {p.listing && <span className={`tag tag-list-${p.listing.kind}`}>{LISTING_LABELS[p.listing.kind]}</span>}
                 </td>
-                <td>{club ? <span className="club-cell"><ClubBadge club={club} size={16} /> {club.name}</span> : <span className="tag tag-free">Serbest</span>}</td>
+                <td>{club ? <span className="club-cell"><ClubBadge club={club} size={16} /> {club.name}<ClubCountry club={club} /></span> : <span className="tag tag-free">Serbest</span>}</td>
                 <td><PositionChips player={p} /></td>
                 <td className="num">{ageOn(p.birthDate, world.date)}</td>
                 <td><AbilityStars player={p} /></td>

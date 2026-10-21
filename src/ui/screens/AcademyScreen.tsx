@@ -225,7 +225,7 @@ function LeagueTab() {
   const rows = useMemo(
     () =>
       Object.values(world.players)
-        .filter((p) => p.clubId && p.clubId !== world.playerClubId)
+        .filter((p) => p.clubId && p.clubId !== world.playerClubId && getClub(world, p.clubId).country === undefined)
         .filter((p) => ageOn(p.birthDate, world.date) <= maxAge)
         .filter((p) => !group || positionGroup(primaryPosition(p)) === group)
         .filter((p) => !clubId || p.clubId === clubId)

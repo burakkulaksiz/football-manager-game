@@ -59,6 +59,7 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
   squad/injuries.ts    Sakatlık türleri, maç/antrenman sakatlığı, günlük iyileşme.
   squad/discipline.ts  Kart cezaları (maç sonrası).
   squad/morale.ts      Maç sonrası moral, günlük ortalamaya dönüş.
+  generation/foreign.ts Yurtdışı kulüpleri: ekleme (ayrı rng), yaz genç katılımı, finans payları, bölge filtresi.
   transfer/scouting.ts Gözlemciler: oyuncu bilgisi (0–100), özellik aralıkları, görevler, raporlar, gözlemci görüşü.
   squad/career.ts      Oyuncu kariyeri: sezon satırları (kulüp başına), kulüp hareketleri, toplamlar.
   squad/hierarchy.ts   Takım hiyerarşisi (etki, seviyeler), kaptan değişikliği etkileri, liderlerin havası.
@@ -160,7 +161,7 @@ Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
 - **Kayıt** (IndexedDB, Dexie şema sürümü 2): `saves` = SaveSlot `{ id, name, careerId, clubId, clubName,
   gameDate, season, isAutosave, createdAt, updatedAt, formatVersion, managerName? }`; `saveData` = `{ id, world: GameWorld }`
   (aynı id). GameWorld olduğu gibi yazılır (düz veri), kayıt anında `structuredClone` ile kopyalanır.
-  `SAVE_FORMAT_VERSION = CURRENT_WORLD_VERSION` (şu an 10). GameWorld yapısı değişince sürümü artır ve
+  `SAVE_FORMAT_VERSION = CURRENT_WORLD_VERSION` (şu an 11). GameWorld yapısı değişince sürümü artır ve
   `engine/migrate.ts`'e dönüşüm ekle; `loadGame` eski kayıtları otomatik dönüştürür, daha yeni sürümü reddeder.
   Sezon sonu kaydı ~1.7 MB (+ haberler/teklifler).
 - **careerId** = `${seed}-${playerClubId}`. Otomatik kayıt kariyer başına tek slot; elle kayıt sınırsız.
@@ -477,3 +478,22 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
   oyuncusu (≤ 21 yaş, potansiyeli ilk 11 düzeyinde) / Kadroya katkı sağlamaz. Profilde bilgi ≥ 80 ise görünür.
 - Arayüz: Transfer Merkezi → Gözlemciler (süren görevler, yeni görev, açılır raporlar); profilde "Gözlemci gönder",
   Gözlemci Raporu (bilgi çubuğu, tahminler, görüş); aramada Yetenek ve Bilgi sütunları.
+
+## Yurtdışı kulüpleri (kullanıcı seçti: maç oynanmayan kulüpler, 8 ülke ~40 kulüp, gerçek adlar)
+- data/foreign_clubs.json (clubs.json biçimi + `country`; itibar 1–130). İngiltere, İspanya, Almanya, İtalya,
+  Fransa, Portekiz, Hollanda, Belçika; 40 kulüp. nations.json'a ENG / ITA (ağırlık 0: Süper Lig üretimi değişmez),
+  names/en.json, names/it.json eklendi.
+- Club.country varsa yurtdışı: divisionOf = 0 (Süper Lig / 1. Lig sorguları onları görmez), fikstür, tablo,
+  küme yok. İtibar 100'ü geçebilir: devler ~120 → kadro seviyesi ~17 (ilk 11 ort. ~170; Galatasaray ~150).
+- Kadrolar ayrı rng ile (FOREIGN_SEED_SALT) Türkiye dünyasından sonra üretilir: aynı tohumla Türkiye kadroları ve
+  fikstür değişmez. Uyruk: kendi ülkesi ağırlıklı (ilk 11 %30–55, yedek %60, genç %85), yabancılar her ülkeden.
+- U19 yok; her yaz A takıma 2–3 genç (17–18). Finans: maç geliri olmadığından yayın payı maaş bütçesinin %75'i.
+- Pazar: istekliliği itibar belirler (oyuncu kendinden 20 puan, 30+ yaşta 30 puan düşük kulübe gitmez); devlerin
+  yıldızları Türkiye'ye gelmez, 30+ yaşlılar gelebilir. Yurtdışı kulüplerinin günlük alım şansı Türk kulüplerinin
+  %40'ı (FOREIGN_BUY_FACTOR). Ölçüm (bir sezon + yaz): Türkiye → yurtdışı ~8 transfer (€170–210 Mn), yurtdışı →
+  Türkiye 6–12, yurtdışı kendi arasında 55–75. Yurtdışı kulüpleri arasındaki transferler habere düşmez.
+- Hız: getClub önbellekli (WeakMap); yapay zekâ alımları kadro büyüklüklerini ve sıraları günde bir kez hesaplar.
+  Oyuncu sayısı ~930 → ~2000; bir sezonun simülasyonu ~2 sn → ~3,3 sn (gün başına ~10 ms).
+- Arayüz: kulüp seçicileri ülke ülke gruplu (ClubOptions); transfer araması ve gözlemci aramasında Bölge filtresi
+  (Tümü / Türkiye / Yurtdışı / ülke); kulüp adının yanında ülke kodu; Altyapı → ligdeki gençler yalnızca Türkiye.
+- Gol kralı uç değer testi: 15 sezonda en fazla iki 38+ (30 sezon ölçüm: yurtdışıyla ort. 26.9, yurtdışısız 25.3).

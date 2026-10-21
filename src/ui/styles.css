@@ -3494,3 +3494,11 @@ select {
 .scout-report-head:hover {
   background: rgba(255, 255, 255, 0.04);
 }
+
+/* Yurtdışı kulübü ülke etiketi */
+.tag-country {
+  margin-left: 6px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+}

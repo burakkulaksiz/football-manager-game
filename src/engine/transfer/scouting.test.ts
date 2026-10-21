@@ -145,6 +145,19 @@ describe('gözlemci görevleri', () => {
   });
 });
 
+describe('bölgeye göre arama', () => {
+  it('yurtdışı / tek ülke araması yalnızca o bölgenin kulüplerinden aday getirir', () => {
+    const w = fresh();
+    expect(assignScout(w, { kind: 'search', position: null, maxAge: 30, maxValue: 0, region: 'POR' })).toBeNull();
+    expect(assignScout(w, { kind: 'search', position: 'ST', maxAge: 25, maxValue: 0, region: 'abroad' })).toBeNull();
+    passDays(w, SCOUT_TASKS.search.days);
+    const [por, abroad] = w.scouting.reports;
+    for (const id of por!.playerIds) expect(w.clubs.find((c) => c.id === w.players[id]!.clubId)!.country).toBe('POR');
+    for (const id of abroad!.playerIds) expect(w.clubs.find((c) => c.id === w.players[id]!.clubId)!.country).toBeDefined();
+    expect(por!.playerIds).toHaveLength(5);
+  });
+});
+
 describe('kayıt dönüşümü', () => {
   it("9. sürüm kaydına gözlemci durumu ve finans dökümüne gözlemcilik gideri eklenir", () => {
     const w = fresh() as Partial<GameWorld> & GameWorld;

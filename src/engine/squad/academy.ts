@@ -121,6 +121,7 @@ export function manageAcademies(world: GameWorld): void {
 /** 1 Temmuz: altyapıdan yeni grup (15–16 yaş) U19'a katılır. Kullanıcıya en umut vadedeni de söyler. */
 export function academyIntake(world: GameWorld, rng: Rng, data: GameData): void {
   for (const club of world.clubs) {
+    if (club.country !== undefined) continue; // yurtdışı: foreignIntake
     const count = rng.int(INTAKE_SIZE[0], INTAKE_SIZE[1]);
     const intake: Player[] = [];
     for (let i = 0; i < count; i++) {

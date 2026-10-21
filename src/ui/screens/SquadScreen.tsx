@@ -4,7 +4,6 @@ import {
   ageOn,
   attributeEstimate,
   clubPlayers,
-  divisionOf,
   getClub,
   GOALKEEPING_ATTRS,
   HOME_NATION,
@@ -24,6 +23,7 @@ import {
   type PlayerSeasonStats,
 } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
+import { ClubOptions } from '../components/ClubOptions';
 import { Modal } from '../components/Modal';
 import { AbilityStars, AttrValue, PotentialStars } from '../components/ScoutViews';
 import { StatusTags } from '../components/StatusTags';
@@ -381,16 +381,7 @@ export function SquadScreen() {
             ))}
           </span>
           <select value={viewedClubId} onChange={(e) => setViewedClub(e.target.value)}>
-            <optgroup label="Süper Lig">
-              {world.clubs.filter((c) => divisionOf(c) === 1).map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </optgroup>
-            <optgroup label="1. Lig">
-              {world.clubs.filter((c) => divisionOf(c) === 2).map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </optgroup>
+            <ClubOptions world={world} />
           </select>
         </span>
       </div>

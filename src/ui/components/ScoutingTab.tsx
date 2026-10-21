@@ -16,8 +16,10 @@ import {
   type ScoutTarget,
 } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
-import { formatDateShort, formatMoney, POSITION_LABELS, POSITION_NAMES, positionGroup } from '../labels';
+import { formatDateShort, formatMoney, nationName, POSITION_LABELS, POSITION_NAMES, positionGroup } from '../labels';
 import { ClubBadge } from './ClubBadge';
+import { ClubCountry } from './ClubCountry';
+import { ClubOptions, RegionOptions } from './ClubOptions';
 import { AbilityStars, PotentialStars, VerdictTag } from './ScoutViews';
 
 const SEARCH_VALUE_LIMITS = [0, 500_000, 1_000_000, 3_000_000, 5_000_000, 10_000_000];
@@ -30,6 +32,7 @@ export function scoutTargetLabel(world: GameWorld, t: ScoutTarget): string {
   }
   if (t.kind === 'club') return `Kulüp taraması: ${getClub(world, t.clubId).name}`;
   const parts = [t.position ? POSITION_NAMES[t.position] : 'Tüm mevkiler', `en fazla ${t.maxAge} yaş`];
+  if (t.region) parts.push(t.region === 'TUR' ? 'Türkiye' : t.region === 'abroad' ? 'yurtdışı' : nationName(t.region));
   if (t.maxValue > 0) parts.push(`değeri en fazla ${formatMoney(t.maxValue)}`);
   return `Arama: ${parts.join(' · ')}`;
 }
@@ -85,7 +88,7 @@ function ReportTable({ report }: { report: ScoutReport }) {
                 {p.firstName} {p.lastName}
                 {p.academy && <span className="tag tag-u19">U19</span>}
               </td>
-              <td>{club ? <span className="club-cell"><ClubBadge club={club} size={16} /> {club.name}</span> : <span className="tag tag-free">Serbest</span>}</td>
+              <td>{club ? <span className="club-cell"><ClubBadge club={club} size={16} /> {club.name}<ClubCountry club={club} /></span> : <span className="tag tag-free">Serbest</span>}</td>
               <td>
                 <span className="pos-boxes">
                   {POSITIONS.filter((pos) => (p.positions[pos] ?? 0) >= 18).map((pos) => (
@@ -113,8 +116,8 @@ export function ScoutingTab() {
   const [position, setPosition] = useState<Position | ''>('');
   const [maxAge, setMaxAge] = useState(23);
   const [maxValue, setMaxValue] = useState(0);
-  const others = world.clubs.filter((c) => c.id !== world.playerClubId).sort((a, b) => a.name.localeCompare(b.name, 'tr'));
-  const [clubId, setClubId] = useState(others[0]?.id ?? '');
+  const [region, setRegion] = useState('');
+  const [clubId, setClubId] = useState(world.clubs.find((c) => c.id !== world.playerClubId)?.id ?? '');
   const reports = [...world.scouting.reports].reverse();
   // Seçilmediyse en yeni rapor açık (sekme açıkken yeni rapor gelirse o açılır)
   const [picked, setOpen] = useState<number | null | undefined>(undefined);
@@ -179,13 +182,19 @@ export function ScoutingTab() {
               <input type="number" min={16} max={40} value={maxAge} onChange={(e) => setMaxAge(Number(e.target.value))} />
             </label>
             <label>
+              <span>Bölge</span>
+              <select value={region} onChange={(e) => setRegion(e.target.value)}>
+                <RegionOptions world={world} />
+              </select>
+            </label>
+            <label>
               <span>En fazla değer</span>
               <select value={maxValue} onChange={(e) => setMaxValue(Number(e.target.value))}>
                 {SEARCH_VALUE_LIMITS.map((v) => <option key={v} value={v}>{v === 0 ? 'Sınırsız' : formatMoney(v)}</option>)}
               </select>
             </label>
           </div>
-          <TaskButton target={{ kind: 'search', position: position || null, maxAge, maxValue }} label="Aramaya gönder" />
+          <TaskButton target={{ kind: 'search', position: position || null, maxAge, maxValue, ...(region ? { region } : {}) }} label="Aramaya gönder" />
         </div>
         <div className="scout-form">
           <div className="strong">Kulüp taraması</div>
@@ -194,7 +203,7 @@ export function ScoutingTab() {
             <label>
               <span>Kulüp</span>
               <select value={clubId} onChange={(e) => setClubId(e.target.value)}>
-                {others.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                <ClubOptions world={world} exclude={world.playerClubId} />
               </select>
             </label>
           </div>

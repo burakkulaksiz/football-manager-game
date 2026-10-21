@@ -3502,3 +3502,65 @@ select {
   letter-spacing: 0.04em;
   opacity: 0.8;
 }
+
+/* Şut ve ısı haritası */
+.column-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.column-stack > .panel {
+  margin-bottom: 0;
+}
+.match-maps {
+  padding: 8px 10px 10px;
+}
+.match-maps-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.match-map {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+.map-goal {
+  fill: rgba(255, 255, 255, 0.18);
+  stroke: rgba(255, 255, 255, 0.8);
+  stroke-width: 0.25;
+}
+.map-shot {
+  cursor: help;
+}
+.match-maps-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+.match-maps.compact .match-maps-legend {
+  font-size: 11px;
+}
+.legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  vertical-align: -1px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+.legend-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.legend-icon {
+  width: 12px;
+  height: 12px;
+  margin-left: 6px;
+}

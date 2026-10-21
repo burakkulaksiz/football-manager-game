@@ -153,6 +153,25 @@ export interface GoalEvent {
   kind?: GoalKind;
 }
 
+export type ShotOutcome = 'goal' | 'saved' | 'missed' | 'blocked';
+
+/**
+ * Şut (şut haritası için). Sahadaki yeri saklanmaz: gösterimde dakikadan türetilir (2D sahayla aynı yer).
+ * Varsayılanlar yazılmaz (kayıt küçük kalsın): ilk yarı, normal şut.
+ */
+export interface ShotRecord {
+  /** Maç saati sayacı: ilk yarı uzatması 46, 47…; ikinci yarı 46'dan başlar (`second` ile ayrılır). */
+  minute: number;
+  second?: true;
+  side: 'home' | 'away';
+  playerId: number;
+  outcome: ShotOutcome;
+  /** Yoksa normal şut. */
+  kind?: Exclude<GoalKind, 'normal'>;
+  /** Korner ortasından kafa. */
+  corner?: true;
+}
+
 export interface CardEvent {
   minute: number;
   extra?: number;
@@ -209,6 +228,10 @@ export interface MatchResult {
   manOfTheMatch: number | null;
   /** Seyirci sayısı (finans işlenince yazılır). */
   attendance?: number;
+  /** Şutlar (şut haritası); eski kayıtlarda yok. */
+  shots?: ShotRecord[];
+  /** Dakikaların anı, dakika başına bir harf (ısı haritası; bkz. PLAY_CODES); eski kayıtlarda yok. */
+  timeline?: string;
 }
 
 /* ------------------------------------------------------------------ */

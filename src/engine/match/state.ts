@@ -1,5 +1,5 @@
 /** Canlı maç durumunun tipleri. Hepsi düz veri (serileştirilebilir). */
-import type { CardEvent, GoalEvent, InjuryEvent, Position } from '../types';
+import type { CardEvent, GoalEvent, InjuryEvent, Position, ShotRecord } from '../types';
 import type { FormationId } from './formation';
 import type { TeamInstructions } from './tactics';
 
@@ -153,7 +153,46 @@ export interface MatchState {
   momentum: number[];
   /** Son oynanan dakikanın en önemli anı (2D saha); maç / ikinci yarı başlarken null (santra). */
   lastPlay: MatchPlay | null;
+  /** Maçın şutları (şut haritası). */
+  shots: ShotRecord[];
+  /** Oynanan dakikaların anları, dakika başına bir harf; devreler '|' ile ayrılır (ısı haritası). */
+  timeline: string;
   rngState: number;
+}
+
+/**
+ * Zaman çizelgesi harfleri: an türü küçük harf = ev sahibinin anı, büyük harf = deplasmanın.
+ * Kayıtta yer tutmasın diye dakika başına tek harf (maç başına ~95 karakter).
+ */
+export const PLAY_CODES: Record<PlayKind, string> = {
+  hold: 'h', foul: 'f', attack: 'a', corner: 'c', freekick: 'k', blocked: 'b', miss: 'm', save: 's', penalty: 'p', goal: 'g',
+};
+
+export function playCode(play: MatchPlay): string {
+  const c = PLAY_CODES[play.kind];
+  return play.side === 'home' ? c : c.toUpperCase();
+}
+
+export interface TimelineMinute {
+  /** Maç saati sayacı (2D sahadaki gibi; ilk yarı uzatması 46, 47…). */
+  minute: number;
+  second: boolean;
+  side: Side;
+  kind: PlayKind;
+}
+
+const KIND_BY_CODE = new Map(Object.entries(PLAY_CODES).map(([k, c]) => [c, k as PlayKind]));
+
+/** Zaman çizelgesini dakikalara açar. Tanınmayan harf atlanır. */
+export function decodeTimeline(timeline: string): TimelineMinute[] {
+  const out: TimelineMinute[] = [];
+  timeline.split('|').forEach((half, h) => {
+    [...half].forEach((ch, i) => {
+      const kind = KIND_BY_CODE.get(ch.toLowerCase());
+      if (kind) out.push({ minute: (h === 0 ? 1 : 46) + i, second: h > 0, side: ch === ch.toLowerCase() ? 'home' : 'away', kind });
+    });
+  });
+  return out;
 }
 
 export const MAX_SUBS = 5;

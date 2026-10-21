@@ -12,6 +12,7 @@ import {
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { readableText } from '../colors';
+import { MatchMaps } from '../components/MatchMaps';
 import { MatchStatRows } from '../components/MatchStatRows';
 import { formatNumber, POSITION_LABELS, positionGroup, ratingClass } from '../labels';
 
@@ -229,10 +230,16 @@ export function MatchReportScreen() {
 
       <div className="two-columns">
         <Timeline fixture={fixture} />
-        <section className="panel">
-          <h2 className="panel-title">İstatistikler</h2>
-          <MatchStatRows home={result.stats.home} away={result.stats.away} />
-        </section>
+        <div className="column-stack">
+          <section className="panel">
+            <h2 className="panel-title">İstatistikler</h2>
+            <MatchStatRows home={result.stats.home} away={result.stats.away} />
+          </section>
+          <section className="panel">
+            <h2 className="panel-title">Şut ve Isı Haritası</h2>
+            <MatchMaps shots={result.shots} timeline={result.timeline} home={home} away={away} nameOf={(id) => playerName(world, id)} />
+          </section>
+        </div>
       </div>
 
       <div className="two-columns">

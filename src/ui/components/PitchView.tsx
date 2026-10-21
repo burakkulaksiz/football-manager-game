@@ -27,7 +27,7 @@ function useElementWidth(ref: React.RefObject<HTMLElement | null>): number {
 const SHOT_MOVE_MS = 380;
 const MOVE_MS = Math.round(SCENE_FRAME_MS * 0.8);
 
-function PitchMarkings() {
+export function PitchMarkings() {
   const L = PITCH_LENGTH;
   const W = PITCH_WIDTH;
   const box = (x: number, depth: number, width: number) =>

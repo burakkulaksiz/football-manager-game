@@ -497,3 +497,20 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
 - Arayüz: kulüp seçicileri ülke ülke gruplu (ClubOptions); transfer araması ve gözlemci aramasında Bölge filtresi
   (Tümü / Türkiye / Yurtdışı / ülke); kulüp adının yanında ülke kodu; Altyapı → ligdeki gençler yalnızca Türkiye.
 - Gol kralı uç değer testi: 15 sezonda en fazla iki 38+ (30 sezon ölçüm: yurtdışıyla ort. 26.9, yurtdışısız 25.3).
+
+## Şut ve ısı haritası
+- Motor kaydı (yalnızca gösterim, rng kullanmaz): MatchState.shots / MatchResult.shots — her şut (dakika sayacı,
+  ikinci yarı işareti, taraf, oyuncu, sonuç gol / kurtarıldı / aut / engellendi, tür kafa / uzaktan / serbest vuruş /
+  penaltı, korner). Varsayılanlar (ilk yarı, normal şut) yazılmaz. Sayılar maç istatistiğiyle birebir (testli).
+- MatchState.timeline / MatchResult.timeline: dakika başına bir harf (PLAY_CODES; küçük = ev sahibi, büyük =
+  deplasman), devreler '|' ile ayrılır; decodeTimeline açar. Eski kayıtlardaki maçlarda ikisi de yok
+  (harita "veri yok" der).
+- Yer saklanmaz: ui/matchMaps.ts şutun çıktığı / gittiği yeri ve dakikanın top yerini 2D sahanın fonksiyonlarıyla
+  (shotOrigin, ballSpot) türetir; haritadaki yer canlı sahada görülenle aynı. Aynı dakikadaki ikinci şut biraz kayar.
+- Bileşen MatchMaps: Şut haritası (gol büyük dolu + çizgi, kurtarıldı dolu, aut halka, engellendi çarpı; üstüne
+  gelince dakika, oyuncu, sonuç) / Isı haritası (dakika başına bulanık nokta, topa sahip takımın renginde; bölge payı:
+  ev kalesi önü / orta / deplasman kalesi önü). Takım filtresi. Renk: çimde okunan ilk kulüp rengi, iki takım
+  benzerse deplasmanın diğer rengi.
+- Yerleri: maç raporunda İstatistikler'in altında; canlı maçta orta sütunda "Haritalar" (önemli an oynarken o anın
+  şutu ve dakikası skor gibi gizli). Motor şut listesini yerinde büyüttüğünden canlı ekran her çizimde kopya verir.
+- Kayıt: sezon sonunda ~4,55 MB'ın ~630 KB'ı şutlar, ~30 KB zaman çizelgesi (yalnızca bu sezonun fikstürü tutulur).

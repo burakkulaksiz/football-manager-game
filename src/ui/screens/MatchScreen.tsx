@@ -16,6 +16,7 @@ import { readableText } from '../colors';
 import { FormationPicker, InstructionsPanel } from '../components/InstructionsPanel';
 import { MatchStatRows } from '../components/MatchStatRows';
 import { AssistantPanel } from '../components/AssistantPanel';
+import { MatchMaps } from '../components/MatchMaps';
 import { PitchView, type CameraMode } from '../components/PitchView';
 import { buildScene, isHighlight, QUIET_MINUTE_MS, revealIndex, SCENE_FRAME_MS, sceneDurationMs } from '../pitchScene';
 import { MENTALITY_LABELS, POSITION_LABELS, positionGroup, ratingClass } from '../labels';
@@ -29,10 +30,41 @@ interface Held {
   away: number;
   goals: number;
   events: number;
+  /** Haritalar: o ana kadarki şutlar ve dakikalar. */
+  shots: number;
+  timeline: number;
 }
 
 function snapshot(m: MatchState): Held {
-  return { home: m.score.home, away: m.score.away, goals: m.goals.length, events: m.events.length };
+  return {
+    home: m.score.home, away: m.score.away, goals: m.goals.length, events: m.events.length,
+    shots: m.shots.length, timeline: m.timeline.length,
+  };
+}
+
+/** Canlı haritalar (önemli an sürerken o anın şutu ve dakikası gizli). */
+function LiveMaps({ match, held }: { match: MatchState; held: Held | null }) {
+  const world = useWorld();
+  // Motor şut listesini yerinde büyütür: her çizimde kopya (harita hesabı yeni listeyi görsün)
+  const shots = match.shots.slice(0, held ? held.shots : match.shots.length);
+  const timeline = held ? match.timeline.slice(0, held.timeline) : match.timeline;
+  const name = (id: number) => {
+    const p = world.players[id];
+    return p ? `${p.firstName} ${p.lastName}` : '?';
+  };
+  return (
+    <section className="panel">
+      <h2 className="panel-title">Haritalar</h2>
+      <MatchMaps
+        shots={shots}
+        timeline={timeline}
+        home={getClub(world, match.home.clubId)}
+        away={getClub(world, match.away.clubId)}
+        nameOf={name}
+        compact
+      />
+    </section>
+  );
 }
 
 /** Gösterilecek olaylar: önemli an sürerken sonuç olayları gizli. */
@@ -616,6 +648,7 @@ export function MatchScreen() {
         <TeamPanel match={match} side="home" />
         <div className="match-center">
           <StatsPanel match={match} />
+          <LiveMaps match={match} held={hold} />
           <Commentary match={match} held={hold} />
         </div>
         <TeamPanel match={match} side="away" />

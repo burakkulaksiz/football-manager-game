@@ -15,7 +15,7 @@
  */
 import type { Attributes } from '../attributes';
 import { Rng } from '../rng';
-import type { GoalKind, MatchResult, Player, PlayerMatchRecord, Position, TeamMatchStats } from '../types';
+import type { GoalKind, MatchResult, Player, PlayerMatchRecord, Position, ShotOutcome, ShotRecord, TeamMatchStats } from '../types';
 import { commentary, type CommentaryKey } from './commentary';
 import {
   assignToFormation,
@@ -29,6 +29,7 @@ import {
   displayMinute,
   MAX_SUBS,
   MOMENTUM_WINDOW,
+  playCode,
   type MatchEventType,
   type MatchState,
   type Mentality,
@@ -310,6 +311,8 @@ export function createMatch(setup: MatchSetup, lookup: PlayerLookup): MatchState
     possessionTicks: { home: 0, away: 0 },
     momentum: [],
     lastPlay: null,
+    shots: [],
+    timeline: '',
     rngState: rng.getState(),
   };
 }
@@ -502,9 +505,18 @@ function resolveShot(ctx: Ctx, side: Side, shooterId: number, kind: GoalKind, th
   const penalty = kind === 'penalty';
   // 2D saha için şutun kaynağı (duran top sahneleri)
   const source = { fromPenalty: penalty, fromCorner, fromFreeKick: kind === 'freekick' };
+  // Şut haritası kaydı (yalnızca gösterim)
+  const noteShot = (outcome: ShotOutcome) => {
+    const shot: ShotRecord = { minute: state.minute, side, playerId: shooterId, outcome };
+    if (state.period === 'second') shot.second = true;
+    if (kind !== 'normal') shot.kind = kind;
+    if (fromCorner) shot.corner = true;
+    state.shots.push(shot);
+  };
   // Engellenen şut (penaltı ve serbest vuruş hariç)
   if (kind !== 'penalty' && kind !== 'freekick' && rng.chance(TUNING.blockChance)) {
     recordPlay(ctx, side, 'blocked', shooterId, source);
+    noteShot('blocked');
     const blocker = pickOnPitch(ctx, oppSide, (ps, p) => SLOT_WEIGHTS[ps.slot!].def * (p.attributes.bravery + p.attributes.positioning));
     noteDefender(ctx, side, 'blocked', blocker);
     if (blocker !== null) {
@@ -526,6 +538,7 @@ function resolveShot(ctx: Ctx, side: Side, shooterId: number, kind: GoalKind, th
     : Math.max(0.1, Math.min(0.75, TUNING.onTargetBase * (0.5 + skill / 24) * KIND_ON_TARGET[kind] * quality));
   if (!rng.chance(pOnTarget)) {
     recordPlay(ctx, side, penalty ? 'penalty' : 'miss', shooterId, { ...source, keeperId });
+    noteShot('missed');
     addRating(ctx, shooterId, kind === 'penalty' ? -0.6 : -0.05);
     if (kind === 'penalty') emit(ctx, 'penaltyMiss', side, 'penaltyMiss', { player: name, keeper: keeperName });
     else emit(ctx, 'miss', side, kind === 'long' ? 'missLong' : kind === 'header' ? 'missHeader' : 'miss', { player: name });
@@ -542,9 +555,11 @@ function resolveShot(ctx: Ctx, side: Side, shooterId: number, kind: GoalKind, th
   if (rng.chance(pGoal)) {
     const assistId = scoreGoal(ctx, side, shooterId, kind);
     recordPlay(ctx, side, 'goal', shooterId, { ...source, keeperId, assistId });
+    noteShot('goal');
     return;
   }
   recordPlay(ctx, side, penalty ? 'penalty' : 'save', shooterId, { ...source, keeperId });
+  noteShot('saved');
   addRating(ctx, shooterId, kind === 'penalty' ? -0.6 : 0.1);
   if (keeperId !== null) addRating(ctx, keeperId, kind === 'penalty' ? 0.8 : 0.3);
   if (kind === 'penalty') emit(ctx, 'penaltyMiss', side, 'penaltyMiss', { player: name, keeper: keeperName });
@@ -904,10 +919,12 @@ export function stepMatch(state: MatchState, lookup: PlayerLookup): void {
     state.minute = 45;
     // İkinci yarı santrasıyla başlar (2D sahada başlama dizilişi)
     state.lastPlay = null;
+    state.timeline += '|';
     emit(ctx, 'secondhalf', null, 'secondhalf');
   } else {
     state.minute++;
     simulateMinute(ctx);
+    if (state.lastPlay) state.timeline += playCode(state.lastPlay);
     if (state.period === 'first' && state.minute >= 45 + state.addedTime[0]) {
       state.period = 'half';
       emit(ctx, 'halftime', null, 'halftime', vars());
@@ -1009,5 +1026,7 @@ export function buildResult(state: MatchState): MatchResult {
     stats,
     players,
     manOfTheMatch: best?.playerId ?? null,
+    shots: [...state.shots],
+    timeline: state.timeline,
   };
 }

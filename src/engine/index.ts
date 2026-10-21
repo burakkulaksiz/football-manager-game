@@ -33,6 +33,7 @@ export * from './squad/development';
 export * from './squad/condition';
 export * from './squad/growth';
 export * from './squad/academy';
+export * from './squad/assistant';
 export * from './season/expectation';
 export * from './season/board';
 export * from './season/seasonEnd';

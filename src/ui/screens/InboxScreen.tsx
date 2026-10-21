@@ -3,6 +3,7 @@ import { formatDateTR, inboxItems, type NewsCategory, type NewsItem } from '../.
 import type { ScreenId } from '../../store/gameStore';
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { formatDateShort, NEWS_CATEGORY_LABELS } from '../labels';
+import { AssistantPanel } from '../components/AssistantPanel';
 
 type Filter = 'all' | 'unread' | 'team' | 'transfer' | 'board';
 
@@ -60,6 +61,8 @@ export function InboxScreen() {
   const player = selected?.playerId !== undefined ? world.players[selected.playerId] : undefined;
 
   return (
+    <div className="screen">
+      <AssistantPanel limit={4} />
     <div className="inbox">
       <section className="panel inbox-list-panel">
         <div className="panel-title panel-title-row">
@@ -115,6 +118,7 @@ export function InboxScreen() {
           <div className="panel-body muted">Bir mesaj seç.</div>
         )}
       </section>
+    </div>
     </div>
   );
 }

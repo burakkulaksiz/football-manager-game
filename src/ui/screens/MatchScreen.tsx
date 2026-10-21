@@ -3,6 +3,7 @@ import {
   displayMinute,
   formatMinute,
   getClub,
+  LINEUP_ADVICE,
   MAX_SUBS,
   primaryPosition,
   type GameWorld,
@@ -14,6 +15,7 @@ import { ClubBadge } from '../components/ClubBadge';
 import { readableText } from '../colors';
 import { FormationPicker, InstructionsPanel } from '../components/InstructionsPanel';
 import { MatchStatRows } from '../components/MatchStatRows';
+import { AssistantPanel } from '../components/AssistantPanel';
 import { PitchView, type CameraMode } from '../components/PitchView';
 import { buildScene, isHighlight, QUIET_MINUTE_MS, revealIndex, SCENE_FRAME_MS, sceneDurationMs } from '../pitchScene';
 import { MENTALITY_LABELS, POSITION_LABELS, positionGroup, ratingClass } from '../labels';
@@ -575,6 +577,9 @@ export function MatchScreen() {
         extra={showPitch && <PitchTools camera={camera} setCamera={setCamera} onFullscreen={enterFullscreen} onHide={togglePitch} />}
       />
       {showTactics && match.period !== 'full' && <LiveTactics match={match} />}
+      {match.period === 'pre' && (
+        <AssistantPanel filter={(a) => LINEUP_ADVICE.has(a.kind) && a.severity !== 'low'} limit={4} hideWhenEmpty compact />
+      )}
       {match.period === 'pre' && (
         <div className="motm">
           Kadro ve taktik, Taktik ekranındaki ayarlarından geliyor. Değiştirmek için sol menüden Taktik&apos;e gidip geri dönebilirsin.

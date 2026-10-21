@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { AssistantPanel } from '../components/AssistantPanel';
 import {
+  LINEUP_ADVICE,
   BENCH_SIZE,
   changeFormation,
   clubPlayers,
@@ -145,6 +147,7 @@ export function TacticsScreen() {
 
   return (
     <div className="screen">
+      <AssistantPanel filter={(a) => LINEUP_ADVICE.has(a.kind) || a.kind === 'thinPosition'} limit={5} hideWhenEmpty />
       <section className="panel">
         <div className="panel-title panel-title-row">
           <span>Taktik — {tactics.formation}</span>

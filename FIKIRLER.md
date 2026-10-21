@@ -33,7 +33,7 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
 ## Kadro ve oyuncu
 - [x] Oyuncuyu transfer listesine / kiralık listesine koyma (yapay zekâ kulüpleri de fazlalıklarını listeler)
 - [x] Altyapı ekranı ve genç oyuncu takibi (ayrı U19 takımı, gelişim grafikleri, ligdeki gençler + takip listesi)
-- [ ] Yardımcı antrenör tavsiyeleri ("şu mevkide eksiğin var")
+- [x] Yardımcı antrenör tavsiyeleri ("şu mevkide eksiğin var")
 - [ ] Oyuncu görüşmeleri (moral, şikâyet, kontrat isteği)
 - [ ] Kaptanlık ve takım içi hiyerarşi
 - [ ] Oyuncu geçmişi (sezon sezon maç/gol, eski kulüpler)

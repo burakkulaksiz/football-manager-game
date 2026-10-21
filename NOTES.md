@@ -63,6 +63,7 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
   squad/condition.ts   Günlük kondisyon toparlanması.
   squad/academy.ts     Altyapı (U19): academyPlayers, promoteToFirstTeam, sendToAcademy, manageAcademies,
                        academyIntake, renewAcademyContracts, toggleWatch (takip listesi).
+  squad/assistant.ts   Yardımcı antrenör: assistantAdvice (saf, yapılandırılmış öneriler; metni arayüz kurar).
   squad/growth.ts      Gelişim geçmişi (≤ 23 yaş, aylık CA; start + ca[] sıkı biçim, en fazla 36 ay), growthRate.
   season/expectation.ts Beklenti → hedef sıra, lig (division), yeni sezonda beklenti hesabı.
   season/board.ts      Yönetim güveni: maç sonrası, aylık değerlendirme, görevden alma (gameOver).
@@ -400,3 +401,13 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
 - Transfer / kiralık / serbest bırakma listeyi siler. Biçim 7 dönüşümü: dönem açıksa yapay zekâ listeleri.
 - Arayüz: profilde liste düğmeleri ve ListDialog; Transfer Merkezi "Listem" sekmesi, aramada "Liste" filtresi,
   gelen tekliflerde tür; kadro ekranında etiket ve "Listede" filtresi.
+
+## Yardımcı antrenör
+- assistantAdvice(world): önem sırasıyla (Acil / Önemli / Öneri) öneriler. Türler: ilk 11'de sakat / cezalı /
+  ayrılmış oyuncu (acil), mevkisinin yabancısı (verim < %85), yedekte yetenek × verimi 10+ iyi seçenek, maça ≤ 3 gün
+  kala yorgun (< %80), mutsuz (moral < 30); dizilişteki mevkide yatkınlığı ≥ 15 oyuncu sayısı < gereken + 1
+  (hiç yoksa acil); ilk 11'de bölge ortalaması takımın 8+ gerisinde (en zayıf bölge); en iyi 14 oyuncudan sözleşmesi
+  sezon sonu bitenler (tek öneri; ocaktan önemli, nisandan acil); U19 yaş sınırı, A takım 18. oyuncusu seviyesindeki
+  U19'lu; 6+ maçtır hiç oynamayan ≤ 21 yaş gençler (tek öneri); kadro > 30 / < 20; maaş bütçesi aşımı.
+- Arayüz: AssistantPanel — Gelen Kutusu üstünde (ilk 4, "Tümünü göster"), Taktik ekranında ilk 11 ve mevki derinliği
+  (yoksa gizli), maç öncesinde acil / önemli ilk 11 uyarıları. Bulunulan ekrana giden düğme gizlenir.

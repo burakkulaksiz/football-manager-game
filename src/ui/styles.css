@@ -3296,3 +3296,45 @@ select {
   margin-bottom: 10px;
   font-weight: 500;
 }
+
+/* ================= Yardımcı antrenör ================= */
+.advice-list {
+  margin: 0;
+  padding: 6px 10px 10px;
+  list-style: none;
+}
+
+.advice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 6px;
+  border-bottom: 1px solid var(--row-line);
+}
+
+.advice:last-child {
+  border-bottom: none;
+}
+
+.advice-text {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.advice-badge {
+  flex: none;
+  min-width: 58px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.advice-badge.high { background: rgba(239, 68, 68, 0.35); color: #ffe0e0; }
+.advice-badge.medium { background: rgba(246, 207, 60, 0.3); color: #fff2c2; }
+.advice-badge.low { background: rgba(255, 255, 255, 0.12); color: var(--text-soft); }
+
+.assistant-panel.compact .advice {
+  padding: 4px 6px;
+}

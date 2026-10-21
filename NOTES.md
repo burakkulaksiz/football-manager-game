@@ -59,6 +59,7 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
   squad/injuries.ts    Sakatlık türleri, maç/antrenman sakatlığı, günlük iyileşme.
   squad/discipline.ts  Kart cezaları (maç sonrası).
   squad/morale.ts      Maç sonrası moral, günlük ortalamaya dönüş.
+  transfer/scouting.ts Gözlemciler: oyuncu bilgisi (0–100), özellik aralıkları, görevler, raporlar, gözlemci görüşü.
   squad/career.ts      Oyuncu kariyeri: sezon satırları (kulüp başına), kulüp hareketleri, toplamlar.
   squad/hierarchy.ts   Takım hiyerarşisi (etki, seviyeler), kaptan değişikliği etkileri, liderlerin havası.
   squad/talks.ts       Oyuncu görüşmeleri: talepler (playerRequests), yanıtlar, menajer görüşmeleri, forma sözü takibi.
@@ -159,7 +160,7 @@ Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
 - **Kayıt** (IndexedDB, Dexie şema sürümü 2): `saves` = SaveSlot `{ id, name, careerId, clubId, clubName,
   gameDate, season, isAutosave, createdAt, updatedAt, formatVersion, managerName? }`; `saveData` = `{ id, world: GameWorld }`
   (aynı id). GameWorld olduğu gibi yazılır (düz veri), kayıt anında `structuredClone` ile kopyalanır.
-  `SAVE_FORMAT_VERSION = CURRENT_WORLD_VERSION` (şu an 9). GameWorld yapısı değişince sürümü artır ve
+  `SAVE_FORMAT_VERSION = CURRENT_WORLD_VERSION` (şu an 10). GameWorld yapısı değişince sürümü artır ve
   `engine/migrate.ts`'e dönüşüm ekle; `loadGame` eski kayıtları otomatik dönüştürür, daha yeni sürümü reddeder.
   Sezon sonu kaydı ~1.7 MB (+ haberler/teklifler).
 - **careerId** = `${seed}-${playerClubId}`. Otomatik kayıt kariyer başına tek slot; elle kayıt sınırsız.
@@ -456,3 +457,23 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
 - Profil: "İstatistikler" yerine tam genişlikte "Kariyer" (sezonlar + toplam) ve "Kulüp Geçmişi" paneli; kulüp adına
   tıklayınca o kulübün kadrosu. Biçim değişmedi (alanlar isteğe bağlı). Kayıt sezon başına ~50 KB büyür.
 - Not: git stash / checkout core.autocrlf=true ile dosyaları CRLF yazabiliyor; düzenleme betikleri LF bekler.
+
+## Gözlemci sistemi (kullanıcı seçti: aralık gösterimi, kendi kadro + maç bilgisi, görev listesi)
+- Bilgi 0–100 yalnızca kullanıcı için (world.scouting.knowledge); yapay zekâ her şeyi bilir, motoru etkilemez.
+  knowledgeOf: kendi oyuncumuz (U19, kiralık gelen dahil) ve bizde oynamış olan (moves/career) = 100; diğerleri
+  max(ün, kayıtlı bilgi). Ün = (CA − 90) × 0.45 + (itibar − 30) × 0.25, 0–60; başka kulübün U19'u 0.
+  Başlangıçta ligin çoğu 1–39, en iyiler ~50.
+- Maç: kulübümüzün maçında forma giyen rakipler +20 (en fazla 75; tam bilgi yalnızca raporla) — applyResult.
+- Görünüm: özellik aralığı genişliği 2 + (1 − k/100) × 8 (bilgi 0 → 10, tam → tek sayı); gerçek değer hep içinde,
+  kayma oyuncu+özelliğe bağlı sabit oran. Yetenek tahmini ±20 × (1 − k/100), potansiyel ±(5 + 15 × (1 − k/100))
+  (tam bilgide bile ±5). Tahminler "?" ile; kendi oyuncumuzda antrenör raporu kesin. Transfer aramasında özellik
+  filtresi aralığın ortasıyla; başka oyuncunun gelişim grafiği yalnızca tam bilgiyle.
+- Görevler (aynı anda 3; ücret transfer bütçesinden ve kasadan, finans dökümünde "Gözlemcilik"):
+  oyuncu 7 gün €10 bin → 100; arama (mevki, en fazla yaş, en fazla değer) 14 gün €25 bin → en iyi 5 aday
+  (CA + gençte (PA − CA)/2 ± 12 yanılgı) 100; kulüp taraması 21 gün €40 bin → A takım 80. İptalde ücret dönmez.
+  Rapor günü önemli haber; en fazla 30 rapor. Emekli olanların bilgisi yeni sezonda silinir.
+- Gözlemci görüşü (scoutVerdict): görünen yetenek, kadromuzda aynı mevki grubunun ilk 11 düzeyi (GK 1, DEF 4,
+  MID 4, ATT 2. en iyi) ve yedek düzeyiyle (2 katı) karşılaştırılır → İlk 11'e girer / Rotasyon / Geleceğin
+  oyuncusu (≤ 21 yaş, potansiyeli ilk 11 düzeyinde) / Kadroya katkı sağlamaz. Profilde bilgi ≥ 80 ise görünür.
+- Arayüz: Transfer Merkezi → Gözlemciler (süren görevler, yeni görev, açılır raporlar); profilde "Gözlemci gönder",
+  Gözlemci Raporu (bilgi çubuğu, tahminler, görüş); aramada Yetenek ve Bilgi sütunları.

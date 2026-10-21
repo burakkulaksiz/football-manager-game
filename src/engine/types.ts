@@ -1,6 +1,7 @@
 import type { Attributes, HiddenAttributes } from './attributes';
 import type { GameDate } from './date';
 import type { CareerMove, CareerSeason } from './squad/career';
+import type { ScoutingState } from './transfer/scouting';
 import type { Tactics } from './match/tactics';
 
 export type Position =
@@ -213,7 +214,7 @@ export interface MatchResult {
 /* ------------------------------------------------------------------ */
 
 export type IncomeCategory = 'tickets' | 'tv' | 'sponsor' | 'transfersIn' | 'prize';
-export type ExpenseCategory = 'wages' | 'bonuses' | 'transfersOut' | 'signingBonuses';
+export type ExpenseCategory = 'wages' | 'bonuses' | 'transfersOut' | 'signingBonuses' | 'scouting';
 
 /** Bir ayın gelir/gider dökümü (giderler pozitif sayı). */
 export interface MonthReport {
@@ -289,7 +290,8 @@ export type NewsCategory =
   | 'training'
   | 'board'
   | 'season'
-  | 'academy';
+  | 'academy'
+  | 'scouting';
 
 /* ------------------------------------------------------------------ */
 /* Antrenman                                                           */
@@ -369,6 +371,8 @@ export interface GameWorld {
   nextRequestId: number;
   /** Verilmiş forma şansı sözleri. */
   promises: PlayingPromise[];
+  /** Gözlemciler: oyuncu bilgisi, görevler, raporlar (yalnızca kullanıcının kulübü). */
+  scouting: ScoutingState;
 }
 
 /* ------------------------------------------------------------------ */

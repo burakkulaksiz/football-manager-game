@@ -18,10 +18,12 @@ import {
   sendToAcademy,
   toggleWatch,
   type Player,
+  abilityEstimate,
 } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { GrowthChart } from '../components/GrowthChart';
+import { AbilityStars, PotentialStars } from '../components/ScoutViews';
 import { Stars } from '../components/Stars';
 import {
   abilityStars,
@@ -106,7 +108,7 @@ function U19Tab() {
                   </td>
                   <td className="num">{ageOn(p.birthDate, world.date)}</td>
                   <td><Stars value={abilityStars(p.currentAbility)} /></td>
-                  <td><Stars value={potentialStarsFor(p, true)} /></td>
+                  <td><Stars value={potentialStarsFor(world, p)} /></td>
                   <td><GrowthLabel player={p} /></td>
                   <td><GrowthChart player={p} /></td>
                   <td className="num">{formatMoney(p.contract.wage)}</td>
@@ -181,7 +183,7 @@ function GrowthTab() {
               <td>{p.academy ? <span className="tag tag-u19">U19</span> : <span className="muted">A Takım</span>}</td>
               <td className="num">{ageOn(p.birthDate, world.date)}</td>
               <td><Stars value={abilityStars(p.currentAbility)} /></td>
-              <td><Stars value={potentialStarsFor(p, true)} /></td>
+              <td><Stars value={potentialStarsFor(world, p)} /></td>
               <td><GrowthLabel player={p} /></td>
               <td><GrowthChart player={p} /></td>
               <td className="right nowrap" onClick={(e) => e.stopPropagation()}>
@@ -228,8 +230,8 @@ function LeagueTab() {
         .filter((p) => !group || positionGroup(primaryPosition(p)) === group)
         .filter((p) => !clubId || p.clubId === clubId)
         .filter((p) => !watchOnly || world.youthWatch.includes(p.id))
-        .map((p) => ({ p, potential: potentialStarsFor(p, false) }))
-        .sort((a, b) => b.potential - a.potential || b.p.currentAbility - a.p.currentAbility),
+        .map((p) => ({ p, potential: potentialStarsFor(world, p) }))
+        .sort((a, b) => b.potential - a.potential || abilityEstimate(world, b.p) - abilityEstimate(world, a.p)),
     [world, group, maxAge, clubId, watchOnly],
   );
 
@@ -266,8 +268,8 @@ function LeagueTab() {
         </label>
       </div>
       <div className="panel-note">
-        {rows.length} genç oyuncu{rows.length > limit ? ` (ilk ${limit} gösteriliyor)` : ''}. Potansiyel gözlemcilerin
-        tahminidir. ☆ ile takip listene ekle; profilden teklif yapabilirsin.
+        {rows.length} genç oyuncu{rows.length > limit ? ` (ilk ${limit} gösteriliyor)` : ''}. Yetenek ve potansiyel
+        tahminidir; gözlemci raporu tahmini netleştirir (?: tahmin). ☆ ile takip listene ekle; profilden teklif yapabilirsin.
       </div>
       <table className="data-table clickable">
         <thead>
@@ -284,7 +286,7 @@ function LeagueTab() {
           </tr>
         </thead>
         <tbody>
-          {rows.slice(0, limit).map(({ p, potential }) => {
+          {rows.slice(0, limit).map(({ p }) => {
             const club = getClub(world, p.clubId!);
             const watched = watch.has(p.id);
             return (
@@ -311,8 +313,8 @@ function LeagueTab() {
                     ))}
                   </span>
                 </td>
-                <td><Stars value={abilityStars(p.currentAbility)} /></td>
-                <td><Stars value={potential} title="Gözlem tahmini" /></td>
+                <td><AbilityStars player={p} /></td>
+                <td><PotentialStars player={p} /></td>
                 <td><GrowthLabel player={p} /></td>
                 <td className="num value">{formatMoney(marketValue(p, world.date))}</td>
               </tr>

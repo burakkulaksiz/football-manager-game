@@ -39,7 +39,7 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
 - [x] Oyuncu geçmişi (sezon sezon maç/gol, eski kulüpler)
 
 ## Transfer
-- [ ] Gözlemci sistemi (bilinmeyen oyuncuların özellikleri gizli, gözlemciyle açılır)
+- [x] Gözlemci sistemi (bilinmeyen oyuncuların özellikleri gizli, gözlemciyle açılır)
 - [ ] Yurtdışı ligleri ve yabancı kulüplerden transfer
 - [ ] Satın alma opsiyonlu kiralık, sonradan satış payı gibi sözleşme maddeleri
 - [ ] Menajer pazarlığı / oyuncu ajanları

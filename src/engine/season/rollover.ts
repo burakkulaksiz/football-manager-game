@@ -8,6 +8,7 @@ import { clubPlayers, getClub, leagueClubs } from '../generation/worldGenerator'
 import { academyIntake, manageAcademies, renewAcademyContracts } from '../squad/academy';
 import { generateSeason, seasonLabel } from '../league/schedule';
 import { addNews } from '../news';
+import { pruneKnowledge } from '../transfer/scouting';
 import { ageOn } from '../player';
 import type { Rng } from '../rng';
 import type { Club, GameWorld, Player } from '../types';
@@ -181,6 +182,7 @@ function newSeasonFinances(world: GameWorld): void {
 export function startNewSeason(world: GameWorld, rng: Rng, data: GameData): void {
   applyLeagueChanges(world);
   retirePlayers(world, rng);
+  pruneKnowledge(world);
   // Altyapı: yaş sınırını geçenler (yapay zekâ alır ya da bırakır), sonra yeni grup U19'a
   manageAcademies(world);
   academyIntake(world, rng, data);

@@ -3406,3 +3406,91 @@ select {
   border-top: 2px solid rgba(255, 255, 255, 0.18);
   font-weight: 700;
 }
+
+/* Gözlemci sistemi */
+.attr-range {
+  font-size: 0.92em;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+.scout-stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.stars-unsure {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.knowledge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.knowledge-bar {
+  display: inline-block;
+  width: 46px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  vertical-align: middle;
+}
+.knowledge-bar.wide {
+  width: 90px;
+}
+.knowledge-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.verdict {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.verdict-starter { color: var(--good); }
+.verdict-rotation { color: var(--accent); }
+.verdict-prospect { color: #7fb8ff; }
+.verdict-none { color: var(--text-muted); font-weight: 400; }
+.scout-forms {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+  padding: 8px 12px;
+}
+.scout-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+}
+.scout-form .filters {
+  padding: 0;
+  border: 0;
+}
+.scout-form .btn {
+  align-self: flex-start;
+}
+.scout-report {
+  border-bottom: 1px solid var(--panel-border);
+}
+.scout-report-head {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 7px 12px;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.scout-report-head:hover {
+  background: rgba(255, 255, 255, 0.04);
+}

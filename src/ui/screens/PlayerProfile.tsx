@@ -23,17 +23,19 @@ import {
   TECHNICAL_ATTRS,
   toggleWatch,
   type AttributeKey,
-  type Attributes,
+  CLUB_SCAN_KNOWLEDGE,
+  FULL_KNOWLEDGE,
+  knowledgeOf,
 } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { CareerPanel, MovesPanel } from '../components/CareerPanel';
 import { GrowthChart } from '../components/GrowthChart';
 import { Shirt } from '../components/Shirt';
 import { TalkPanel } from '../components/TalkPanel';
+import { AbilityStars, AttrValue, KnowledgeBar, PotentialStars, ScoutButton, VerdictTag } from '../components/ScoutViews';
 import { Stars } from '../components/Stars';
 import { ContractDialog, ListDialog, OfferDialog } from '../components/TransferDialogs';
 import {
-  attrClass,
   ATTRIBUTE_LABELS,
   familiarityLabel,
   FOOT_LABELS,
@@ -45,7 +47,6 @@ import {
   nationName,
   abilityStars,
   POSITION_NAMES,
-  potentialStarsFor,
   trendSymbol,
 } from '../labels';
 import { PositionBoxes } from './SquadScreen';
@@ -142,6 +143,7 @@ function TransferActions({ player }: { player: Player }) {
       <section className="panel action-panel">
         <div className="panel-body action-bar">
           <span className="muted">Serbest oyuncu — bonservis ödemeden, yalnızca sözleşmeyle imzalayabilirsin.</span>
+          <ScoutButton player={player} />
           <button className="btn btn-go" onClick={() => setDialog('contract')}>Sözleşme Teklif Et</button>
         </div>
         {dialog === 'contract' && <ContractDialog player={player} onClose={() => setDialog(null)} />}
@@ -162,6 +164,7 @@ function TransferActions({ player }: { player: Player }) {
           {activeOffers.some((o) => o.buyerId === world.playerClubId) && ' · açık teklifin var'}
         </span>
         {watchButton}
+        <ScoutButton player={player} />
         <button className="btn" disabled={transferBlock !== null} title={transferBlock ?? ''} onClick={() => setDialog('transfer')}>
           Transfer Teklifi
         </button>
@@ -175,10 +178,12 @@ function TransferActions({ player }: { player: Player }) {
   );
 }
 
-function AttributeColumn({ title, keys, values }: {
+/** Özellik sütunu; tanımadığımız oyuncuda değerler aralık olarak (gözlemci sistemi). */
+function AttributeColumn({ title, keys, player, knowledge }: {
   title: string;
   keys: readonly AttributeKey[];
-  values: Attributes;
+  player: Player;
+  knowledge: number;
 }) {
   return (
     <div className="profile-col">
@@ -186,7 +191,7 @@ function AttributeColumn({ title, keys, values }: {
       {keys.map((k) => (
         <div key={k} className="kv">
           <span className="kv-label">{ATTRIBUTE_LABELS[k]}</span>
-          <span className={attrClass(values[k])}>{values[k]}</span>
+          <AttrValue player={player} attr={k} knowledge={knowledge} />
         </div>
       ))}
     </div>
@@ -209,6 +214,8 @@ export function PlayerProfile() {
   );
   const own = player.clubId === world.playerClubId;
   const growth = GROWTH_LABELS[growthRate(player)];
+  const knowledge = knowledgeOf(world, player);
+  const known = knowledge >= FULL_KNOWLEDGE;
 
   return (
     <div className="screen">
@@ -241,30 +248,38 @@ export function PlayerProfile() {
           </div>
 
           {isGK ? (
-            <AttributeColumn title="Kalecilik" keys={GOALKEEPING_ATTRS} values={player.attributes} />
+            <AttributeColumn title="Kalecilik" keys={GOALKEEPING_ATTRS} player={player} knowledge={knowledge} />
           ) : (
-            <AttributeColumn title="Teknik" keys={TECHNICAL_ATTRS} values={player.attributes} />
+            <AttributeColumn title="Teknik" keys={TECHNICAL_ATTRS} player={player} knowledge={knowledge} />
           )}
-          <AttributeColumn title="Zihinsel" keys={MENTAL_ATTRS} values={player.attributes} />
+          <AttributeColumn title="Zihinsel" keys={MENTAL_ATTRS} player={player} knowledge={knowledge} />
           <div className="profile-col">
-            <AttributeColumn title="Fiziksel" keys={PHYSICAL_ATTRS} values={player.attributes} />
+            <AttributeColumn title="Fiziksel" keys={PHYSICAL_ATTRS} player={player} knowledge={knowledge} />
             <div className="sub-head sub-head-gap">Diğer</div>
             <Row label="Kondisyon">%{player.condition}</Row>
             <Row label="Form">{player.form.length > 0 ? player.form.join(' ') : '—'}</Row>
             <Row label="Moral">{moraleLabel(player.morale)}</Row>
             <Row label="Gelişim"><span className={trendSymbol(player.trend).className}>{trendSymbol(player.trend).text}</span></Row>
-            <div className="sub-head sub-head-gap">Antrenör Raporu</div>
-            <Row label="Yetenek"><Stars value={abilityStars(player.currentAbility)} /></Row>
             {own ? (
-              <Row label="Potansiyel"><Stars value={potentialStarsFor(player, true)} /></Row>
+              <>
+                <div className="sub-head sub-head-gap">Antrenör Raporu</div>
+                <Row label="Yetenek"><Stars value={abilityStars(player.currentAbility)} /></Row>
+                <Row label="Potansiyel"><PotentialStars player={player} /></Row>
+              </>
             ) : (
-              <Row label="Potansiyel (tahmin)"><Stars value={potentialStarsFor(player, false)} title="Gözlem tahmini" /></Row>
+              <>
+                <div className="sub-head sub-head-gap">Gözlemci Raporu</div>
+                <Row label="Bilgi"><KnowledgeBar knowledge={knowledge} /></Row>
+                <Row label="Yetenek"><AbilityStars player={player} /></Row>
+                <Row label="Potansiyel (tahmin)"><PotentialStars player={player} /></Row>
+                <Row label="Görüş">{knowledge >= CLUB_SCAN_KNOWLEDGE ? <VerdictTag player={player} /> : <span className="muted">Rapor yok</span>}</Row>
+              </>
             )}
           </div>
         </div>
       </section>
 
-      {player.growth && player.growth.ca.length >= 2 && (
+      {player.growth && player.growth.ca.length >= 2 && known && (
         <section className="panel">
           <h2 className="panel-title panel-title-row">
             <span>Gelişim</span>

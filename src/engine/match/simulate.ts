@@ -5,6 +5,7 @@ import { processDiscipline } from '../squad/discipline';
 import { injurePlayer } from '../squad/injuries';
 import { applyMatchMorale } from '../squad/morale';
 import { trackPromises } from '../squad/talks';
+import { learnFromMatch } from '../transfer/scouting';
 import { clubPlayers, getClub } from '../generation/worldGenerator';
 import type { Rng } from '../rng';
 import type { Fixture, GameWorld, MatchResult } from '../types';
@@ -85,5 +86,6 @@ export function applyResult(world: GameWorld, fixture: Fixture, result: MatchRes
   processDiscipline(world, fixture, result, rng);
   applyMatchMorale(world, fixture, result);
   trackPromises(world, fixture, result);
+  learnFromMatch(world, fixture.homeId, fixture.awayId, result.players);
   boardAfterMatch(world, fixture);
 }

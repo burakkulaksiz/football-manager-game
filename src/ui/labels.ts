@@ -1,5 +1,6 @@
 /** Motor anahtarlarının Türkçe karşılıkları ve biçimlendirme yardımcıları. */
-import type { AttributeKey, FanExpectation, Foot, GameDate, Position } from '../engine';
+import { abilityEstimate, potentialEstimate } from '../engine';
+import type { AttributeKey, FanExpectation, Foot, GameDate, GameWorld, Player, Position, ScoutVerdict } from '../engine';
 import { gameData } from '../gameData';
 
 export const ATTRIBUTE_LABELS: Record<AttributeKey, string> = {
@@ -252,6 +253,7 @@ export const NEWS_CATEGORY_LABELS: Record<import('../engine').NewsCategory, stri
   board: 'Yönetim',
   season: 'Sezon',
   academy: 'Altyapı',
+  scouting: 'Gözlemci',
 };
 
 export const INCOME_LABELS: Record<import('../engine').IncomeCategory, string> = {
@@ -267,6 +269,7 @@ export const EXPENSE_LABELS: Record<import('../engine').ExpenseCategory, string>
   bonuses: 'Primler',
   transfersOut: 'Transfer Gideri',
   signingBonuses: 'İmza Bonusu',
+  scouting: 'Gözlemcilik',
 };
 
 const MONTH_NAMES = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -320,14 +323,32 @@ export const GROWTH_LABELS: Record<import('../engine').GrowthRate, { text: strin
 };
 
 /**
- * Potansiyel yıldızları: kendi oyuncumuzda antrenör raporu (kesin), başka kulübün oyuncusunda
- * gözlem tahmini — oyuncuya özgü sabit bir sapmayla (±0.5 yıldız civarı; her bakışta aynı).
+ * Yetenek / potansiyel yıldızları: kendi oyuncumuzda antrenör raporu (kesin), başka kulübün oyuncusunda
+ * bilgi düzeyine göre tahmin (gözlemci sistemi; oyuncuya özgü sabit sapma, her bakışta aynı).
  */
-export function potentialStarsFor(player: import('../engine').Player, own: boolean): number {
-  if (own) return abilityStars(player.potentialAbility);
-  const noise = ((Math.imul(player.id, 2654435761) >>> 0) % 1000) / 1000 - 0.5;
-  return abilityStars(player.potentialAbility + noise * 28);
+export function abilityStarsFor(world: GameWorld, player: Player): number {
+  return abilityStars(abilityEstimate(world, player));
 }
+
+export function potentialStarsFor(world: GameWorld, player: Player): number {
+  return abilityStars(potentialEstimate(world, player));
+}
+
+/** Bilgi düzeyi etiketi (gözlemci sistemi). */
+export function knowledgeLabel(knowledge: number): string {
+  if (knowledge >= 100) return 'Tam';
+  if (knowledge >= 75) return 'İyi';
+  if (knowledge >= 45) return 'Orta';
+  if (knowledge >= 20) return 'Az';
+  return 'Çok az';
+}
+
+export const VERDICT_LABELS: Record<ScoutVerdict, { text: string; className: string }> = {
+  starter: { text: "İlk 11'e girer", className: 'verdict-starter' },
+  rotation: { text: 'Rotasyon oyuncusu', className: 'verdict-rotation' },
+  prospect: { text: 'Geleceğin oyuncusu', className: 'verdict-prospect' },
+  notNeeded: { text: 'Kadroya katkı sağlamaz', className: 'verdict-none' },
+};
 
 /** Liste etiketleri (kadro, transfer, profil). */
 export const LISTING_LABELS: Record<import('../engine').ListingKind, string> = {

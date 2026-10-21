@@ -10,6 +10,7 @@ import { addNews } from '../news';
 import { divisionOf, initialBoard } from '../season/expectation';
 import { recordGrowth } from '../squad/growth';
 import { refreshAiListings } from '../transfer/listing';
+import { emptyScouting } from '../transfer/scouting';
 import { DEFAULT_TRAINING } from '../squad/training';
 
 /** Altyapı üretiminin ayrı rng'si için tohum tuzu. */
@@ -162,6 +163,7 @@ export function createWorld(
     requests: [],
     nextRequestId: 1,
     promises: [],
+    scouting: emptyScouting(),
   };
   fillAcademies(world, data, new Rng((seed ^ ACADEMY_SEED_SALT) >>> 0));
   recordGrowth(world);

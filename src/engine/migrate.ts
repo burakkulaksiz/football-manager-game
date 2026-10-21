@@ -2,7 +2,7 @@
  * Eski kayıtları güncel GameWorld biçimine dönüştürür.
  * Biçim sürümü: 1 = aşama 6 (finans/transfer yok), 2 = aşama 7, 3 = aşama 8 (ceza, gelişim, antrenman),
  * 4 = aşama 9 (1. Lig, yönetim, sezon arşivi), 5 = menajer kartı, 6 = altyapı (U19) ve gelişim geçmişi,
- * 7 = transfer / kiralık listesi, 8 = oyuncu görüşmeleri, 9 = yardımcı kaptan.
+ * 7 = transfer / kiralık listesi, 8 = oyuncu görüşmeleri, 9 = yardımcı kaptan, 10 = gözlemciler.
  */
 import type { GameData } from './data';
 import { initFinance, initFinances, payMonthly } from './finance/finance';
@@ -10,12 +10,13 @@ import { ACADEMY_SEED_SALT, fillAcademies, generateClubSquad } from './generatio
 import { recordGrowth } from './squad/growth';
 import { refreshAiListings } from './transfer/listing';
 import { isWindowOpen } from './transfer/window';
+import { emptyScouting } from './transfer/scouting';
 import { Rng } from './rng';
 import { initialBoard } from './season/expectation';
 import { DEFAULT_TRAINING } from './squad/training';
 import type { GameWorld } from './types';
 
-export const CURRENT_WORLD_VERSION = 9;
+export const CURRENT_WORLD_VERSION = 10;
 
 /** `raw` eski biçimdeki dünya; dönüştürülmüş dünya döner (yerinde değiştirir). */
 export function migrateWorld(raw: unknown, fromVersion: number, data: GameData): GameWorld {
@@ -98,6 +99,13 @@ export function migrateWorld(raw: unknown, fromVersion: number, data: GameData):
   }
   if (fromVersion < 9) {
     for (const t of Object.values(world.tactics)) t.viceCaptainId ??= null;
+  }
+  if (fromVersion < 10) {
+    // Gözlemciler: bilgi ünden başlar (maç geçmişinden türetilmez); finans dökümüne gözlemcilik gideri
+    world.scouting ??= emptyScouting();
+    for (const fin of Object.values(world.finances)) {
+      for (const r of [fin.current, ...fin.history]) r.expense.scouting ??= 0;
+    }
   }
   return world;
 }

@@ -4,6 +4,8 @@ import {
   ageOn,
   ALL_ATTRS,
   askingPrice,
+  attributeEstimate,
+  knowledgeOf,
   squadRanks,
   formatDateTR,
   getClub,
@@ -24,6 +26,8 @@ import {
 } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
+import { ScoutingTab } from '../components/ScoutingTab';
+import { AbilityStars, KnowledgeBar } from '../components/ScoutViews';
 import { ContractDialog, CounterDialog, ListDialog } from '../components/TransferDialogs';
 import {
   ATTRIBUTE_LABELS,
@@ -37,7 +41,7 @@ import {
   positionGroup,
 } from '../labels';
 
-type Tab = 'search' | 'offers' | 'listings' | 'news';
+type Tab = 'search' | 'offers' | 'listings' | 'scouts' | 'news';
 
 /** Kulüp filtresinde serbest oyuncuları seçen değer. */
 const FREE_AGENTS = '__free';
@@ -112,9 +116,10 @@ function SearchTab() {
       })
       // '__free' = serbest oyuncular
       .filter((p) => !clubId || (clubId === FREE_AGENTS ? p.clubId === null : p.clubId === clubId))
-      .filter((p) => !attr || p.attributes[attr] >= attrMin)
+      // Görünen (tahmini) değerle: tanınmayan oyuncunun gerçek değeri sızmasın
+      .filter((p) => !attr || attributeEstimate(world, p, attr) >= attrMin)
       .filter((p) => !listed || p.listing?.kind === listed)
-      .map((p) => ({ p, value: marketValue(p, world.date), asking: p.clubId ? askingPrice(world, p, ranks) : 0 }))
+      .map((p) => ({ p, value: marketValue(p, world.date), asking: p.clubId ? askingPrice(world, p, ranks) : 0, knowledge: knowledgeOf(world, p) }))
       .filter((r) => !maxValue || r.value <= maxValue)
       .filter((r) => !affordable || r.asking <= budget)
       .sort((a, b) => b.value - a.value);
@@ -187,6 +192,8 @@ function SearchTab() {
             <th>Kulüp</th>
             <th>Mevki</th>
             <th className="num">Yaş</th>
+            <th>Yetenek</th>
+            <th>Bilgi</th>
             <th className="num">Değer</th>
             <th className="num">Beklenti</th>
             <th className="num">Maaş</th>
@@ -194,7 +201,7 @@ function SearchTab() {
           </tr>
         </thead>
         <tbody>
-          {results.slice(0, limit).map(({ p, value, asking }) => {
+          {results.slice(0, limit).map(({ p, value, asking, knowledge }) => {
             const club = p.clubId ? getClub(world, p.clubId) : null;
             return (
               <tr key={p.id} onClick={() => openPlayer(p.id)}>
@@ -206,6 +213,8 @@ function SearchTab() {
                 <td>{club ? <span className="club-cell"><ClubBadge club={club} size={16} /> {club.name}</span> : <span className="tag tag-free">Serbest</span>}</td>
                 <td><PositionChips player={p} /></td>
                 <td className="num">{ageOn(p.birthDate, world.date)}</td>
+                <td><AbilityStars player={p} /></td>
+                <td><KnowledgeBar knowledge={knowledge} /></td>
                 <td className="num value">{formatMoney(value)}</td>
                 <td className={`num${asking > budget ? ' muted' : ''}`}>{p.clubId ? formatMoney(asking) : 'Bonservissiz'}</td>
                 <td className="num">{formatMoney(p.contract.wage)}</td>
@@ -462,12 +471,16 @@ export function TransferScreen() {
             <button className={`tab${tab === 'listings' ? ' active' : ''}`} onClick={() => setTab('listings')}>
               Listem{listedCount > 0 ? ` (${listedCount})` : ''}
             </button>
+            <button className={`tab${tab === 'scouts' ? ' active' : ''}`} onClick={() => setTab('scouts')}>
+              Gözlemciler{world.scouting.assignments.length > 0 ? ` (${world.scouting.assignments.length})` : ''}
+            </button>
             <button className={`tab${tab === 'news' ? ' active' : ''}`} onClick={() => setTab('news')}>Haberler</button>
           </span>
         </div>
         {tab === 'search' && <SearchTab />}
         {tab === 'offers' && <OffersTab />}
         {tab === 'listings' && <ListingsTab />}
+        {tab === 'scouts' && <ScoutingTab />}
         {tab === 'news' && <NewsTab />}
       </section>
     </div>

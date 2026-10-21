@@ -12,6 +12,7 @@ import { aiTransferDay } from './transfer/ai';
 import { returnLoans } from './transfer/market';
 import { processOffers } from './transfer/offers';
 import { listedOffersDay, listingsOnWindowOpen } from './transfer/listing';
+import { scoutingDay } from './transfer/scouting';
 import { transferWindow } from './transfer/window';
 import { boardMonthly } from './season/board';
 import { recordGrowth } from './squad/growth';
@@ -65,6 +66,7 @@ export function processDay(world: GameWorld, rng: Rng, data: GameData): void {
   processOffers(world);
   aiTransferDay(world, rng);
   listedOffersDay(world, rng);
+  scoutingDay(world, rng);
 
   healInjuries(world);
   recoverCondition(world);

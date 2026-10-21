@@ -1,11 +1,14 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import {
+  abilityEstimate,
   ageOn,
+  attributeEstimate,
   clubPlayers,
   divisionOf,
   getClub,
   GOALKEEPING_ATTRS,
   HOME_NATION,
+  knowledgeOf,
   marketValue,
   MENTAL_ATTRS,
   naturalPositions,
@@ -22,13 +25,12 @@ import {
 } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { Modal } from '../components/Modal';
-import { Stars } from '../components/Stars';
+import { AbilityStars, AttrValue, PotentialStars } from '../components/ScoutViews';
 import { StatusTags } from '../components/StatusTags';
 import {
-  abilityStars,
+  abilityStarsFor,
   LISTING_LABELS,
   potentialStarsFor,
-  attrClass,
   ATTRIBUTE_LABELS,
   formatDateShort,
   formatMoney,
@@ -182,12 +184,12 @@ const VIEW_COLUMNS: Record<SquadView, Column[]> = {
   ],
   report: [
     NUMBER, NAME, POSITION, AGE,
-    { id: 'ability', label: 'Yetenek', sort: (p) => p.currentAbility, render: (p) => <Stars value={abilityStars(p.currentAbility)} /> },
-    // Başka kulübün oyuncusunda potansiyel gözlem tahmini (kendi oyuncumuzda antrenör raporu)
+    // Başka kulübün oyuncusunda yetenek ve potansiyel bilgi düzeyine göre tahmin (kendi oyuncumuzda antrenör raporu)
+    { id: 'ability', label: 'Yetenek', sort: (p, c) => abilityEstimate(c.world, p), render: (p) => <AbilityStars player={p} /> },
     {
       id: 'potential', label: 'Potansiyel',
-      sort: (p, c) => potentialStarsFor(p, p.clubId === c.world.playerClubId),
-      render: (p, c) => <Stars value={potentialStarsFor(p, p.clubId === c.world.playerClubId)} />,
+      sort: (p, c) => potentialStarsFor(c.world, p),
+      render: (p) => <PotentialStars player={p} />,
     },
     {
       id: 'trend', label: 'Gelişim', sort: (p) => p.trend,
@@ -233,8 +235,14 @@ function CompareDialog({ ids, onClose }: { ids: [number, number]; onClose: () =>
   const [a, b] = ids.map((id) => world.players[id]!) as [Player, Player];
   const sa = playerSeasonStats(world.season.fixtures, a.id);
   const sb = playerSeasonStats(world.season.fixtures, b.id);
-  const potA = potentialStarsFor(a, a.clubId === world.playerClubId);
-  const potB = potentialStarsFor(b, b.clubId === world.playerClubId);
+  const potA = potentialStarsFor(world, a);
+  const potB = potentialStarsFor(world, b);
+  const abA = abilityStarsFor(world, a);
+  const abB = abilityStarsFor(world, b);
+  // Tanımadığımız oyuncuda özellikler aralık; karşılaştırma aralığın ortasıyla
+  const kA = knowledgeOf(world, a);
+  const kB = knowledgeOf(world, b);
+  const est = (p: Player, k: AttributeKey) => attributeEstimate(world, p, k, p === a ? kA : kB);
   const isGK = (p: Player) => primaryPosition(p) === 'GK';
   const groups: { title: string; keys: readonly AttributeKey[] }[] = [
     ...(!isGK(a) || !isGK(b) ? [{ title: 'Teknik', keys: TECHNICAL_ATTRS }] : []),
@@ -247,8 +255,8 @@ function CompareDialog({ ids, onClose }: { ids: [number, number]; onClose: () =>
   for (const g of groups) {
     for (const k of g.keys) {
       if (NEUTRAL_ATTRS.has(k)) continue;
-      if (a.attributes[k] > b.attributes[k]) aWins++;
-      else if (b.attributes[k] > a.attributes[k]) bWins++;
+      if (est(a, k) > est(b, k)) aWins++;
+      else if (est(b, k) > est(a, k)) bWins++;
     }
   }
   const header = (p: Player) => (
@@ -272,9 +280,8 @@ function CompareDialog({ ids, onClose }: { ids: [number, number]; onClose: () =>
         <CompareRow label="Piyasa değeri" a={formatMoney(marketValue(a, world.date))} b={formatMoney(marketValue(b, world.date))}
           aValue={marketValue(a, world.date)} bValue={marketValue(b, world.date)} />
         <CompareRow label="Maaş" a={formatMoney(a.contract.wage)} b={formatMoney(b.contract.wage)} />
-        <CompareRow label="Yetenek" a={<Stars value={abilityStars(a.currentAbility)} />} b={<Stars value={abilityStars(b.currentAbility)} />}
-          aValue={abilityStars(a.currentAbility)} bValue={abilityStars(b.currentAbility)} />
-        <CompareRow label="Potansiyel" a={<Stars value={potA} />} b={<Stars value={potB} />} aValue={potA} bValue={potB} />
+        <CompareRow label="Yetenek" a={<AbilityStars player={a} />} b={<AbilityStars player={b} />} aValue={abA} bValue={abB} />
+        <CompareRow label="Potansiyel" a={<PotentialStars player={a} />} b={<PotentialStars player={b} />} aValue={potA} bValue={potB} />
         <CompareRow label="Kondisyon" a={`%${a.condition}`} b={`%${b.condition}`} aValue={a.condition} bValue={b.condition} />
         <CompareRow label="Moral" a={moraleLabel(a.morale)} b={moraleLabel(b.morale)} aValue={a.morale} bValue={b.morale} />
         <CompareRow label="Sezon: maç / gol / asist" a={`${sa.apps} / ${sa.goals} / ${sa.assists}`} b={`${sb.apps} / ${sb.goals} / ${sb.assists}`} />
@@ -287,10 +294,10 @@ function CompareDialog({ ids, onClose }: { ids: [number, number]; onClose: () =>
               <CompareRow
                 key={k}
                 label={ATTRIBUTE_LABELS[k]}
-                a={<span className={attrClass(a.attributes[k])}>{a.attributes[k]}</span>}
-                b={<span className={attrClass(b.attributes[k])}>{b.attributes[k]}</span>}
-                aValue={NEUTRAL_ATTRS.has(k) ? undefined : a.attributes[k]}
-                bValue={NEUTRAL_ATTRS.has(k) ? undefined : b.attributes[k]}
+                a={<AttrValue player={a} attr={k} knowledge={kA} />}
+                b={<AttrValue player={b} attr={k} knowledge={kB} />}
+                aValue={NEUTRAL_ATTRS.has(k) ? undefined : est(a, k)}
+                bValue={NEUTRAL_ATTRS.has(k) ? undefined : est(b, k)}
               />
             ))}
           </div>

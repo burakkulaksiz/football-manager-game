@@ -9,7 +9,8 @@ const AREA_LABELS: Record<AreaGroup, string> = { GK: 'kale', DEF: 'defans', MID:
 
 interface AdviceView {
   text: ReactNode;
-  action?: { label: string; screen: ScreenId };
+  /** Ekrana ya da (playerId varsa) oyuncu profiline gider. */
+  action?: { label: string; screen: ScreenId; playerId?: number };
 }
 
 /** Öneriyi cümleye çevirir; oyuncu adları tıklanınca profil açılır. */
@@ -55,6 +56,16 @@ function describe(a: Advice, name: (id: number) => ReactNode): AdviceView {
       return { text: <>A takım kadron kalabalık ({a.value} oyuncu): fazlalıkları transfer listesine koymayı düşün.</>, action: { label: 'Kadro', screen: 'squad' } };
     case 'squadTooSmall':
       return { text: <>A takım kadron çok dar ({a.value} oyuncu): sakatlık ve cezalarda zorlanırsın.</>, action: { label: 'Transfer Merkezi', screen: 'transfers' } };
+    case 'playerRequest':
+      return {
+        text: <>{name(a.playerIds[0]!)} seninle görüşmek istiyor; yanıt için {a.value} gün kaldı.</>,
+        action: { label: 'Görüş', screen: 'player', playerId: a.playerIds[0]! },
+      };
+    case 'promiseAtRisk':
+      return {
+        text: <>{name(a.playerIds[0]!)} için verdiğin forma sözü tehlikede: kalan {a.value} maçın hepsinde ilk 11'de başlamalı.</>,
+        action: tactics,
+      };
     case 'wagesOver':
       return { text: <>Maaş bütçesi aşıldı (kullanım %{a.value}); yönetim harcamalara dikkat edilmesini ister.</>, action: { label: 'Finans', screen: 'finance' } };
   }
@@ -107,8 +118,13 @@ export function AssistantPanel({ filter, limit = 4, hideWhenEmpty = false, compa
                 <span className={`advice-badge ${a.severity}`}>{SEVERITY_LABELS[a.severity]}</span>
                 <span className="advice-text">{view.text}</span>
                 {/* Zaten o ekrandaysak yönlendirme düğmesi gereksiz */}
-                {view.action && view.action.screen !== currentScreen && (
-                  <button className="btn btn-small" onClick={() => setScreen(view.action!.screen)}>{view.action.label} ›</button>
+                {view.action && (view.action.playerId !== undefined || view.action.screen !== currentScreen) && (
+                  <button
+                    className="btn btn-small"
+                    onClick={() => (view.action!.playerId !== undefined ? openPlayer(view.action!.playerId) : setScreen(view.action!.screen))}
+                  >
+                    {view.action.label} ›
+                  </button>
                 )}
               </li>
             );

@@ -80,11 +80,14 @@ const NAME: Column = {
   id: 'name',
   label: 'İsim',
   sort: (p) => `${p.lastName} ${p.firstName}`,
-  render: (p) => (
+  render: (p, c) => (
     <span className="strong">
       {p.firstName} {p.lastName}
       {p.loan && <span className="tag" title={'Kiralık, dönüş ' + formatDateShort(p.loan.until)}>Kiralık</span>}
       {p.listing && <span className={`tag tag-list-${p.listing.kind}`}>{LISTING_LABELS[p.listing.kind]}</span>}
+      {c.world.requests.some((r) => r.playerId === p.id) && (
+        <span className="tag tag-warn" title="Seninle görüşmek istiyor (profilden yanıtla)">Görüşmek istiyor</span>
+      )}
       <StatusTags player={p} />
     </span>
   ),

@@ -2,18 +2,13 @@
  * Moral (0–100): sonuçlar, maç puanı ve forma şansıyla değişir, zamanla 60'a döner.
  * Maçta verime ±%5 etki eder (engine.ts → efficiency).
  */
-import { addDays } from '../date';
 import { clubPlayers } from '../generation/worldGenerator';
-import { addNews } from '../news';
 import { isAvailable } from '../player';
 import type { Fixture, GameWorld, MatchResult } from '../types';
 
 export const MORALE_BASELINE = 60;
 /** Bu sıranın (CA'ya göre kadro sırası) üstündeki oyuncular forma bekler. */
 export const EXPECTS_TO_PLAY = 14;
-/** Morali bunun altına düşen oyuncu şikâyet eder. */
-export const COMPLAINT_THRESHOLD = 30;
-const COMPLAINT_COOLDOWN_DAYS = 45;
 
 const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
 
@@ -51,22 +46,5 @@ export function moraleDrift(world: GameWorld): void {
     if (gap === 0) continue;
     const step = Math.sign(gap) * Math.max(1, Math.abs(gap) * 0.03);
     p.morale = clamp(Math.abs(step) >= Math.abs(gap) ? MORALE_BASELINE : p.morale + step);
-  }
-}
-
-/** Haftalık: morali çok düşen oyuncumuz forma şansı için şikâyet eder (haber). */
-export function playerComplaints(world: GameWorld): void {
-  for (const p of clubPlayers(world, world.playerClubId)) {
-    if (p.morale >= COMPLAINT_THRESHOLD || !isAvailable(p)) continue;
-    if (p.lastComplaint && addDays(p.lastComplaint, COMPLAINT_COOLDOWN_DAYS) > world.date) continue;
-    p.lastComplaint = world.date;
-    addNews(world, {
-      category: 'player',
-      title: `${p.firstName} ${p.lastName} mutsuz`,
-      body: `${p.firstName} ${p.lastName} forma şansı bulamamaktan şikâyetçi. Moralini düzeltmek için ona süre vermeyi düşünebilirsin.`,
-      important: true,
-      playerId: p.id,
-      clubId: p.clubId!,
-    });
   }
 }

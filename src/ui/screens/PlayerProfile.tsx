@@ -29,6 +29,7 @@ import {
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { GrowthChart } from '../components/GrowthChart';
 import { Shirt } from '../components/Shirt';
+import { TalkPanel } from '../components/TalkPanel';
 import { Stars } from '../components/Stars';
 import { ContractDialog, ListDialog, OfferDialog } from '../components/TransferDialogs';
 import {
@@ -215,6 +216,7 @@ export function PlayerProfile() {
   return (
     <div className="screen">
       <TransferActions player={player} />
+      {own && <TalkPanel player={player} />}
       <section className="panel">
         <h2 className="panel-title">Oyuncu Profili</h2>
         <div className="profile-grid">

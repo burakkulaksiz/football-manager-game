@@ -8,12 +8,13 @@
  * - Gençler: U19 yaş sınırını geçenler, A takıma hazır U19'lular, süre bulamayan gençler.
  * - Kadro ve maaş: kalabalık / dar kadro, maaş bütçesi aşımı.
  */
-import { makeDate } from '../date';
+import { daysBetween, makeDate } from '../date';
 import { clubPlayers } from '../generation/worldGenerator';
 import { FORMATIONS, slotFit } from '../match/formation';
 import { ageOn, isAvailable, primaryPosition } from '../player';
 import type { GameWorld, Player, Position } from '../types';
 import { academyPlayers, isOverAge } from './academy';
+import { PROMISE_MATCHES, promiseAtRisk } from './talks';
 
 export type AdviceSeverity = 'high' | 'medium' | 'low';
 export type AreaGroup = 'GK' | 'DEF' | 'MID' | 'ATT';
@@ -32,7 +33,9 @@ export type AdviceKind =
   | 'needsMinutes'
   | 'squadTooBig'
   | 'squadTooSmall'
-  | 'wagesOver';
+  | 'wagesOver'
+  | 'playerRequest'
+  | 'promiseAtRisk';
 
 export interface Advice {
   /** React anahtarı ve tekrarları ayıklamak için. */
@@ -191,6 +194,16 @@ export function assistantAdvice(world: GameWorld): Advice[] {
       (p) => !p.loan && !p.listing && ageOn(p.birthDate, world.date) <= 21 && primaryPosition(p) !== 'GK' && !played.has(p.id),
     );
     if (idle.length > 0) add({ kind: 'needsMinutes', severity: 'low', playerIds: idle.map((p) => p.id) });
+  }
+
+  /* ---------------- Görüşmeler ---------------- */
+  for (const r of world.requests) {
+    if (byId.has(r.playerId)) add({ kind: 'playerRequest', severity: 'high', playerIds: [r.playerId], value: daysBetween(world.date, r.respondBy) });
+  }
+  for (const pr of world.promises) {
+    if (byId.has(pr.playerId) && promiseAtRisk(pr)) {
+      add({ kind: 'promiseAtRisk', severity: 'medium', playerIds: [pr.playerId], value: PROMISE_MATCHES - pr.matches });
+    }
   }
 
   /* ---------------- Kadro ve maaş ---------------- */

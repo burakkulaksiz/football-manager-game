@@ -96,6 +96,30 @@ export interface Player {
   growth?: { start: string; ca: number[] };
   /** Transfer / kiralık listesinde. */
   listing?: Listing;
+  /** Menajerin bu oyuncuyla son görüşmesi (görüşmeler arası bekleme). */
+  lastTalk?: GameDate;
+  /** Moral uzun süre düşükse başladığı gün (ayrılık talebi için). */
+  unhappySince?: GameDate;
+}
+
+export type RequestTopic = 'playingTime' | 'contract' | 'transfer';
+
+/** Oyuncunun menajerden görüşme talebi (yanıt bekler). */
+export interface PlayerRequest {
+  id: number;
+  playerId: number;
+  topic: RequestTopic;
+  created: GameDate;
+  /** Bu güne kadar yanıtlanmazsa oyuncu kırılır. */
+  respondBy: GameDate;
+}
+
+/** Forma şansı sözü: oyuncunun oynayabildiği maçlar ve ilk 11'de başladıkları. */
+export interface PlayingPromise {
+  playerId: number;
+  made: GameDate;
+  matches: number;
+  starts: number;
 }
 
 export type ListingKind = 'transfer' | 'loan';
@@ -334,6 +358,11 @@ export interface GameWorld {
   manager: ManagerInfo;
   /** Takip listesindeki (genelde genç) oyuncular. */
   youthWatch: number[];
+  /** Oyuncularımızın bekleyen görüşme talepleri. */
+  requests: PlayerRequest[];
+  nextRequestId: number;
+  /** Verilmiş forma şansı sözleri. */
+  promises: PlayingPromise[];
 }
 
 /* ------------------------------------------------------------------ */

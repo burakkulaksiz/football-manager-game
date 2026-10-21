@@ -143,6 +143,21 @@ describe('kayıt sistemi', () => {
     expect(Object.values(loaded.players).some((pl) => pl.listing)).toBe(true);
   });
 
+  it('görüşmesiz (biçim 7) kayıt dönüştürülür: talep ve söz listeleri boş başlar', async () => {
+    const world = createWorld(gameData, 14, 'kasimpasa', START);
+    const old = structuredClone(world) as Partial<GameWorld>;
+    delete old.requests;
+    delete old.nextRequestId;
+    delete old.promises;
+    const id = await saveGame(world, 'Biçim 7');
+    await db.saveData.put({ id, world: old as GameWorld });
+    await db.saves.update(id, { formatVersion: 7 });
+    const loaded = await loadGame(id);
+    expect(loaded.requests).toEqual([]);
+    expect(loaded.nextRequestId).toBe(1);
+    expect(loaded.promises).toEqual([]);
+  });
+
   it('yüklenen oyun, hiç kaydedilmemiş gibi aynı sonuçlarla devam eder', async () => {
     const original = createWorld(gameData, 8, 'samsunspor', START);
     playRounds(original, 3);

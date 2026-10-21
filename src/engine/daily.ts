@@ -20,7 +20,8 @@ import { endSeason } from './season/seasonEnd';
 import { recoverCondition } from './squad/condition';
 import { weeklyDevelopment } from './squad/development';
 import { healInjuries, trainingInjuries } from './squad/injuries';
-import { moraleDrift, playerComplaints } from './squad/morale';
+import { moraleDrift } from './squad/morale';
+import { expireRequests, playerRequests } from './squad/talks';
 import type { GameWorld } from './types';
 
 /** Transfer dönemi açılış/kapanış haberi. */
@@ -67,9 +68,10 @@ export function processDay(world: GameWorld, rng: Rng, data: GameData): void {
   healInjuries(world);
   recoverCondition(world);
   moraleDrift(world);
+  expireRequests(world);
   trainingInjuries(world, rng);
   if (weekday(world.date) === 1) {
     weeklyDevelopment(world, rng);
-    playerComplaints(world);
+    playerRequests(world);
   }
 }

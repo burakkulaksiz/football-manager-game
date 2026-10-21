@@ -159,6 +159,9 @@ export function createWorld(
     gameOver: null,
     manager: { name: managerName.trim() || 'Menajer', joined: startDate, won: 0, drawn: 0, lost: 0, titles: 0 },
     youthWatch: [],
+    requests: [],
+    nextRequestId: 1,
+    promises: [],
   };
   fillAcademies(world, data, new Rng((seed ^ ACADEMY_SEED_SALT) >>> 0));
   recordGrowth(world);

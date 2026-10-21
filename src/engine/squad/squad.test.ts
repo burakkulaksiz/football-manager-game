@@ -11,7 +11,8 @@ import type { CardEvent, Fixture, GameWorld, Player } from '../types';
 import { recoverCondition } from './condition';
 import { developPlayer } from './development';
 import { createInjury, healInjuries, INJURY_TYPES } from './injuries';
-import { applyMatchMorale, moraleDrift, playerComplaints } from './morale';
+import { applyMatchMorale, moraleDrift } from './morale';
+import { playerRequests } from './talks';
 import { YELLOW_LIMIT } from './discipline';
 
 const START = '2026-07-01';
@@ -137,7 +138,7 @@ describe('moral', () => {
     expect(squad[0]!.morale).toBeLessThan(lossBefore);
   });
 
-  it('forma bekleyen sağlam oyuncu kenarda kalınca morali düşer; çok düşerse şikâyet eder', () => {
+  it('forma bekleyen sağlam oyuncu kenarda kalınca morali düşer; çok düşerse görüşme talep eder', () => {
     const world = fresh();
     const squad = clubPlayers(world, 'goztepe').sort((a, b) => b.currentAbility - a.currentAbility);
     const star = squad[0]!;
@@ -149,12 +150,12 @@ describe('moral', () => {
     expect(star.morale).toBeLessThan(before);
 
     star.morale = 20;
-    playerComplaints(world);
-    expect(world.news.some((n) => n.category === 'player' && n.playerId === star.id)).toBe(true);
-    // Aynı hafta tekrar şikâyet etmez
-    const count = world.news.length;
-    playerComplaints(world);
-    expect(world.news.length).toBe(count);
+    playerRequests(world);
+    expect(world.requests.some((r) => r.playerId === star.id && r.topic === 'playingTime')).toBe(true);
+    // Aynı hafta tekrar talep etmez
+    const count = world.requests.length;
+    playerRequests(world);
+    expect(world.requests.length).toBe(count);
   });
 
   it('moral zamanla ortalamaya döner', () => {

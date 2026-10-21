@@ -54,11 +54,12 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
                        gelen tekliflere yanıt, günlük teklif işleme (processOffers).
   transfer/ai.ts       Yapay zekâ alımları ve kullanıcıya teklifler (aiTransferDay).
   transfer/listing.ts  Transfer / kiralık listesi: listPlayer, unlistPlayer, listedOffersDay, refreshAiListings.
-  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 7; migrateWorld GameData de alır).
+  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 8; migrateWorld GameData de alır).
   squad/training.ts    Antrenman odağı/yoğunluğu ve etkileri (INTENSITY_EFFECTS, FOCUS_ATTRS).
   squad/injuries.ts    Sakatlık türleri, maç/antrenman sakatlığı, günlük iyileşme.
   squad/discipline.ts  Kart cezaları (maç sonrası).
-  squad/morale.ts      Maç sonrası moral, günlük ortalamaya dönüş, şikâyetler.
+  squad/morale.ts      Maç sonrası moral, günlük ortalamaya dönüş.
+  squad/talks.ts       Oyuncu görüşmeleri: talepler (playerRequests), yanıtlar, menajer görüşmeleri, forma sözü takibi.
   squad/development.ts Haftalık gelişim/gerileme (pazartesi).
   squad/condition.ts   Günlük kondisyon toparlanması.
   squad/academy.ts     Altyapı (U19): academyPlayers, promoteToFirstTeam, sendToAcademy, manageAcademies,
@@ -156,7 +157,7 @@ Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
 - **Kayıt** (IndexedDB, Dexie şema sürümü 2): `saves` = SaveSlot `{ id, name, careerId, clubId, clubName,
   gameDate, season, isAutosave, createdAt, updatedAt, formatVersion, managerName? }`; `saveData` = `{ id, world: GameWorld }`
   (aynı id). GameWorld olduğu gibi yazılır (düz veri), kayıt anında `structuredClone` ile kopyalanır.
-  `SAVE_FORMAT_VERSION = CURRENT_WORLD_VERSION` (şu an 7). GameWorld yapısı değişince sürümü artır ve
+  `SAVE_FORMAT_VERSION = CURRENT_WORLD_VERSION` (şu an 8). GameWorld yapısı değişince sürümü artır ve
   `engine/migrate.ts`'e dönüşüm ekle; `loadGame` eski kayıtları otomatik dönüştürür, daha yeni sürümü reddeder.
   Sezon sonu kaydı ~1.7 MB (+ haberler/teklifler).
 - **careerId** = `${seed}-${playerClubId}`. Otomatik kayıt kariyer başına tek slot; elle kayıt sınırsız.
@@ -411,3 +412,19 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
   U19'lu; 6+ maçtır hiç oynamayan ≤ 21 yaş gençler (tek öneri); kadro > 30 / < 20; maaş bütçesi aşımı.
 - Arayüz: AssistantPanel — Gelen Kutusu üstünde (ilk 4, "Tümünü göster"), Taktik ekranında ilk 11 ve mevki derinliği
   (yoksa gizli), maç öncesinde acil / önemli ilk 11 uyarıları. Bulunulan ekrana giden düğme gizlenir.
+
+## Oyuncu görüşmeleri
+- Talepler (pazartesi, playerRequests; eski şikâyet haberinin yerine): ayrılık (30+ gün moral < 25; unhappySince),
+  forma şansı (moral < 30, sağlam, sözü yok), sözleşme (ilk 11 seviyesi; ekimden itibaren sözleşmesi sezon sonu
+  bitiyor ya da maaşı talebinin %60'ından az). Oyuncu başına tek açık talep, talepler arası 45 gün (lastComplaint),
+  haftada en fazla 1 yeni talep (ayrılık > forma > sözleşme, aynı türde en iyi oyuncu). Yanıt süresi 7 gün;
+  yanıtsız kalırsa düşer, moral −8.
+- Yanıtlar (respondToRequest): forma → söz ver (+12, söz takibe), yerini kazanmalı (profesyonellik ≥ 14: +3, değilse
+  −6), kiralık listesi (+6); sözleşme → görüşelim (+4, yenileme penceresi), şimdi değil (−8), sözleşmesine uymalı (−12);
+  ayrılık → transfer listesi (moral kaybı yok, +10), ayrılamaz (−15).
+- Menajer görüşmeleri (talkToPlayer, oyuncu başına 14 günde bir): öv (form ≥ 7: +8, ≥ 6.5: +4, altı: −3, oynamadı: +1),
+  eleştir (form ≥ 7: −12 haksız; profesyonellik ≥ 14: −2, < 10: −10, diğer −5), moral ver (moral < 50: +6, değilse +2),
+  forma sözü (+10).
+- Forma sözü (trackPromises, maç sonrası): oynayabildiği 5 maçın ≥ 3'ünde ilk 11 → +8; değilse −20 ve mutsuz sayılır.
+  Sakat/cezalıyken oynanan maç sayılmaz. Yardımcı antrenör: bekleyen talep (acil), tehlikedeki söz (önemli).
+- Arayüz: profilde Görüşme paneli (TalkPanel), kadroda "Görüşmek istiyor" etiketi. Biçim 8: requests, promises.

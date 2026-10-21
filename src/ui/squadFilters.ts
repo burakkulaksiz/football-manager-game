@@ -3,7 +3,7 @@ import { ageOn, makeDate, primaryPosition, seasonEndYear, type GameDate, type Pl
 import { positionGroup, type PositionGroup } from './labels';
 
 export type GroupFilter = 'all' | PositionGroup;
-export type StatusFilter = 'all' | 'unavailable' | 'expiring' | 'loan' | 'young' | 'xi';
+export type StatusFilter = 'all' | 'unavailable' | 'expiring' | 'loan' | 'listed' | 'young' | 'xi';
 export type SquadView = 'general' | 'stats' | 'contract' | 'report';
 
 export interface SquadFilters {
@@ -27,6 +27,7 @@ export const STATUS_FILTERS: { id: StatusFilter; label: string; ownOnly?: boolea
   { id: 'unavailable', label: 'Sakat / Cezalı' },
   { id: 'expiring', label: 'Sözleşmesi Bitiyor' },
   { id: 'loan', label: 'Kiralık' },
+  { id: 'listed', label: 'Listede' },
   { id: 'young', label: 'Gençler (≤21)' },
   { id: 'xi', label: 'İlk 11', ownOnly: true },
 ];
@@ -61,6 +62,7 @@ export function filterSquad(
       case 'unavailable': return p.injury !== null || p.suspension > 0;
       case 'expiring': return !p.loan && isExpiring(p, ctx.date);
       case 'loan': return p.loan !== null;
+      case 'listed': return p.listing !== undefined;
       case 'young': return ageOn(p.birthDate, ctx.date) <= 21;
       case 'xi': return ctx.lineup?.includes(p.id) ?? false;
       default: return true;

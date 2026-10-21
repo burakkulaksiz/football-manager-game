@@ -3,6 +3,9 @@ import {
   ageOn,
   askingPrice,
   canSendToAcademy,
+  listingPrice,
+  loanFeeAsk,
+  unlistPlayer,
   getClub,
   growthRate,
   isActive,
@@ -27,7 +30,7 @@ import { useGameStore, useWorld } from '../../store/gameStore';
 import { GrowthChart } from '../components/GrowthChart';
 import { Shirt } from '../components/Shirt';
 import { Stars } from '../components/Stars';
-import { ContractDialog, OfferDialog } from '../components/TransferDialogs';
+import { ContractDialog, ListDialog, OfferDialog } from '../components/TransferDialogs';
 import {
   attrClass,
   ATTRIBUTE_LABELS,
@@ -36,6 +39,7 @@ import {
   formatDateShort,
   formatMoney,
   GROWTH_LABELS,
+  LISTING_LABELS,
   moraleLabel,
   nationName,
   abilityStars,
@@ -84,7 +88,7 @@ function TransferActions({ player }: { player: Player }) {
       showNotice(`${player.firstName} ${player.lastName} U19'a gönderildi.`);
     }
   };
-  const [dialog, setDialog] = useState<'transfer' | 'loan' | 'contract' | null>(null);
+  const [dialog, setDialog] = useState<'transfer' | 'loan' | 'contract' | 'list-transfer' | 'list-loan' | null>(null);
   const own = player.clubId === world.playerClubId;
   const activeOffers = world.offers.filter((o) => o.playerId === player.id && isActive(o));
 
@@ -105,7 +109,30 @@ function TransferActions({ player }: { player: Player }) {
           {canSendToAcademy(world, player) && <button className="btn" onClick={moveSquad}>U19&apos;a gönder</button>}
           {!player.loan && !player.academy && <button className="btn" onClick={() => setDialog('contract')}>Sözleşme Yenile</button>}
         </div>
+        {!player.loan && (
+          <div className="panel-body action-bar listing-bar">
+            {player.listing ? (
+              <>
+                <span>
+                  <span className={`tag tag-list-${player.listing.kind}`}>{LISTING_LABELS[player.listing.kind]}</span>{' '}
+                  İstenen: <strong className="value">{player.listing.price === null ? `kulüp değerlendirsin (≈ ${formatMoney(listingPrice(world, player))})` : formatMoney(player.listing.price)}</strong>
+                  <span className="muted"> · {formatDateShort(player.listing.since)} tarihinden beri</span>
+                </span>
+                <button className="btn btn-small" onClick={() => setDialog(player.listing!.kind === 'loan' ? 'list-loan' : 'list-transfer')}>Bedeli değiştir</button>
+                <button className="btn btn-small" onClick={() => worldAction((w) => unlistPlayer(w.players[player.id]!))}>Listeden çıkar</button>
+              </>
+            ) : (
+              <>
+                <span className="muted">Satmak ya da kiraya vermek istersen listeye koy; teklifler transfer döneminde gelir.</span>
+                <button className="btn btn-small" onClick={() => setDialog('list-transfer')}>Transfer listesine koy</button>
+                <button className="btn btn-small" onClick={() => setDialog('list-loan')}>Kiralık listesine koy</button>
+              </>
+            )}
+          </div>
+        )}
         {dialog === 'contract' && <ContractDialog player={player} onClose={() => setDialog(null)} />}
+        {dialog === 'list-transfer' && <ListDialog player={player} kind="transfer" onClose={() => setDialog(null)} />}
+        {dialog === 'list-loan' && <ListDialog player={player} kind="loan" onClose={() => setDialog(null)} />}
       </section>
     );
   }
@@ -128,7 +155,10 @@ function TransferActions({ player }: { player: Player }) {
     <section className="panel action-panel">
       <div className="panel-body action-bar">
         <span className="muted">
-          Kulübün beklentisi (tahmini): <strong className="value">{formatMoney(askingPrice(world, player))}</strong>
+          {player.listing && <><span className={`tag tag-list-${player.listing.kind}`}>{LISTING_LABELS[player.listing.kind]}</span>{' '}</>}
+          {player.listing?.kind === 'loan'
+            ? <>Kiralık bedeli beklentisi: <strong className="value">{formatMoney(loanFeeAsk(world, player))}</strong> · bonservis: {formatMoney(askingPrice(world, player))}</>
+            : <>Kulübün beklentisi (tahmini): <strong className="value">{formatMoney(askingPrice(world, player))}</strong></>}
           {activeOffers.some((o) => o.buyerId === world.playerClubId) && ' · açık teklifin var'}
         </span>
         {watchButton}

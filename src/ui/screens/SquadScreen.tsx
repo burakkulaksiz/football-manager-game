@@ -26,6 +26,7 @@ import { Stars } from '../components/Stars';
 import { StatusTags } from '../components/StatusTags';
 import {
   abilityStars,
+  LISTING_LABELS,
   potentialStarsFor,
   attrClass,
   ATTRIBUTE_LABELS,
@@ -83,6 +84,7 @@ const NAME: Column = {
     <span className="strong">
       {p.firstName} {p.lastName}
       {p.loan && <span className="tag" title={'Kiralık, dönüş ' + formatDateShort(p.loan.until)}>Kiralık</span>}
+      {p.listing && <span className={`tag tag-list-${p.listing.kind}`}>{LISTING_LABELS[p.listing.kind]}</span>}
       <StatusTags player={p} />
     </span>
   ),

@@ -1,18 +1,21 @@
 /**
  * Eski kayıtları güncel GameWorld biçimine dönüştürür.
  * Biçim sürümü: 1 = aşama 6 (finans/transfer yok), 2 = aşama 7, 3 = aşama 8 (ceza, gelişim, antrenman),
- * 4 = aşama 9 (1. Lig, yönetim, sezon arşivi), 5 = menajer kartı, 6 = altyapı (U19) ve gelişim geçmişi.
+ * 4 = aşama 9 (1. Lig, yönetim, sezon arşivi), 5 = menajer kartı, 6 = altyapı (U19) ve gelişim geçmişi,
+ * 7 = transfer / kiralık listesi.
  */
 import type { GameData } from './data';
 import { initFinance, initFinances, payMonthly } from './finance/finance';
 import { ACADEMY_SEED_SALT, fillAcademies, generateClubSquad } from './generation/worldGenerator';
 import { recordGrowth } from './squad/growth';
+import { refreshAiListings } from './transfer/listing';
+import { isWindowOpen } from './transfer/window';
 import { Rng } from './rng';
 import { initialBoard } from './season/expectation';
 import { DEFAULT_TRAINING } from './squad/training';
 import type { GameWorld } from './types';
 
-export const CURRENT_WORLD_VERSION = 6;
+export const CURRENT_WORLD_VERSION = 7;
 
 /** `raw` eski biçimdeki dünya; dönüştürülmüş dünya döner (yerinde değiştirir). */
 export function migrateWorld(raw: unknown, fromVersion: number, data: GameData): GameWorld {
@@ -87,5 +90,6 @@ export function migrateWorld(raw: unknown, fromVersion: number, data: GameData):
     }
     recordGrowth(world);
   }
+  if (fromVersion < 7 && isWindowOpen(world.date)) refreshAiListings(world);
   return world;
 }

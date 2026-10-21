@@ -53,7 +53,8 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
   transfer/offers.ts   Kullanıcı teklifleri, karşı teklif, sözleşme görüşmesi (negotiateTransfer/Renewal),
                        gelen tekliflere yanıt, günlük teklif işleme (processOffers).
   transfer/ai.ts       Yapay zekâ alımları ve kullanıcıya teklifler (aiTransferDay).
-  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 6; migrateWorld GameData de alır).
+  transfer/listing.ts  Transfer / kiralık listesi: listPlayer, unlistPlayer, listedOffersDay, refreshAiListings.
+  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 7; migrateWorld GameData de alır).
   squad/training.ts    Antrenman odağı/yoğunluğu ve etkileri (INTENSITY_EFFECTS, FOCUS_ATTRS).
   squad/injuries.ts    Sakatlık türleri, maç/antrenman sakatlığı, günlük iyileşme.
   squad/discipline.ts  Kart cezaları (maç sonrası).
@@ -154,7 +155,7 @@ Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
 - **Kayıt** (IndexedDB, Dexie şema sürümü 2): `saves` = SaveSlot `{ id, name, careerId, clubId, clubName,
   gameDate, season, isAutosave, createdAt, updatedAt, formatVersion, managerName? }`; `saveData` = `{ id, world: GameWorld }`
   (aynı id). GameWorld olduğu gibi yazılır (düz veri), kayıt anında `structuredClone` ile kopyalanır.
-  `SAVE_FORMAT_VERSION = CURRENT_WORLD_VERSION` (şu an 6). GameWorld yapısı değişince sürümü artır ve
+  `SAVE_FORMAT_VERSION = CURRENT_WORLD_VERSION` (şu an 7). GameWorld yapısı değişince sürümü artır ve
   `engine/migrate.ts`'e dönüşüm ekle; `loadGame` eski kayıtları otomatik dönüştürür, daha yeni sürümü reddeder.
   Sezon sonu kaydı ~1.7 MB (+ haberler/teklifler).
 - **careerId** = `${seed}-${playerClubId}`. Otomatik kayıt kariyer başına tek slot; elle kayıt sınırsız.
@@ -386,3 +387,16 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
 - Arayüz: Altyapı ekranı (U19 Kadrosu / Gelişim / Ligdeki Gençler). Yetenek puanı gizli: grafiklerde sayı yok,
   "Son 6 ay" etiketi (Hızlı ≥ +10, İyi ≥ +4, Yavaş ≥ 0, Geriliyor). Başka kulübün oyuncusunda potansiyel gözlem
   tahmini (potentialStarsFor: oyuncuya sabit ±0.5 yıldız sapma) — kadro ekranı ve profilde de.
+
+## Transfer / kiralık listesi kuralları
+- Player.listing = { kind: 'transfer' | 'loan', price: number | null (null = önerilen), since }.
+- Kullanıcı: kendi (kiralık olmayan) oyuncusunu listeler; transfer listesi moral −8 (bir kez). Önerilen bedel:
+  transferde piyasa değerinin %90'ı, kiralıkta loanFeeAsk. Dönem açıkken listedeki oyuncu başına günlük %8 (yaz) /
+  %6 (devre arası) teklif olasılığı, aynı anda tek açık teklif. Alıcı: kadrosu < 28, oyuncu ilk 11 ortalamasının
+  −22…+12 aralığında, transferde bütçe ≥ bedelin %70'i. Teklif istenen bedelin %65–100'ü, gizli üst sınır %100–115.
+  Gelen kiralık teklifi: completeAiDeal (kabul / karşı teklif kiralık olarak tamamlanır).
+- Yapay zekâ: dönem açıldığı gün (ve yeni oyunda) refreshAiListings: kadro sırası 22+ ve 22+ yaş → satılık (≤ 3),
+  21 yaş altı ve kadro sırası 16+ → kiralık (≤ 2). Satılıkta askingPrice ×0.8, kiralıkta loanFeeAsk ×0.6.
+- Transfer / kiralık / serbest bırakma listeyi siler. Biçim 7 dönüşümü: dönem açıksa yapay zekâ listeleri.
+- Arayüz: profilde liste düğmeleri ve ListDialog; Transfer Merkezi "Listem" sekmesi, aramada "Liste" filtresi,
+  gelen tekliflerde tür; kadro ekranında etiket ve "Listede" filtresi.

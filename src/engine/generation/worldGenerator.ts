@@ -9,6 +9,7 @@ import { defaultTactics } from '../match/tactics';
 import { addNews } from '../news';
 import { divisionOf, initialBoard } from '../season/expectation';
 import { recordGrowth } from '../squad/growth';
+import { refreshAiListings } from '../transfer/listing';
 import { DEFAULT_TRAINING } from '../squad/training';
 
 /** Altyapı üretiminin ayrı rng'si için tohum tuzu. */
@@ -161,6 +162,7 @@ export function createWorld(
   };
   fillAcademies(world, data, new Rng((seed ^ ACADEMY_SEED_SALT) >>> 0));
   recordGrowth(world);
+  refreshAiListings(world);
   addNews(world, {
     category: 'board',
     title: `${userClub.name} yönetiminden hoş geldin mesajı`,

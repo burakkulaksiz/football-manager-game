@@ -240,7 +240,7 @@ export function respondToIncoming(world: GameWorld, offerId: number, action: 'ac
   const offer = world.offers.find((o) => o.id === offerId);
   if (!offer || offer.sellerId !== world.playerClubId || offer.status !== 'pending') return 'Yanıt verilecek bir teklif yok.';
   if (action === 'accept') {
-    completeAiPurchase(world, offer, offer.fee);
+    completeAiDeal(world, offer, offer.fee);
     return null;
   }
   if (action === 'reject') {
@@ -254,6 +254,18 @@ export function respondToIncoming(world: GameWorld, offerId: number, action: 'ac
   offer.respondOn = addDays(world.date, 1);
   offer.note = `€${formatPlain(offer.counterFee)} istedin; ${getClub(world, offer.buyerId).name} yanıtı bekleniyor.`;
   return null;
+}
+
+/** Yapay zekâ kulübünün kullanıcıdan alımı ya da kiralaması (oyuncuyla anlaşmayı kendisi yapar). */
+export function completeAiDeal(world: GameWorld, offer: TransferOffer, fee: number): void {
+  if (offer.kind === 'loan') {
+    loanPlayer(world, world.players[offer.playerId]!, offer.buyerId, fee);
+    offer.fee = fee;
+    offer.status = 'completed';
+    offer.note = 'Kiralık tamamlandı.';
+    return;
+  }
+  completeAiPurchase(world, offer, fee);
 }
 
 /** Yapay zekâ kulübün satın alımı (oyuncuyla anlaşmayı kendisi yapar). */
@@ -333,9 +345,9 @@ function buyerDecision(world: GameWorld, offer: TransferOffer): void {
   const buyer = getClub(world, offer.buyerId).name;
   const counter = offer.counterFee ?? offer.fee;
   const affordable = counter <= world.finances[offer.buyerId]!.transferBudget;
-  if (offer.maxFee !== null && counter <= offer.maxFee && affordable) {
-    completeAiPurchase(world, offer, counter);
-    return; // transferPlayer haberi yazdı
+  if (offer.maxFee !== null && counter <= offer.maxFee && (affordable || offer.kind === 'loan')) {
+    completeAiDeal(world, offer, counter);
+    return; // transferPlayer / loanPlayer haberi yazdı
   }
   offer.status = 'rejected';
   offer.note = `${buyer} karşı teklifini kabul etmedi ve masadan kalktı.`;

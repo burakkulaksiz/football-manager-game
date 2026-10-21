@@ -31,7 +31,7 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
 - [ ] Oyuncuya bireysel talimat ("sadece pas ver", "yükleniş yap")
 
 ## Kadro ve oyuncu
-- [ ] Oyuncuyu transfer listesine / kiralık listesine koyma
+- [x] Oyuncuyu transfer listesine / kiralık listesine koyma (yapay zekâ kulüpleri de fazlalıklarını listeler)
 - [x] Altyapı ekranı ve genç oyuncu takibi (ayrı U19 takımı, gelişim grafikleri, ligdeki gençler + takip listesi)
 - [ ] Yardımcı antrenör tavsiyeleri ("şu mevkide eksiğin var")
 - [ ] Oyuncu görüşmeleri (moral, şikâyet, kontrat isteği)

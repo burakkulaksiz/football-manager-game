@@ -132,6 +132,17 @@ describe('kayıt sistemi', () => {
     expect(academy.every((p) => p.growth?.ca.length === 1)).toBe(true);
   });
 
+  it('listesiz (biçim 6) kayıt dönem açıkken yapay zekâ listeleriyle açılır', async () => {
+    const world = createWorld(gameData, 13, 'kasimpasa', START);
+    const old = structuredClone(world);
+    for (const pl of Object.values(old.players)) delete pl.listing;
+    const id = await saveGame(world, 'Biçim 6');
+    await db.saveData.put({ id, world: old });
+    await db.saves.update(id, { formatVersion: 6 });
+    const loaded = await loadGame(id);
+    expect(Object.values(loaded.players).some((pl) => pl.listing)).toBe(true);
+  });
+
   it('yüklenen oyun, hiç kaydedilmemiş gibi aynı sonuçlarla devam eder', async () => {
     const original = createWorld(gameData, 8, 'samsunspor', START);
     playRounds(original, 3);

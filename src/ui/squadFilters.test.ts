@@ -33,6 +33,15 @@ describe('kadro filtreleri', () => {
     expect(out.length).toBe(squad.filter((p) => isExpiring(p, world.date)).length);
   });
 
+  it('listedekiler (satılık / kiralık)', () => {
+    squad[2]!.listing = { kind: 'transfer', price: null, since: world.date };
+    squad[3]!.listing = { kind: 'loan', price: 100_000, since: world.date };
+    const out = filterSquad(squad, { ...DEFAULT_SQUAD_FILTERS, status: 'listed' }, ctx);
+    expect(out.map((p) => p.id).sort()).toEqual([squad[2]!.id, squad[3]!.id].sort());
+    delete squad[2]!.listing;
+    delete squad[3]!.listing;
+  });
+
   it('ilk 11 ve gençler', () => {
     expect(filterSquad(squad, { ...DEFAULT_SQUAD_FILTERS, status: 'xi' }, ctx)).toHaveLength(11);
     expect(filterSquad(squad, { ...DEFAULT_SQUAD_FILTERS, status: 'xi' }, { ...ctx, lineup: null })).toHaveLength(0);

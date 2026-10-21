@@ -8,12 +8,15 @@ import {
   formatDateTR,
   getClub,
   isActive,
+  listingPrice,
   marketValue,
   naturalPositions,
   POSITIONS,
   respondToIncoming,
   transferWindow,
+  unlistPlayer,
   withdrawOffer,
+  type ListingKind,
   type AttributeKey,
   type Player,
   type Position,
@@ -21,11 +24,12 @@ import {
 } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
-import { ContractDialog, CounterDialog } from '../components/TransferDialogs';
+import { ContractDialog, CounterDialog, ListDialog } from '../components/TransferDialogs';
 import {
   ATTRIBUTE_LABELS,
   formatDateShort,
   formatMoney,
+  LISTING_LABELS,
   NEWS_CATEGORY_LABELS,
   OFFER_STATUS_LABELS,
   POSITION_LABELS,
@@ -33,7 +37,7 @@ import {
   positionGroup,
 } from '../labels';
 
-type Tab = 'search' | 'offers' | 'news';
+type Tab = 'search' | 'offers' | 'listings' | 'news';
 
 /** Kulüp filtresinde serbest oyuncuları seçen değer. */
 const FREE_AGENTS = '__free';
@@ -92,6 +96,7 @@ function SearchTab() {
   const [attrMin, setAttrMin] = useState(12);
   const [clubId, setClubId] = useState('');
   const [affordable, setAffordable] = useState(false);
+  const [listed, setListed] = useState<ListingKind | ''>('');
   const budget = world.finances[world.playerClubId]!.transferBudget;
   // Uzun liste parça parça çizilir (yüzlerce satır ekranı yavaşlatır).
   const [limit, setLimit] = useState(RESULTS_PAGE);
@@ -108,14 +113,15 @@ function SearchTab() {
       // '__free' = serbest oyuncular
       .filter((p) => !clubId || (clubId === FREE_AGENTS ? p.clubId === null : p.clubId === clubId))
       .filter((p) => !attr || p.attributes[attr] >= attrMin)
+      .filter((p) => !listed || p.listing?.kind === listed)
       .map((p) => ({ p, value: marketValue(p, world.date), asking: p.clubId ? askingPrice(world, p, ranks) : 0 }))
       .filter((r) => !maxValue || r.value <= maxValue)
       .filter((r) => !affordable || r.asking <= budget)
       .sort((a, b) => b.value - a.value);
     return rows;
-  }, [world, position, minAge, maxAge, maxValue, attr, attrMin, clubId, affordable, budget]);
+  }, [world, position, minAge, maxAge, maxValue, attr, attrMin, clubId, affordable, budget, listed]);
   // Filtre değişince ilk sayfaya dön
-  useEffect(() => setLimit(RESULTS_PAGE), [position, minAge, maxAge, maxValue, attr, attrMin, clubId, affordable]);
+  useEffect(() => setLimit(RESULTS_PAGE), [position, minAge, maxAge, maxValue, attr, attrMin, clubId, affordable, listed]);
 
   return (
     <>
@@ -160,6 +166,14 @@ function SearchTab() {
             {world.clubs.filter((c) => c.id !== world.playerClubId).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </label>
+        <label>
+          <span>Liste</span>
+          <select value={listed} onChange={(e) => setListed(e.target.value as ListingKind | '')}>
+            <option value="">Tümü</option>
+            <option value="transfer">Satılık</option>
+            <option value="loan">Kiralık listesi</option>
+          </select>
+        </label>
         <label className="check">
           <input type="checkbox" checked={affordable} onChange={(e) => setAffordable(e.target.checked)} />
           <span>Sadece bütçeme uygun</span>
@@ -187,6 +201,7 @@ function SearchTab() {
                 <td className="strong">
                   {p.firstName} {p.lastName}
                   {p.loan && <span className="tag">Kiralık</span>}
+                  {p.listing && <span className={`tag tag-list-${p.listing.kind}`}>{LISTING_LABELS[p.listing.kind]}</span>}
                 </td>
                 <td>{club ? <span className="club-cell"><ClubBadge club={club} size={16} /> {club.name}</span> : <span className="tag tag-free">Serbest</span>}</td>
                 <td><PositionChips player={p} /></td>
@@ -288,7 +303,7 @@ function OffersTab() {
       ) : (
         <table className="data-table">
           <thead>
-            <tr><th>Oyuncu</th><th>Alıcı</th><th className="num">Teklif</th><th className="num">Değeri</th><th>Durum</th><th>Not</th><th></th></tr>
+            <tr><th>Oyuncu</th><th>Alıcı</th><th>Tür</th><th className="num">Teklif</th><th className="num">Değeri</th><th>Durum</th><th>Not</th><th></th></tr>
           </thead>
           <tbody>
             {incoming.map((o) => {
@@ -297,6 +312,7 @@ function OffersTab() {
                 <tr key={o.id}>
                   {playerCell(o)}
                   <td>{getClub(world, o.buyerId).name}</td>
+                  <td>{o.kind === 'loan' ? 'Kiralık' : 'Bonservis'}</td>
                   <td className="num value">{formatMoney(o.counterFee ?? o.fee)}</td>
                   <td className="num">{formatMoney(marketValue(p, world.date))}</td>
                   <td><StatusBadge offer={o} /></td>
@@ -320,6 +336,77 @@ function OffersTab() {
         <ContractDialog player={world.players[contractFor.playerId]!} offer={contractFor} onClose={() => setContractFor(null)} />
       )}
       {counterFor && <CounterDialog offer={counterFor} onClose={() => setCounterFor(null)} />}
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Listem: transfer / kiralık listesindeki oyuncularımız                */
+/* ------------------------------------------------------------------ */
+
+function ListingsTab() {
+  const world = useWorld();
+  const worldAction = useGameStore((s) => s.worldAction);
+  const openPlayer = useGameStore((s) => s.openPlayer);
+  const [edit, setEdit] = useState<Player | null>(null);
+  const listed = Object.values(world.players)
+    .filter((p) => p.clubId === world.playerClubId && p.listing)
+    .sort((a, b) => (a.listing!.kind === b.listing!.kind ? b.currentAbility - a.currentAbility : a.listing!.kind === 'transfer' ? -1 : 1));
+  const window = transferWindow(world.date);
+
+  if (listed.length === 0) {
+    return (
+      <div className="panel-body muted">
+        Listede oyuncun yok. Satmak ya da kiraya vermek istediğin oyuncuyu profilinden ("Transfer listesine koy" /
+        "Kiralık listesine koy") ya da Kadro ekranından seçerek listeye koyabilirsin.
+      </div>
+    );
+  }
+  return (
+    <>
+      <div className="panel-note">
+        {window.open
+          ? 'Transfer dönemi açık: listedeki oyuncularına ilgilenen kulüplerden teklif gelir (Teklifler sekmesi).'
+          : 'Transfer dönemi kapalı: teklifler dönem açılınca gelmeye başlar.'}
+      </div>
+      <table className="data-table clickable">
+        <thead>
+          <tr>
+            <th>Oyuncu</th>
+            <th>Liste</th>
+            <th className="num">Yaş</th>
+            <th className="num">İstenen</th>
+            <th className="num">Değeri</th>
+            <th>Listede</th>
+            <th>Açık teklif</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {listed.map((p) => {
+            const offers = world.offers.filter((o) => o.playerId === p.id && isActive(o));
+            const best = offers.reduce((m, o) => Math.max(m, o.counterFee ?? o.fee), 0);
+            return (
+              <tr key={p.id} onClick={() => openPlayer(p.id)}>
+                <td className="strong">{p.firstName} {p.lastName}</td>
+                <td><span className={`tag tag-list-${p.listing!.kind}`}>{LISTING_LABELS[p.listing!.kind]}</span></td>
+                <td className="num">{ageOn(p.birthDate, world.date)}</td>
+                <td className="num value">
+                  {p.listing!.price === null ? <span className="muted">≈ {formatMoney(listingPrice(world, p))}</span> : formatMoney(p.listing!.price)}
+                </td>
+                <td className="num">{formatMoney(marketValue(p, world.date))}</td>
+                <td>{formatDateShort(p.listing!.since)}</td>
+                <td>{offers.length === 0 ? <span className="muted">—</span> : `${offers.length} teklif (en iyi ${formatMoney(best)})`}</td>
+                <td className="actions" onClick={(e) => e.stopPropagation()}>
+                  <button className="btn btn-small" onClick={() => setEdit(p)}>Bedeli değiştir</button>
+                  <button className="btn btn-small" onClick={() => worldAction((w) => unlistPlayer(w.players[p.id]!))}>Listeden çıkar</button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {edit && <ListDialog player={edit} kind={edit.listing?.kind ?? 'transfer'} onClose={() => setEdit(null)} />}
     </>
   );
 }
@@ -359,6 +446,7 @@ export function TransferScreen() {
   const [tab, setTab] = useState<Tab>('search');
   const actionable = actionableOffers(world.offers, world.playerClubId);
   const active = world.offers.filter((o) => isActive(o) && (o.buyerId === world.playerClubId || o.sellerId === world.playerClubId)).length;
+  const listedCount = Object.values(world.players).filter((p) => p.clubId === world.playerClubId && p.listing).length;
 
   return (
     <div className="screen">
@@ -371,11 +459,15 @@ export function TransferScreen() {
             <button className={`tab${tab === 'offers' ? ' active' : ''}`} onClick={() => setTab('offers')}>
               Teklifler{active > 0 ? ` (${active})` : ''}{actionable > 0 && <i className="tab-dot" />}
             </button>
+            <button className={`tab${tab === 'listings' ? ' active' : ''}`} onClick={() => setTab('listings')}>
+              Listem{listedCount > 0 ? ` (${listedCount})` : ''}
+            </button>
             <button className={`tab${tab === 'news' ? ' active' : ''}`} onClick={() => setTab('news')}>Haberler</button>
           </span>
         </div>
         {tab === 'search' && <SearchTab />}
         {tab === 'offers' && <OffersTab />}
+        {tab === 'listings' && <ListingsTab />}
         {tab === 'news' && <NewsTab />}
       </section>
     </div>

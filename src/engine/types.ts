@@ -94,6 +94,17 @@ export interface Player {
   academy?: boolean;
   /** Gelişim geçmişi (≤ 23 yaş): başlangıç ayı ('YYYY-MM') ve art arda aylık yetenek değerleri. */
   growth?: { start: string; ca: number[] };
+  /** Transfer / kiralık listesinde. */
+  listing?: Listing;
+}
+
+export type ListingKind = 'transfer' | 'loan';
+
+export interface Listing {
+  kind: ListingKind;
+  /** İstenen bedel (€); null = önerilen bedel (kulüp değerlendirsin). */
+  price: number | null;
+  since: GameDate;
 }
 
 export type GoalKind = 'normal' | 'header' | 'long' | 'freekick' | 'penalty';

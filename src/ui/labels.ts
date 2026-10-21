@@ -328,3 +328,9 @@ export function potentialStarsFor(player: import('../engine').Player, own: boole
   const noise = ((Math.imul(player.id, 2654435761) >>> 0) % 1000) / 1000 - 0.5;
   return abilityStars(player.potentialAbility + noise * 28);
 }
+
+/** Liste etiketleri (kadro, transfer, profil). */
+export const LISTING_LABELS: Record<import('../engine').ListingKind, string> = {
+  transfer: 'Satılık',
+  loan: 'Kiralık listesi',
+};

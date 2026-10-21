@@ -11,6 +11,7 @@ import type { Rng } from './rng';
 import { aiTransferDay } from './transfer/ai';
 import { returnLoans } from './transfer/market';
 import { processOffers } from './transfer/offers';
+import { listedOffersDay, listingsOnWindowOpen } from './transfer/listing';
 import { transferWindow } from './transfer/window';
 import { boardMonthly } from './season/board';
 import { recordGrowth } from './squad/growth';
@@ -56,10 +57,12 @@ export function processDay(world: GameWorld, rng: Rng, data: GameData): void {
   if (world.seasonState === 'ended' && world.date.endsWith('-07-01')) startNewSeason(world, rng, data);
 
   windowNews(world);
+  listingsOnWindowOpen(world);
   returnLoans(world);
   if (world.date.endsWith('-06-30')) processExpiringContracts(world, rng);
   processOffers(world);
   aiTransferDay(world, rng);
+  listedOffersDay(world, rng);
 
   healInjuries(world);
   recoverCondition(world);

@@ -23,6 +23,7 @@ export * from './finance/finance';
 export * from './transfer/window';
 export * from './transfer/market';
 export * from './transfer/offers';
+export * from './transfer/listing';
 export * from './migrate';
 export * from './squad/training';
 export * from './squad/injuries';

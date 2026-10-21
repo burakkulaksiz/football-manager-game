@@ -3273,3 +3273,26 @@ select {
 .growth-chart.large .growth-area {
   vector-effect: non-scaling-stroke;
 }
+
+/* ================= Transfer / kiralık listesi ================= */
+.tag-list-transfer {
+  background: rgba(246, 207, 60, 0.3);
+  color: #fff2c2;
+}
+
+.tag-list-loan {
+  background: rgba(23, 160, 106, 0.4);
+  color: #d4f7e6;
+}
+
+.listing-bar {
+  border-top: 1px solid var(--row-line);
+}
+
+.check-field {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-weight: 500;
+}

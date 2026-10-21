@@ -92,6 +92,8 @@ export function squadRanks(world: GameWorld): SquadRanks {
 /** Kulübün satış için istediği bonservis. */
 export function askingPrice(world: GameWorld, player: Player, ranks?: SquadRanks): number {
   let price = marketValue(player, world.date) * (1.15 + 0.35 * playerImportance(world, player, ranks));
+  // Satılık listesindeki oyuncu için kulüp daha az ister
+  if (player.listing?.kind === 'transfer') price *= LISTED_TRANSFER_DISCOUNT;
   const yearsLeft = (Number(player.contract.expires.slice(0, 4)) - seasonEndYear(world.date)) + 1;
   if (yearsLeft <= 1) price *= 0.8;
   return roundNice(price);
@@ -99,8 +101,15 @@ export function askingPrice(world: GameWorld, player: Player, ranks?: SquadRanks
 
 /** Kiralık bedeli beklentisi. */
 export function loanFeeAsk(world: GameWorld, player: Player): number {
-  return roundNice(marketValue(player, world.date) * 0.08);
+  // Kiralık listesindeki oyuncu için kiralık bedeli düşük
+  const discount = player.listing?.kind === 'loan' ? LISTED_LOAN_DISCOUNT : 1;
+  return roundNice(marketValue(player, world.date) * 0.08 * discount);
 }
+
+/** Satılık listesindeki oyuncuda istenen bonservis çarpanı. */
+export const LISTED_TRANSFER_DISCOUNT = 0.8;
+/** Kiralık listesindeki oyuncuda kiralık bedeli çarpanı. */
+export const LISTED_LOAN_DISCOUNT = 0.6;
 
 /** Oyuncu bu kulübe gelmeye istekli mi? Çok daha küçük bir kulübe genç oyuncu gitmek istemez. */
 export function willingToJoin(world: GameWorld, player: Player, buyerId: string): boolean {
@@ -162,8 +171,9 @@ export function transferPlayer(world: GameWorld, player: Player, buyerId: string
 
   player.clubId = buyerId;
   player.loan = null;
-  // Alan kulübün A takımına katılır (altyapıdan alınsa da)
+  // Alan kulübün A takımına katılır (altyapıdan alınsa da); eski kulübün listesi düşer
   delete player.academy;
+  delete player.listing;
   // Yeni kulüp, yeni heyecan
   player.morale = Math.max(player.morale, 72);
   player.contract = { wage: terms.wage, expires: contractExpiry(world.date, terms.years) };
@@ -193,6 +203,7 @@ export function loanPlayer(world: GameWorld, player: Player, toClubId: string, f
 
   player.clubId = toClubId;
   delete player.academy;
+  delete player.listing;
   player.loan = { fromClubId, until: makeDate(seasonEndYear(world.date), 6, 30) };
   player.squadNumber = freeSquadNumber(world, player, toClubId);
   cancelOffersFor(world, player.id);
@@ -269,4 +280,5 @@ export function releasePlayer(world: GameWorld, player: Player): void {
   player.squadNumber = null;
   player.loan = null;
   delete player.academy;
+  delete player.listing;
 }

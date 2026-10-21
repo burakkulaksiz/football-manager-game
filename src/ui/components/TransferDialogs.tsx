@@ -3,6 +3,7 @@ import {
   ageOn,
   askingPrice,
   getClub,
+  listPlayer,
   loanFeeAsk,
   makeOffer,
   marketValue,
@@ -12,6 +13,9 @@ import {
   NEGOTIATION_PATIENCE,
   preferredYears,
   respondToIncoming,
+  suggestedListPrice,
+  transferWindow,
+  type ListingKind,
   type NegotiationResult,
   type Player,
   type TransferOffer,
@@ -212,11 +216,68 @@ export function CounterDialog({ offer, onClose }: { offer: TransferOffer; onClos
     >
       <p>
         {getClub(world, offer.buyerId).name}, <strong>{player.firstName} {player.lastName}</strong> için{' '}
-        {formatMoney(offer.fee)} teklif etti. Piyasa değeri {formatMoney(marketValue(player, world.date))}.
+        {offer.kind === 'loan' ? 'kiralık bedeli olarak ' : ''}{formatMoney(offer.fee)} teklif etti. Piyasa değeri {formatMoney(marketValue(player, world.date))}.
         Fazla yüksek istersen alıcı vazgeçebilir.
       </p>
       <div className="dialog-gap" />
-      <MoneyInput label="İstediğin bonservis" value={fee} onChange={setFee} />
+      <MoneyInput label={offer.kind === 'loan' ? 'İstediğin kiralık bedeli' : 'İstediğin bonservis'} value={fee} onChange={setFee} />
+      {error && <div className="form-error">{error}</div>}
+    </Modal>
+  );
+}
+
+/** Kendi oyuncunu transfer / kiralık listesine koyma (ya da bedeli değiştirme). */
+export function ListDialog({ player, kind, onClose }: { player: Player; kind: ListingKind; onClose: () => void }) {
+  const world = useWorld();
+  const worldAction = useGameStore((s) => s.worldAction);
+  const showNotice = useGameStore((s) => s.showNotice);
+  const suggested = suggestedListPrice(world, player, kind);
+  const current = player.listing?.kind === kind ? player.listing.price : null;
+  const [auto, setAuto] = useState(player.listing?.kind === kind ? current === null : false);
+  const [price, setPrice] = useState(current ?? suggested);
+  const [error, setError] = useState<string | null>(null);
+  const window = transferWindow(world.date);
+  const name = `${player.firstName} ${player.lastName}`;
+  const changing = player.listing !== undefined;
+
+  const submit = () => {
+    const err = worldAction((w) => listPlayer(w, w.players[player.id]!, kind, auto ? null : price));
+    if (err) {
+      setError(err);
+      return;
+    }
+    showNotice(`${name} ${kind === 'loan' ? 'kiralık' : 'transfer'} listesine kondu.`);
+    onClose();
+  };
+
+  return (
+    <Modal
+      title={kind === 'loan' ? 'Kiralık Listesi' : 'Transfer Listesi'}
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn" onClick={onClose}>Vazgeç</button>
+          <button className="btn-continue" onClick={submit}>
+            {changing ? 'Kaydet' : 'Listeye Koy'} <span className="btn-continue-arrow">›</span>
+          </button>
+        </>
+      }
+    >
+      <p>
+        <strong>{name}</strong> {kind === 'loan' ? 'kiralık' : 'transfer'} listesine konacak. Transfer döneminde ilgilenen
+        kulüplerden {kind === 'loan' ? 'kiralık ' : ''}teklifler gelir; Transfer Merkezi'nden yanıtlarsın. Piyasa değeri{' '}
+        {formatMoney(marketValue(player, world.date))}.
+      </p>
+      {kind === 'transfer' && player.listing?.kind !== 'transfer' && (
+        <p className="muted">Satılık olduğunu öğrenen oyuncunun morali düşer.</p>
+      )}
+      {!window.open && <p className="muted">Transfer dönemi kapalı: teklifler dönem açılınca gelmeye başlar.</p>}
+      <div className="dialog-gap" />
+      <label className="field check-field">
+        <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} />
+        <span>Bedeli kulüp değerlendirsin (önerilen: {formatMoney(suggested)})</span>
+      </label>
+      {!auto && <MoneyInput label={kind === 'loan' ? 'İstediğin kiralık bedeli' : 'İstediğin bonservis'} value={price} onChange={setPrice} />}
       {error && <div className="form-error">{error}</div>}
     </Modal>
   );

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { clubPlayers, createMatch, createWorld, stepMatch, type MatchState } from '../engine';
+import { clubPlayers, createMatch, createWorld, DEFAULT_INSTRUCTIONS, stepMatch, type MatchState, type TeamInstructions } from '../engine';
 import { autoSelectLineup } from '../engine/match/formation';
 import { gameData } from '../gameData';
-import { ballSpot, blockLine, cameraTransform, CAMERA_ZOOM, colorsClash, PITCH_LENGTH, PITCH_VIEW, PITCH_WIDTH, screenUnit, shotOrigin, teamSpots, toScreen } from './pitch';
+import { ballSpot, blockLine, cameraTransform, CAMERA_ZOOM, colorsClash, formationRoles, PITCH_LENGTH, PITCH_VIEW, PITCH_WIDTH, screenUnit, shotOrigin, teamShape, teamSpots, toScreen } from './pitch';
 
 const world = createWorld(gameData, 3, 'galatasaray', '2026-07-01');
 
@@ -65,6 +65,55 @@ describe('2D saha geometrisi', () => {
   it('renk çakışması: kırmızıya karşı kırmızı çakışır, kırmızıya karşı lacivert çakışmaz', () => {
     expect(colorsClash('#C8102E', '#B3122E')).toBe(true);
     expect(colorsClash('#C8102E', '#0A2A66')).toBe(false);
+  });
+});
+
+describe('taktiğe göre şekil', () => {
+  const withInstructions = (change: Partial<TeamInstructions>): MatchState => {
+    const m = match();
+    m.home.instructions = { ...DEFAULT_INSTRUCTIONS, ...change };
+    return m;
+  };
+  const center = { x: PITCH_LENGTH / 2, y: PITCH_WIDTH / 2 };
+  /** Ev sahibinin saha oyuncuları (rolleriyle) verilen yerleşimde. */
+  const outfield = (m: MatchState, ball = center, possession: 'home' | 'away' | null = 'home') => {
+    const spots = teamSpots(m, 'home', ball, false, possession);
+    return formationRoles(m, 'home').filter((r) => r.slot !== 'GK').map((r) => ({ ...r, at: spots.get(r.id)! }));
+  };
+  const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+
+  it('varsayılan talimatlar şekli değiştirmez', () => {
+    expect(teamShape(DEFAULT_INSTRUCTIONS)).toEqual({ push: 0, line: 0, press: 0, spread: 1, stayBackLy: 65 });
+  });
+
+  it('hücum mentalitesinde blok ileride, savunmada geride', () => {
+    const attacking = avg(outfield(withInstructions({ mentality: 2 })).map((p) => p.at.x));
+    const defensive = avg(outfield(withInstructions({ mentality: -2 })).map((p) => p.at.x));
+    expect(attacking - defensive).toBeGreaterThan(10);
+  });
+
+  it('yüksek savunma hattında defans ileride, derin hatta geride', () => {
+    const backLine = (m: MatchState) => avg(outfield(m).filter((p) => p.ly >= 65).map((p) => p.at.x));
+    expect(backLine(withInstructions({ defensiveLine: 'high' })) - backLine(withInstructions({ defensiveLine: 'deep' }))).toBeGreaterThan(10);
+  });
+
+  it('geniş oyunda oyuncular kanatlara yayılır, dar oyunda ortada toplanır', () => {
+    const spread = (m: MatchState) => avg(outfield(m).map((p) => Math.abs(p.at.y - PITCH_WIDTH / 2)));
+    expect(spread(withInstructions({ width: 'wide' }))).toBeGreaterThan(spread(withInstructions({ width: 'narrow' })) * 1.25);
+  });
+
+  it('top rakipteyken yoğun preste öndekiler ileri çıkar, az preste geri çekilir', () => {
+    const front = (m: MatchState) => avg(outfield(m, center, 'away').filter((p) => p.ly < 40).map((p) => p.at.x));
+    expect(front(withInstructions({ pressing: 'high' })) - front(withInstructions({ pressing: 'low' }))).toBeGreaterThan(10);
+    // Top bizdeyken pres etkisizdir
+    const own = (m: MatchState) => avg(outfield(m, center, 'home').map((p) => p.at.x));
+    expect(own(withInstructions({ pressing: 'high' }))).toBeCloseTo(own(withInstructions({ pressing: 'low' })), 6);
+  });
+
+  it('tam hücumda bekler de rakip ceza sahasına girer', () => {
+    const nearGoal = { x: PITCH_LENGTH - 8, y: PITCH_WIDTH / 2 };
+    const inBox = (m: MatchState) => outfield(m, nearGoal).filter((p) => p.at.x > PITCH_LENGTH - 25).length;
+    expect(inBox(withInstructions({ mentality: 2 }))).toBeGreaterThan(inBox(withInstructions({ mentality: -2 })));
   });
 });
 

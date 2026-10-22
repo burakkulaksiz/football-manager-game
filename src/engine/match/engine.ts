@@ -597,7 +597,7 @@ function resolveAttack(ctx: Ctx, side: Side, units: Record<Side, Units>): void {
 
   recordPlay(ctx, side, 'attack');
   if (!rng.chance(pShot)) {
-    if (rng.chance(TUNING.cornerFromAttack)) {
+    if (rng.chance(TUNING.cornerFromAttack * ctx.effects[side].corners)) {
       awardCorner(ctx, side);
       return;
     }

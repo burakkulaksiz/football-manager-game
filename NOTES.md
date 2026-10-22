@@ -54,7 +54,7 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
                        gelen tekliflere yanıt, günlük teklif işleme (processOffers).
   transfer/ai.ts       Yapay zekâ alımları ve kullanıcıya teklifler (aiTransferDay).
   transfer/listing.ts  Transfer / kiralık listesi: listPlayer, unlistPlayer, listedOffersDay, refreshAiListings.
-  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 9; migrateWorld GameData de alır).
+  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 12; migrateWorld GameData de alır).
   squad/training.ts    Antrenman odağı/yoğunluğu ve etkileri (INTENSITY_EFFECTS, FOCUS_ATTRS).
   squad/injuries.ts    Sakatlık türleri, maç/antrenman sakatlığı, günlük iyileşme.
   squad/discipline.ts  Kart cezaları (maç sonrası).
@@ -124,11 +124,12 @@ Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
   ~4600 maçta ölçülen (5. aşama sonrası): **2.56 gol/maç, %44.6 ev galibiyeti, %25.0 beraberlik**,
   takım başına 13.1 şut / 4.9 isabet / 4.8 korner, maç başına 3.3 sarı / 0.2 kırmızı.
 - **Taktik:** 6 diziliş (4-4-2, 4-3-3, 4-2-3-1, 3-5-2, 5-3-2, 4-5-1) + talimatlar: mentalite (−2…+2),
-  pas (kısa/karışık/uzun), tempo, pres, savunma hattı. Etkiler çarpan olarak (`instructionEffects`):
+  pas (kısa/karışık/uzun), tempo, pres, savunma hattı, genişlik. Etkiler çarpan olarak (`instructionEffects`):
   hücum → atak/şut ↑ ama rakibe açık; kısa pas → top hakimiyeti (pas kalitesine bağlı) + kaliteli şut;
   uzun → atak ↑, kafa payı ↑, top kaybı; hızlı tempo → atak ↑, yorgunluk ↑; yoğun pres → rakip
   top hakimiyeti ↓, faul ve yorgunluk ↑; yüksek hat → rakip forvetler hızlıysa gol riski ↑; derin hat →
-  rakip daha çok ama daha kötü şut. Varsayılan talimatlar etkisiz (denge testleri bununla).
+  rakip daha çok ama daha kötü şut; geniş → atak, kafa payı ve korner (`corners` çarpanı) ↑, orta saha ↓,
+  rakibe ortada açık; dar → orta saha ↑, atak/korner/kafa ↓. Varsayılan talimatlar etkisiz (denge testleri bununla).
 - **Kaptan:** sahadaysa liderliğine göre takıma ±%3. Penaltı/serbest vuruşçu seçiliyse ve sahadaysa o kullanır.
 - **Kullanıcı taktiği** `world.tactics[clubId]` içinde (yalnızca kendi kulübümüz). Maçta `resolveLineup`
   sakat/ayrılmış oyuncuyu çıkarır, boş mevkiyi otomatik doldurur, yedek boşsa otomatik seçer.
@@ -364,6 +365,14 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
         (--u, metre başına px) kamerayı içerir (pitch.ts toScreen / screenUnit, testli) — yakın kamerada yazılar net.
         Sahne kutusu genişliği ResizeObserver ile (useElementWidth). Çim, çizgiler, fileler, pas izleri SVG'de kalır.
         Ölçüm (önemli an sırasında): CPU 6× yavaşta ana iş parçacığı kare hızı 42–52 → 52–58, yük 430–550 → 300–450 ms/sn.
+  - [x] Taktiğe göre şekil: yeni talimat **genişlik** (dar/normal/geniş; kayıt sürümü 12, eski taktiklere 'normal').
+        pitch.ts teamShape (saf, testli): mentalite bloğu ±3 m/kademe kaydırır, savunma hattı arka hattı ±7 m,
+        pres yalnızca top rakipteyken önü +8 / −6 m (defansı %35'i kadar), genişlik yan yayılma ×1.18 / ×0.8;
+        stayBackLy: tam hücumda bekler de rakip ceza sahasına girer, savunmacı mentalitede ön libero geride kalır.
+        teamSpots'a `possession` (frameSpots'ta karenin carrierSide'ı): top rakipteyken takım daralır (yayılma ×0.88)
+        ve topa daha çok kayar (yoğun preste daha da çok). Varsayılan talimatlarda top bizdeyken yerleşim eskisi gibi.
+        pitchScene: oyun kurma ve asistsiz son pasın koridoru genişliğe göre (lane). Yapay zekâ mentaliteyi skora göre
+        değiştirdiği için onun şekli de maç içinde değişir. Taktik ekranındaki formalı saha (kadro yerleştirme) sabit.
   - [ ] Sıradaki: FIKIRLER.md'den seçilecek.
 
 ## Açık konular / ileride

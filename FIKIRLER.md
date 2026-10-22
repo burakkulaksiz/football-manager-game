@@ -12,7 +12,7 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
   - [x] **Duran top sahneleri:** korner ve serbest vuruşta oyuncular kurulu pozisyona geçer (baraj, kale önü kalabalığı),
         penaltıda herkes ceza sahası dışında bekler.
   - [x] **Gol sonrası:** golü atan oyuncu köşe bayrağına koşar, takım arkadaşları toplanır; ardından santra dizilişi.
-  - [ ] **Taktiğe göre şekil:** mentalite (hücum/defans), savunma çizgisi, genişlik ve pres talimatları blok derinliğini
+  - [x] **Taktiğe göre şekil:** mentalite (hücum/defans), savunma çizgisi, genişlik ve pres talimatları blok derinliğini
         ve genişliği değiştirir; kullanıcı taktiğinin etkisi sahada görünür.
   - [ ] **Kart / sakatlık / değişiklik görselleri:** oyuncunun üstünde sarı/kırmızı kart simgesi, atılan oyuncu sahadan
         çıkar, sakat oyuncu yerde, değişiklikte yeni numara kenardan girer.

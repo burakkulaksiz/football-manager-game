@@ -135,6 +135,14 @@ describe('taktiklerin etkisi', () => {
     expect(mean(high.map(condition))).toBeLessThan(mean(low.map(condition)));
   });
 
+  it('geniş oyun daha çok korner, dar oyun daha çok top hakimiyeti getirir', () => {
+    const poss = (s: MatchState) => s.possessionTicks.home / (s.possessionTicks.home + s.possessionTicks.away);
+    const wide = run(team('besiktas', homeLineup, { ...DEFAULT_INSTRUCTIONS, width: 'wide' }), 200);
+    const narrow = run(team('besiktas', homeLineup, { ...DEFAULT_INSTRUCTIONS, width: 'narrow' }), 200);
+    expect(mean(wide.map((s) => s.home.counters.corners))).toBeGreaterThan(mean(narrow.map((s) => s.home.counters.corners)));
+    expect(mean(narrow.map(poss))).toBeGreaterThan(mean(wide.map(poss)));
+  });
+
   it('kısa pas iyi pas yapan takıma top hakimiyeti kazandırır', () => {
     const poss = (s: MatchState) => s.possessionTicks.home / (s.possessionTicks.home + s.possessionTicks.away);
     const short = run(team('besiktas', homeLineup, { ...DEFAULT_INSTRUCTIONS, passing: 'short' }), 200);

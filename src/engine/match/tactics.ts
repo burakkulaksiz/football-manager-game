@@ -19,6 +19,7 @@ export type PassingStyle = 'short' | 'mixed' | 'direct';
 export type Tempo = 'slow' | 'normal' | 'fast';
 export type Pressing = 'low' | 'normal' | 'high';
 export type DefensiveLine = 'deep' | 'normal' | 'high';
+export type Width = 'narrow' | 'normal' | 'wide';
 
 export interface TeamInstructions {
   mentality: Mentality;
@@ -26,6 +27,7 @@ export interface TeamInstructions {
   tempo: Tempo;
   pressing: Pressing;
   defensiveLine: DefensiveLine;
+  width: Width;
 }
 
 export const DEFAULT_INSTRUCTIONS: TeamInstructions = {
@@ -34,6 +36,7 @@ export const DEFAULT_INSTRUCTIONS: TeamInstructions = {
   tempo: 'normal',
   pressing: 'normal',
   defensiveLine: 'normal',
+  width: 'normal',
 };
 
 /** Kullanıcının kulübü için kayıtlı taktik. */
@@ -72,13 +75,15 @@ export interface InstructionEffects {
   oppShotQuality: number;
   fouls: number;
   fatigue: number;
-  /** Kafa şutu payına eklenir (uzun top). */
+  /** Kafa şutu payına eklenir (uzun top, kanat ortaları). */
   headerBonus: number;
+  /** Şuta dönüşmeyen ataktan korner çıkma olasılığı. */
+  corners: number;
 }
 
 export const NEUTRAL_EFFECTS: InstructionEffects = {
   midfield: 1, oppMidfield: 1, attackChance: 1, shotChance: 1, oppShotChance: 1,
-  shotQuality: 1, oppShotQuality: 1, fouls: 1, fatigue: 1, headerBonus: 0,
+  shotQuality: 1, oppShotQuality: 1, fouls: 1, fatigue: 1, headerBonus: 0, corners: 1,
 };
 
 /** Talimat etkisinin hesaplanmasında takımın sahadaki profili. */
@@ -155,6 +160,22 @@ export function instructionEffects(i: TeamInstructions, own: TeamProfile, opp: T
     e.oppShotChance *= 1.06;
     e.oppShotQuality *= 0.9;
     e.attackChance *= 0.95;
+  }
+
+  // Genişlik: geniş oyun kanatlardan orta ve korner getirir ama ortada boşluk bırakır;
+  // dar oyun orta sahayı kalabalıklaştırır, kanat ataklarından vazgeçer.
+  if (i.width === 'wide') {
+    e.attackChance *= 1.04;
+    e.headerBonus += 0.05;
+    e.corners *= 1.15;
+    e.midfield *= 0.98;
+    e.oppShotChance *= 1.03;
+  } else if (i.width === 'narrow') {
+    e.attackChance *= 0.95;
+    e.headerBonus -= 0.04;
+    e.corners *= 0.85;
+    e.midfield *= 1.03;
+    e.oppShotChance *= 0.98;
   }
   return e;
 }

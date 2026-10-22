@@ -13,6 +13,7 @@ const ROWS: { key: OptionKey; label: string }[] = [
   { key: 'tempo', label: 'Tempo' },
   { key: 'pressing', label: 'Pres' },
   { key: 'defensiveLine', label: 'Savunma Hattı' },
+  { key: 'width', label: 'Genişlik' },
 ];
 
 /** Bir talimat satırı: segmentli seçim + seçilenin açıklaması. */
@@ -67,7 +68,7 @@ const MENTALITY_OPTIONS = ([-2, -1, 0, 1, 2] as const).map((m) => ({
   hint: MENTALITY_HINTS[m],
 }));
 
-/** Takım talimatları: mentalite, pas, tempo, pres, savunma hattı. */
+/** Takım talimatları: mentalite, pas, tempo, pres, savunma hattı, genişlik. */
 export function InstructionsPanel({ instructions, onChange, disabled }: {
   instructions: TeamInstructions;
   onChange: (change: Partial<TeamInstructions>) => void;

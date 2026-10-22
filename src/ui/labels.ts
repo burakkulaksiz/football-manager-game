@@ -212,6 +212,11 @@ export const INSTRUCTION_OPTIONS = {
     { value: 'normal', label: 'Normal', hint: 'Dengeli savunma hattı.' },
     { value: 'high', label: 'Yüksek', hint: 'Takımı ileri taşır; hızlı rakip forvetlere karşı arkada tehlike.' },
   ],
+  width: [
+    { value: 'narrow', label: 'Dar', hint: 'Orta saha kalabalık ve kompakt; kanatlardan az orta, az korner.' },
+    { value: 'normal', label: 'Normal', hint: 'Dengeli genişlik.' },
+    { value: 'wide', label: 'Geniş', hint: 'Kanatları kullanır: daha çok orta, kafa ve korner; ortada boşluk kalır.' },
+  ],
 } as const;
 
 export const MENTALITY_HINTS: Record<-2 | -1 | 0 | 1 | 2, string> = {

@@ -4,7 +4,7 @@
  *
  * Koordinatlar metre: x 0–105 (ev sahibi sağa hücum eder), y 0–68 (yukarıdan aşağı).
  */
-import { FORMATION_LAYOUT, FORMATIONS, type MatchPlay, type MatchState, type Position, type Side } from '../engine';
+import { FORMATION_LAYOUT, FORMATIONS, type MatchPlay, type MatchState, type Position, type Side, type TeamInstructions } from '../engine';
 
 export const PITCH_LENGTH = 105;
 export const PITCH_WIDTH = 68;
@@ -78,32 +78,70 @@ export function blockLine(side: Side, ball: Point): number {
   return clamp((progress - 15) / 75, 0, 1);
 }
 
+/** Takım talimatlarının saha şekline etkisi (metre ve çarpanlar). */
+export interface TeamShape {
+  /** Mentalite: bütün blok ileri (+) / geri (−). */
+  push: number;
+  /** Savunma hattının ek kayması (derin −, yüksek +). */
+  line: number;
+  /** Top rakipteyken pres: önde oynayanların ileri (+, yoğun) / geri (−, az) kayması. */
+  press: number;
+  /** Yan yayılma çarpanı (orta çizgiden uzaklık): dar < 1 < geniş. */
+  spread: number;
+  /** Rakip ceza sahasına girmeyen, geride kalan oyuncuların dizilişteki ly sınırı (ly ≥ sınır → geride). */
+  stayBackLy: number;
+}
+
+/** Talimatlardan saha şekli; varsayılan talimatlar bugünkü yerleşimi verir. */
+export function teamShape(i: TeamInstructions): TeamShape {
+  const m = i.mentality;
+  return {
+    push: m * 3,
+    line: (i.defensiveLine === 'high' ? 7 : i.defensiveLine === 'deep' ? -7 : 0) + m,
+    press: i.pressing === 'high' ? 8 : i.pressing === 'low' ? -6 : 0,
+    spread: i.width === 'wide' ? 1.18 : i.width === 'narrow' ? 0.8 : 1,
+    // Tam hücumda bekler de ceza sahasına girer; savunmada ön libero/orta saha geride kalır
+    stayBackLy: m >= 2 ? 74 : m === 1 ? 69 : m === -1 ? 56 : m <= -2 ? 51 : 65,
+  };
+}
+
 /**
  * Bir takımın sahadaki oyuncularının yerleri.
  * Dizilişteki yer (FORMATION_LAYOUT: x soldan sağa, y yukarı = hücum) sahaya çevrilir;
  * derinlik blok çizgisine göre kayar, genişlik biraz topa doğru sıkışır.
+ * Talimatlar (teamShape) bloğun derinliğini, savunma hattını, presi ve genişliği değiştirir.
  * `kickoff`: başlama vuruşu dizilişi (herkes kendi yarısında).
+ * `possession`: topun hangi takımda olduğu (pres ve top kaybında daralma için; bilinmiyorsa null).
  */
-export function teamSpots(match: MatchState, side: Side, ball: Point, kickoff: boolean): Map<number, Point> {
+export function teamSpots(match: MatchState, side: Side, ball: Point, kickoff: boolean, possession: Side | null = null): Map<number, Point> {
   // Top bir kaleye 20 m'den yakınsa (korner, şut, penaltı) oyuncular ceza sahasına doluşur.
   const attackProgress = side === 'home' ? ball.x : PITCH_LENGTH - ball.x;
   const inOppBox = !kickoff && attackProgress > 85;
   const inOwnBox = !kickoff && attackProgress < 20;
   const t = kickoff ? 0.12 : blockLine(side, ball);
+  const shape = teamShape(match[side].instructions);
+  const defending = possession !== null && possession !== side;
+  // Top rakipteyken takım daralır (genişlik talimatının etkisi azalır) ve topa doğru kayar
+  const spread = defending ? 0.88 * (1 + (shape.spread - 1) * 0.4) : shape.spread;
+  const ballPull = defending ? (match[side].instructions.pressing === 'high' ? 0.3 : 0.24) : 0.18;
   const spots = new Map<number, Point>();
 
   for (const { id, slot, lx, ly } of formationRoles(match, side)) {
     let a: number;
-    if (slot === 'GK') a = 4 + t * 8;
+    const defender = ly >= 65;
+    if (slot === 'GK') a = 4 + t * 8 + (kickoff ? 0 : Math.max(-1, shape.line * 0.4));
     else a = 6 + ((100 - ly) / 100) * 52 + t * 36;
     if (kickoff) a = Math.min(a, PITCH_LENGTH / 2 - 1.5);
     // Hücum yönüne bakan oyuncunun sağı: ev sahibi için aşağı (+y), deplasman için yukarı
     let y = side === 'home' ? (lx / 100) * PITCH_WIDTH : ((100 - lx) / 100) * PITCH_WIDTH;
     if (!kickoff && slot !== 'GK') {
-      y += (ball.y - y) * 0.18;
-      const defender = ly >= 65;
-      if (inOppBox && !defender) {
-        // Hücumcular ve orta saha rakip ceza sahasına girer (stoperler geride kalır)
+      // Talimatlar: mentalite bloğu, savunma hattı arka dörtlüyü taşır; pres top rakipteyken önü ileri iter
+      a += shape.push + (defender ? shape.line : 0);
+      if (defending) a += shape.press * (defender ? 0.35 : 1);
+      y = MID_Y + (y - MID_Y) * spread;
+      y += (ball.y - y) * ballPull;
+      if (inOppBox && ly < shape.stayBackLy) {
+        // Hücumcular ve orta saha rakip ceza sahasına girer (stoperler, savunmacı mentalitede ön libero da geride)
         a += (91 - a) * 0.6;
         y += (MID_Y - y) * 0.35;
       } else if (inOwnBox) {
@@ -115,7 +153,7 @@ export function teamSpots(match: MatchState, side: Side, ball: Point, kickoff: b
       a += (hash01(match.minute, id) - 0.5) * 5;
       y += (hash01(match.minute, id + 0.5) - 0.5) * 5;
     }
-    spots.set(id, { x: alongX(side, a), y: clamp(y, 2, PITCH_WIDTH - 2) });
+    spots.set(id, { x: alongX(side, clamp(a, 1, PITCH_LENGTH - 1)), y: clamp(y, 2, PITCH_WIDTH - 2) });
   }
   return spots;
 }

@@ -5,7 +5,7 @@
  * Ara karelerin yerleri dakikaya bağlı sabit hash'ten gelir; son kare her zaman ballSpot ile aynıdır.
  */
 import type { MatchPlay, MatchState, Side } from '../engine';
-import { ballSpot, formationRoles, hash01, PITCH_LENGTH, PITCH_WIDTH, shotOrigin, teamSpots, type Point } from './pitch';
+import { ballSpot, formationRoles, hash01, PITCH_LENGTH, PITCH_WIDTH, shotOrigin, teamShape, teamSpots, type Point } from './pitch';
 
 const MID_Y = PITCH_WIDTH / 2;
 
@@ -62,7 +62,7 @@ function progress(side: Side, p: Point): number {
 function nearestTeammate(match: MatchState, side: Side, target: Point, exclude: ReadonlySet<number>): number | null {
   let best: number | null = null;
   let bestDist = Infinity;
-  for (const [id, p] of teamSpots(match, side, target, false)) {
+  for (const [id, p] of teamSpots(match, side, target, false, side)) {
     if (exclude.has(id) || match.players[id]!.slot === 'GK') continue;
     const d = Math.hypot(p.x - target.x, p.y - target.y);
     if (d < bestDist) {
@@ -75,7 +75,7 @@ function nearestTeammate(match: MatchState, side: Side, target: Point, exclude: 
 
 /** Oyuncunun o anki yerleşimdeki yeri (bulunamazsa hedef). */
 function spotOf(match: MatchState, side: Side, id: number, ball: Point): Point {
-  return teamSpots(match, side, ball, false).get(id) ?? ball;
+  return teamSpots(match, side, ball, false, side).get(id) ?? ball;
 }
 
 /**
@@ -89,6 +89,9 @@ export function buildScene(match: MatchState, play: MatchPlay | null, minute: nu
   const final = ballSpot(play, minute);
   const frames: SceneFrame[] = [];
   const used = new Set<number>();
+  // Pas koridoru: geniş oynayan takım kanatları, dar oynayan ortayı kullanır
+  const spread = teamShape(match[side].instructions).spread;
+  const lane = (y: number) => MID_Y + (y - MID_Y) * spread;
 
   /** Hedefe pas: en yakın takım arkadaşı topla buluşur (aynı oyuncu art arda iki kez almaz). */
   const passTo = (target: Point, move: FrameMove = 'pass', carrier?: number | null) => {
@@ -99,7 +102,7 @@ export function buildScene(match: MatchState, play: MatchPlay | null, minute: nu
   /** Oyun kurma: kendi yarısından ileriye 1–2 pas. */
   const buildUp = (count: number) => {
     const starts = [24 + h(1) * 14, 44 + h(2) * 16];
-    for (const a of starts.slice(2 - count)) passTo(at(side, a, 10 + h(a) * 48));
+    for (const a of starts.slice(2 - count)) passTo(at(side, a, lane(10 + h(a) * 48)));
   };
   const lastFrame = () => frames[frames.length - 1]!;
   /** Son karede faulü yapan, topun hemen yanında (kendi kalesi tarafında). */
@@ -186,7 +189,7 @@ export function buildScene(match: MatchState, play: MatchPlay | null, minute: nu
           const spot = spotOf(match, side, play.assistId, approach);
           passTo(at(side, Math.max(70, progress(side, spot)), spot.y), 'pass', play.assistId);
         } else {
-          passTo(at(side, 70 + h(8) * 10, 12 + h(9) * 44));
+          passTo(at(side, 70 + h(8) * 10, lane(12 + h(9) * 44)));
         }
         if (play.playerId !== null) used.delete(play.playerId);
         passTo(origin, 'pass', play.playerId);
@@ -328,7 +331,7 @@ export function sceneDurationMs(scene: readonly SceneFrame[]): number {
 export function frameSpots(match: MatchState, frame: SceneFrame, kickoff: boolean): Map<number, { side: Side; at: Point }> {
   const spots = new Map<number, { side: Side; at: Point }>();
   for (const side of ['home', 'away'] as const) {
-    for (const [id, p] of teamSpots(match, side, frame.ball, kickoff || frame.kickoff === true)) spots.set(id, { side, at: p });
+    for (const [id, p] of teamSpots(match, side, frame.ball, kickoff || frame.kickoff === true, frame.carrierSide)) spots.set(id, { side, at: p });
   }
   if (frame.setPiece) {
     for (const [id, point] of setPieceSpots(match, frame.setPiece, frame.setPiece.spot, frame.carrierId)) {

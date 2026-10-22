@@ -46,7 +46,7 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
 
 ## Lig ve rekabet
 - [x] Türkiye Kupası (tek maç eleme, beraberlikte penaltılar; uzatma yok)
-- [ ] Avrupa kupaları (Şampiyonlar Ligi, Avrupa Ligi)
+- [x] Avrupa kupaları (Şampiyonlar Ligi, Avrupa Ligi; 4'lü gruplar, iki maçlı eleme, tek maç final)
 - [ ] Milli takım ve milli maç arası
 - [ ] 1. Lig'in gerçekten oynanması (şu an çıkanlar rastgele seçiliyor)
 - [ ] Gerçek kadrolar (`data/squads/`)

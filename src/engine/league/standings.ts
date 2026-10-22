@@ -75,9 +75,13 @@ function sortTiedGroup(group: StandingRow[], fixtures: readonly Fixture[]): Stan
   });
 }
 
-export function computeStandings(clubIds: readonly string[], allFixtures: readonly Fixture[]): StandingRow[] {
-  // Yalnızca lig maçları (kupa maçları puan durumunu ve ikili averajı etkilemez)
-  const fixtures = allFixtures.filter((f) => f.competition !== 'cup');
+/** Lig puan durumu: yalnızca lig maçları (kupa ve Avrupa maçları puan durumunu ve ikili averajı etkilemez). */
+export function computeStandings(clubIds: readonly string[], fixtures: readonly Fixture[]): StandingRow[] {
+  return tableFrom(clubIds, fixtures.filter((f) => f.competition === undefined));
+}
+
+/** Verilen maçlardan puan tablosu (Avrupa grupları gibi mini ligler için). */
+export function tableFrom(clubIds: readonly string[], fixtures: readonly Fixture[]): StandingRow[] {
   const rows = [...tally(clubIds, fixtures).values()].sort((a, b) => b.points - a.points);
   for (const row of rows) row.form = row.form.slice(-5);
 

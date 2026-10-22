@@ -12,6 +12,7 @@ import {
   stepMatch,
   teamHierarchy,
   substitute,
+  type Competition,
   type FormationId,
   type GameWorld,
   type MatchState,
@@ -23,6 +24,14 @@ import {
 import { DEFAULT_SQUAD_FILTERS, type SquadFilters, type SquadView } from '../ui/squadFilters';
 import { gameData } from '../gameData';
 import { autosave, loadGame, saveGame } from '../persistence/saves';
+
+/** Fikstür ekranı sekmeleri. */
+export type FixturesTab = 'club' | 'round' | 'cup' | 'europe';
+
+/** Maçın organizasyonuna göre fikstür sekmesi. */
+export function tabFor(competition: Competition | undefined): FixturesTab {
+  return competition === 'cup' ? 'cup' : competition ? 'europe' : 'round';
+}
 
 /** Sol menüden açılan ekranlar + menü dışı ekranlar ('player'). */
 export type ScreenId =
@@ -82,7 +91,7 @@ interface GameState {
   /** Karşılaştırma için seçilen oyuncular (en fazla 2). */
   compareIds: number[];
   /** Fikstür ekranı: kendi maçlarımız mı, haftalık görünüm mü; seçili hafta. */
-  fixturesTab: 'club' | 'round' | 'cup';
+  fixturesTab: FixturesTab;
   fixturesRound: number;
   /** Oynanmakta olan kendi maçımız (yoksa null). */
   liveMatch: MatchState | null;
@@ -109,7 +118,7 @@ interface GameState {
   setSquadFilters: (change: Partial<SquadFilters>) => void;
   toggleCompare: (playerId: number) => void;
   clearCompare: () => void;
-  setFixturesView: (tab: 'club' | 'round' | 'cup', round?: number) => void;
+  setFixturesView: (tab: FixturesTab, round?: number) => void;
   /**
    * "Devam": maç günüyse maçları oynatır, değilse bir sonraki maç gününe ilerler.
    * Maçlar oynanınca o haftanın sonuçları gösterilir.
@@ -331,8 +340,8 @@ export const useGameStore = create<GameState>()((set, get) => {
       }
       touch(world);
       if (result.kind === 'played') {
-        // Kupa günü: kupa sekmesi; lig haftasında hafta sekmesi
-        set(result.cup ? { fixturesTab: 'cup' } : { fixturesTab: 'round', fixturesRound: result.round });
+        // Kupa / Avrupa günü: ilgili sekme; lig haftasında hafta sekmesi
+        set(result.competition ? { fixturesTab: tabFor(result.competition) } : { fixturesTab: 'round', fixturesRound: result.round });
         get().navigate({ screen: 'fixtures' });
         runAutosave();
       } else if (result.news.length > 0) {
@@ -407,8 +416,9 @@ export const useGameStore = create<GameState>()((set, get) => {
       const fixtureId = liveMatch.fixtureId;
       const round = finishUserMatch(world, liveMatch);
       touch(world);
-      set(round[0]?.competition === 'cup'
-        ? { liveMatch: null, fixturesTab: 'cup' }
+      const competition = round[0]?.competition;
+      set(competition
+        ? { liveMatch: null, fixturesTab: tabFor(competition) }
         : { liveMatch: null, fixturesTab: 'round', fixturesRound: round[0]?.round ?? 1 });
       get().navigate({ screen: 'report', fixtureId });
       runAutosave();

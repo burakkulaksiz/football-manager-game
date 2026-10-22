@@ -7,6 +7,7 @@ import type { GameData } from './data';
 import { addDays, formatDateTR, weekday } from './date';
 import { startNewMonth } from './finance/finance';
 import { cupDay } from './league/cup';
+import { europeDay } from './league/europe';
 import { addNews } from './news';
 import type { Rng } from './rng';
 import { aiTransferDay } from './transfer/ai';
@@ -57,8 +58,9 @@ export function processDay(world: GameWorld, rng: Rng, data: GameData): void {
   }
   // Sezon döngüsü
   if (world.seasonState === 'running' && world.season.fixtures.every((f) => f.result !== null)) endSeason(world, rng);
-  // Türkiye Kupası kuraları
+  // Türkiye Kupası ve Avrupa kuraları
   cupDay(world);
+  europeDay(world);
   if (world.date.endsWith('-05-01')) contractWarnings(world);
   if (world.seasonState === 'ended' && world.date.endsWith('-07-01')) startNewSeason(world, rng, data);
 

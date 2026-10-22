@@ -67,6 +67,7 @@ function ManagerCard() {
         <div className="kv"><span className="kv-label">Galibiyet yüzdesi</span><span className="kv-value">{played > 0 ? `%${Math.round((m.won / played) * 100)}` : '—'}</span></div>
         <div className="kv"><span className="kv-label">Lig şampiyonluğu</span><span className="kv-value">{m.titles}</span></div>
         <div className="kv"><span className="kv-label">Türkiye Kupası</span><span className="kv-value">{m.cups ?? 0}</span></div>
+        <div className="kv"><span className="kv-label">Avrupa kupası</span><span className="kv-value">{m.europeTitles ?? 0}</span></div>
       </div>
     </section>
   );

@@ -4,6 +4,7 @@ import { ageOn } from '../player';
 import { advance } from '../gameFlow';
 import { clubPlayers, createWorld, getClub, leagueClubs } from '../generation/worldGenerator';
 import { CUP_ROUNDS, cupFixtures, fixtureWinner } from '../league/cup';
+import { europeCompetitionOf } from '../league/europe';
 import { computeStandings } from '../league/standings';
 import { negotiateFreeAgent } from '../transfer/offers';
 import { contractDemand } from '../transfer/agents';
@@ -31,7 +32,8 @@ describe('sezon döngüsü', () => {
   const lowerIds = world.clubs.filter((c) => divisionOf(c) === 2).map((c) => c.id);
 
   it('son maçın ertesi günü sezon kapanır: şampiyon, küme düşenler, çıkanlar, ödüller, primler', () => {
-    playUntil(world, '2027-05-20');
+    // Sezon son maçın (Şampiyonlar Ligi finali, 25 Mayıs) ertesi günü kapanır
+    playUntil(world, '2027-05-28');
     // Fikstür 1 Temmuz'a kadar geçen sezonundur; tablo son haftadan sonra alınır.
     const finalTable = computeStandings(leagueClubs(world).map((c) => c.id), world.season.fixtures);
     expect(world.seasonState).toBe('ended');
@@ -42,8 +44,10 @@ describe('sezon döngüsü', () => {
     expect(summary.promotedIds).toHaveLength(3);
     for (const id of summary.promotedIds) expect(lowerIds).toContain(id);
     expect(summary.awards.length).toBeGreaterThanOrEqual(4);
-    expect(world.finances[summary.championId]!.current.income.prize + world.finances[summary.championId]!.history.reduce((s, r) => s + (r.income.prize ?? 0), 0))
-      .toBe(prizeFor(1, 18) + cupPrizes(world, summary.championId));
+    const championPrize = world.finances[summary.championId]!.current.income.prize + world.finances[summary.championId]!.history.reduce((s, r) => s + (r.income.prize ?? 0), 0);
+    // Avrupa'da oynadıysa onun ödülleri de eklenir
+    if (europeCompetitionOf(world, summary.championId)) expect(championPrize).toBeGreaterThan(prizeFor(1, 18) + cupPrizes(world, summary.championId));
+    else expect(championPrize).toBe(prizeFor(1, 18) + cupPrizes(world, summary.championId));
     expect(world.news.some((n) => n.category === 'season')).toBe(true);
   });
 
@@ -52,8 +56,8 @@ describe('sezon döngüsü', () => {
     const table = computeStandings(leagueClubs(world).map((c) => c.id), world.season.fixtures);
     const row = table.find((r) => r.clubId === 'galatasaray')!;
     expect(world.manager.name).toBe('Menajer');
-    // Lig ve kupa maçları (penaltılarla biten kupa maçı beraberlik sayılır)
-    const cup = cupFixtures(world).filter((f) => f.homeId === 'galatasaray' || f.awayId === 'galatasaray');
+    // Lig, kupa ve Avrupa maçları (penaltılarla biten maç beraberlik sayılır)
+    const cup = world.season.fixtures.filter((f) => f.competition && (f.homeId === 'galatasaray' || f.awayId === 'galatasaray'));
     const goals = (f: Fixture) => (f.homeId === 'galatasaray' ? [f.result!.homeGoals, f.result!.awayGoals] : [f.result!.awayGoals, f.result!.homeGoals]);
     const cupWon = cup.filter((f) => goals(f)[0]! > goals(f)[1]!).length;
     const cupDrawn = cup.filter((f) => goals(f)[0] === goals(f)[1]).length;

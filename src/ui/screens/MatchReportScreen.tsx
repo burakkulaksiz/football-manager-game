@@ -1,9 +1,10 @@
 import {
+  aggregateScore,
   fixtureLabel,
   formatDateTR,
   formatMinute,
   getClub,
-  isCupFixture,
+  isEuropeFixture,
   matchTimeline,
   primaryPosition,
   teamAppearances,
@@ -11,7 +12,7 @@ import {
   type GameWorld,
   type TimelineEvent,
 } from '../../engine';
-import { useGameStore, useWorld } from '../../store/gameStore';
+import { tabFor, useGameStore, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { readableText } from '../colors';
 import { MatchMaps } from '../components/MatchMaps';
@@ -167,6 +168,8 @@ export function MatchReportScreen() {
   }
 
   const result = fixture.result;
+  // Rövanş: iki maçın toplamı
+  const agg = isEuropeFixture(fixture) ? aggregateScore(world, fixture) : null;
   const home = getClub(world, fixture.homeId);
   const away = getClub(world, fixture.awayId);
   const motm = result.manOfTheMatch !== null ? world.players[result.manOfTheMatch] : undefined;
@@ -177,7 +180,7 @@ export function MatchReportScreen() {
       .map((e) => `${world.players[e.playerId]?.lastName ?? '?'} ${formatMinute(e.minute, e.extra)}${e.kind === 'penalty' ? ' (P)' : ''}`);
 
   const showRound = () => {
-    setFixturesView(isCupFixture(fixture) ? 'cup' : 'round', fixture.round);
+    setFixturesView(tabFor(fixture.competition), fixture.round);
     setScreen('fixtures');
   };
 
@@ -195,6 +198,7 @@ export function MatchReportScreen() {
           <div className="sb-score">
             {result.homeGoals}<span className="sb-dash">–</span>{result.awayGoals}
           </div>
+          {agg && <div className="sb-penalties">Toplam {agg.home}-{agg.away}</div>}
           {result.penalties && <div className="sb-penalties">Penaltılar {result.penalties.home}-{result.penalties.away}</div>}
           <div className="sb-clock">Maç Sonu</div>
         </div>

@@ -2,6 +2,7 @@ import {
   cleanSheets,
   computeStandings,
   CUP_NAME,
+  EUROPE,
   getClub,
   leagueClubs,
   leagueFixtures,
@@ -171,6 +172,8 @@ function SeasonHistory({ world }: { world: GameWorld }) {
                 </span>
               </div>
               {s.cupWinnerName && <div className="kv"><span className="kv-label">{CUP_NAME}</span><span className="kv-value">{s.cupWinnerName}</span></div>}
+              {s.clWinnerName && <div className="kv"><span className="kv-label">{EUROPE.cl.name}</span><span className="kv-value">{s.clWinnerName}</span></div>}
+              {s.elWinnerName && <div className="kv"><span className="kv-label">{EUROPE.el.name}</span><span className="kv-value">{s.elWinnerName}</span></div>}
               <div className="kv"><span className="kv-label">Küme düşenler</span><span className="kv-value neg">{s.relegatedNames.join(', ')}</span></div>
               <div className="kv"><span className="kv-label">1. Lig'den çıkanlar</span><span className="kv-value">{s.promotedNames.join(', ')}</span></div>
               {s.awards.map((a) => (

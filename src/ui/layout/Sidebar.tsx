@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { cupRoundName, getClub, isCupFixture, nextFixtureFor, unreadCount } from '../../engine';
+import { getClub, nextFixtureFor, shortFixtureLabel, unreadCount } from '../../engine';
 import { hasUnsavedProgress, useGameStore, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { QuitDialog, SaveDialog } from '../components/SaveDialogs';
@@ -23,7 +23,7 @@ function NextMatchCard() {
   const away = getClub(world, next.awayId);
   return (
     <div className="next-card">
-      <div className="next-card-title">Sıradaki Maç · {isCupFixture(next) ? `Kupa ${cupRoundName(next.round)}` : `${next.round}. Hafta`}</div>
+      <div className="next-card-title">Sıradaki Maç · {shortFixtureLabel(next)}</div>
       <div className="next-card-teams">
         <ClubBadge club={home} size={28} />
         <span className="next-card-vs">v</span>

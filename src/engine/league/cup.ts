@@ -46,16 +46,11 @@ export function isCupFixture(f: Fixture): boolean {
 
 /** Lig maçları (puan durumu, lig istatistikleri, ödüller). */
 export function leagueFixtures(fixtures: readonly Fixture[]): Fixture[] {
-  return fixtures.filter((f) => !isCupFixture(f));
+  return fixtures.filter((f) => f.competition === undefined);
 }
 
 export function cupRoundName(round: number): string {
   return CUP_ROUNDS[round - 1]?.name ?? `${round}. Tur`;
-}
-
-/** "Süper Lig · 5. Hafta" / "Türkiye Kupası · Son 16". */
-export function fixtureLabel(f: Fixture): string {
-  return isCupFixture(f) ? `${CUP_NAME} · ${cupRoundName(f.round)}` : `Süper Lig · ${f.round}. Hafta`;
 }
 
 /** Turun planlanan tarihi: verilen günden sonraki ilk çarşamba. */

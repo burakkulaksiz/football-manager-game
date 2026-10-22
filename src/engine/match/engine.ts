@@ -239,6 +239,8 @@ export interface MatchSetup {
   knockout?: boolean;
   /** Tarafsız saha: iç saha avantajı yok. */
   neutral?: boolean;
+  /** İki maçlı eşleşmenin rövanşı: ilk maçın golleri (bu maçın ev sahibi / deplasmanı açısından). */
+  aggregate?: { home: number; away: number };
 }
 
 function newPlayerState(rng: Rng, p: Player, side: Side, slot: Position | null): PlayerMatchState {
@@ -319,6 +321,7 @@ export function createMatch(setup: MatchSetup, lookup: PlayerLookup): MatchState
     pendingSubs: [],
     ...(setup.knockout ? { knockout: true } : {}),
     ...(setup.neutral ? { neutral: true } : {}),
+    ...(setup.aggregate ? { aggregate: { ...setup.aggregate } } : {}),
     shots: [],
     timeline: '',
     rngState: rng.getState(),
@@ -1011,7 +1014,9 @@ export function stepMatch(state: MatchState, lookup: PlayerLookup): void {
       state.period = 'full';
       finalizeRatings(ctx);
       emit(ctx, 'fulltime', null, 'fulltime', vars());
-      if (state.knockout && state.score.home === state.score.away) penaltyShootout(ctx);
+      // Eleme: beraberlikte (rövanşta toplam skorda eşitlikte) penaltı atışları
+      const agg = state.aggregate ?? { home: 0, away: 0 };
+      if (state.knockout && state.score.home + agg.home === state.score.away + agg.away) penaltyShootout(ctx);
     }
   }
   state.rngState = ctx.rng.getState();

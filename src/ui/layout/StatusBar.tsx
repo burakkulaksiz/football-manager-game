@@ -1,4 +1,4 @@
-import { getClub, scoreLine, type GameWorld } from '../../engine';
+import { EUROPE, getClub, scoreLine, type GameWorld } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { formatDayMonth } from '../labels';
 import { pageHeading } from './pageHeading';
@@ -25,7 +25,7 @@ function resultItems(world: GameWorld): string[] {
   const lastDate = played.reduce((max, f) => (f.date > max ? f.date : max), played[0]!.date);
   return played
     .filter((f) => f.date === lastDate)
-    .map((f) => `${f.competition === 'cup' ? 'Kupa: ' : ''}${getClub(world, f.homeId).name} ${scoreLine(f).replace(' - ', '-')} ${getClub(world, f.awayId).name}`);
+    .map((f) => `${f.competition === 'cup' ? 'Kupa: ' : f.competition ? `${EUROPE[f.competition].short}: ` : ''}${getClub(world, f.homeId).name} ${scoreLine(f).replace(' - ', '-')} ${getClub(world, f.awayId).name}`);
 }
 
 export function StatusBar() {

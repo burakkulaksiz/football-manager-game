@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { leagueFixtures } from '../league/cup';
 import { gameData } from '../../gameData';
 import { playSeason } from '../testing';
 import { clubPlayers, createWorld, getClub } from '../generation/worldGenerator';
@@ -84,11 +85,11 @@ describe('tek maç', () => {
 });
 
 describe('istatistik doğrulama (binlerce maç)', () => {
-  // 15 sezon × 306 maç ≈ 4600 maç
+  // 15 sezon × 306 lig maçı ≈ 4600 maç (kupa ve Avrupa maçları hariç: Süper Lig dengesi)
   const seasons = Array.from({ length: 15 }, (_, i) => {
     const w = createWorld(gameData, 500 + i, 'galatasaray', START);
     playSeason(w);
-    return w.season.fixtures.map((f) => f.result!);
+    return leagueFixtures(w.season.fixtures).map((f) => f.result!);
   });
   const results = seasons.flat();
   // Her sezonun gol kralının gol sayısı

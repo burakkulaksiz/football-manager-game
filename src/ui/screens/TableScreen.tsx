@@ -6,8 +6,7 @@ import { OutcomeBox } from '../components/OutcomeBox';
 /** Sıraya göre bölge: Avrupa kupaları ve küme düşme hattı. */
 function zoneClass(position: number, total: number): string {
   if (position <= 2) return 'zone-cl';
-  if (position === 3) return 'zone-el';
-  if (position === 4) return 'zone-ecl';
+  if (position <= 4) return 'zone-el';
   if (position > total - 3) return 'zone-rel';
   return '';
 }
@@ -70,8 +69,7 @@ export function TableScreen() {
       </table>
       <div className="legend">
         <span><i className="zone-mark zone-cl" /> Şampiyonlar Ligi</span>
-        <span><i className="zone-mark zone-el" /> Avrupa Ligi</span>
-        <span><i className="zone-mark zone-ecl" /> Konferans Ligi</span>
+        <span><i className="zone-mark zone-el" /> Avrupa Ligi (kupa şampiyonu da katılır)</span>
         <span><i className="zone-mark zone-rel" /> Küme düşme</span>
       </div>
     </section>

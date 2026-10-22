@@ -31,7 +31,10 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
   league/standings.ts  Puan durumu + eşitlik kuralları.
   league/stats.ts      Gol/asist/puan sıralamaları, oyuncu sezon istatistikleri (maç kayıtlarından türetilir).
   league/cup.ts        Türkiye Kupası: turlar (CUP_ROUNDS), kura (cupDay), kazanan (fixtureWinner, penaltılar),
-                       tur sonrası ödül/haber (cupAfterMatch), etiketler (fixtureLabel, scoreLine), leagueFixtures.
+                       tur sonrası ödül/haber (cupAfterMatch), scoreLine, leagueFixtures (yalnızca lig: competition yok).
+  league/europe.ts     Avrupa kupaları (ŞL / AL): katılım (turkishQualifiers), kuralar (europeDay), grup tablosu
+                       (groupTable → standings.tableFrom), iki maçlı eşleşme (aggregateScore, tieWinner), ödüller.
+  league/competitions.ts Organizasyon etiketleri: competitionName, stageLabel, fixtureLabel, shortFixtureLabel.
   match/state.ts       Canlı maç durumu tipleri (düz veri, serileştirilebilir), dakika gösterimi.
   match/formation.ts   6 diziliş + saha yerleşimi (FORMATION_LAYOUT), mevki uyumu (slotFit = yanlış mevki cezası),
                        otomatik ilk 11 + 9 yedek, chooseFormation (yapay zekâ), assignToFormation.
@@ -421,6 +424,25 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
         Arayüz: Fikstür'de "Türkiye Kupası" sekmesi (turlar, bay geçenler, durumumuz), Kulübüm listesi tarih sırasında
         kupa etiketiyle, skorlar "2 - 2 (P 4-3)", maç ve rapor başlığında fixtureLabel, tabelada penaltılar, haber
         bandı son maç gününün sonuçları, geçmiş sezonlarda kupa şampiyonu, menajer kartında kupa sayısı.
+  - [x] Avrupa kupaları. Fixture.competition: 'cup' | 'cl' | 'el' (Competition), Avrupa grup maçında Fixture.group;
+        round: 1–6 grup maçları, 7/8 çeyrek final ilk maç/rövanş, 9/10 yarı final, 11 final. computeStandings artık
+        yalnızca lig maçları (competition yok); mini lig için tableFrom. 16'şar kulüp: ŞL = Türkiye'den geçen sezonun
+        ilk 2'si + en güçlü 14 yabancı; AL = kupa şampiyonu (ŞL'de değilse) + 3./4. (gerekirse 5.) + ŞL dışındaki en
+        ZAYIF 13 yabancı (ilk denemede en güçlüler konunca Türk kulüpleri neredeyse hiç kazanamıyordu). İlk sezon
+        itibar sırası. Bir ülkeden en çok 4 kulüp; grup kurası 4 torba (itibar), geri izlemeyle aynı ülke aynı grupta
+        olmaz. Kura 25 Ağustos (ilk maça 3 günden az kaldıysa o sezon Avrupa yok: eski kayıt), sonraki aşamalar önceki
+        bitince (processDay → europeDay); ayrı tohumlu rng. ŞL salı, AL perşembe (STAGE_DATES: 14 Eyl … 7 Ara grup,
+        8/15 Mar çeyrek, 12/19 Nis yarı, 18 May final — ligin bitiminden sonra; sezon ŞL finalinin ertesi günü kapanır).
+        Çeyrek final: grup birincisi başka grubun ikincisiyle, rövanş birincinin evinde; yarı final serbest kura; final
+        tarafsız. Rövanş: MatchSetup/MatchState.aggregate (ilk maçın golleri, bu maçın ev/deplasmanı açısından);
+        toplamda eşitlikte penaltılar (deplasman golü yok). Ödüller ('prize'; EUROPE[comp].prizes): katılım, grup
+        galibiyeti/beraberliği, çeyrek, yarı, final, şampiyonluk (ŞL 8 Mn katılım … 10 Mn şampiyonluk; AL daha az).
+        Kullanıcı: gruptan çıkmak / tur atlamak güven +5 ve itibar +1, şampiyonluk ŞL +25 / AL +15, itibar +3
+        (Türk kulübü, en çok 100), manager.europeTitles; haberler ('europe'). SeasonSummary.clWinnerName/elWinnerName.
+        Motor istatistik testi artık yalnızca lig maçlarını ölçer. Arayüz: Fikstür'de "Avrupa" sekmesi (ŞL / AL
+        seçimi; grup tabloları, eleme turları ilk maç + rövanş + toplam), Kulübüm listesinde ŞL/AL etiketi, tabelada
+        ve raporda "Toplam X-Y", puan durumu bölgeleri 1–2 ŞL, 3–4 AL (Konferans Ligi kalktı), geçmişte şampiyonlar,
+        menajer kartında Avrupa kupası. Ölçüm (5 sezon): Türk kulüpleri ŞL'de çoğunlukla 3.–4., AL'de ara sıra gruptan çıkar.
   - [ ] Sıradaki: FIKIRLER.md'den seçilecek.
 
 ## Açık konular / ileride

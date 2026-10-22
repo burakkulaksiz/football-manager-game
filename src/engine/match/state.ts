@@ -174,6 +174,8 @@ export interface MatchState {
   knockout?: boolean;
   /** Tarafsız saha (kupa finali): iç saha avantajı yok. */
   neutral?: boolean;
+  /** Rövanş maçı: ilk maçın golleri (bu maçın ev sahibi / deplasmanı açısından); eşitlik toplam skora göre. */
+  aggregate?: { home: number; away: number };
   /** Penaltı atışları (oynandıysa). */
   penalties?: Shootout;
   /** Dakikalar arasında yapılan değişiklikler: sıradaki dakikanın anına (lastPlay.subs) taşınır. */

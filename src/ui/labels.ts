@@ -278,6 +278,7 @@ export const NEWS_CATEGORY_LABELS: Record<import('../engine').NewsCategory, stri
   academy: 'Altyapı',
   scouting: 'Gözlemci',
   cup: 'Kupa',
+  europe: 'Avrupa',
 };
 
 export const INCOME_LABELS: Record<import('../engine').IncomeCategory, string> = {

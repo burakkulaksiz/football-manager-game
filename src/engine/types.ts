@@ -340,7 +340,8 @@ export type NewsCategory =
   | 'season'
   | 'academy'
   | 'scouting'
-  | 'cup';
+  | 'cup'
+  | 'europe';
 
 /* ------------------------------------------------------------------ */
 /* Antrenman                                                           */
@@ -369,16 +370,21 @@ export interface NewsItem {
 
 export interface Fixture {
   id: number;
-  /** Ligde hafta (1–34); kupada tur (1 = 1. Tur … 5 = Final). */
+  /** Ligde hafta (1–34); kupada tur (1 = 1. Tur … 5 = Final); Avrupa'da aşama (1–6 grup maçı, 7–10 çeyrek ve yarı final maçları, 11 final). */
   round: number;
   date: GameDate;
   homeId: string;
   awayId: string;
   /** Oynanmadıysa null. */
   result: MatchResult | null;
-  /** Türkiye Kupası maçı; yoksa lig maçı. */
-  competition?: 'cup';
+  /** Kupa ya da Avrupa maçı; yoksa lig maçı. */
+  competition?: Competition;
+  /** Avrupa grup aşaması: grup harfi ('A'–'D'). */
+  group?: string;
 }
+
+/** 'cup' = Türkiye Kupası, 'cl' = Şampiyonlar Ligi, 'el' = Avrupa Ligi. */
+export type Competition = 'cup' | 'cl' | 'el';
 
 export interface Season {
   /** Sezonun başladığı yıl: 2026 → "2026/27" */
@@ -444,6 +450,8 @@ export interface ManagerInfo {
   titles: number;
   /** Türkiye Kupası zaferleri. */
   cups?: number;
+  /** Avrupa kupası zaferleri (Şampiyonlar Ligi ya da Avrupa Ligi). */
+  europeTitles?: number;
 }
 
 export interface BoardState {
@@ -478,4 +486,7 @@ export interface SeasonSummary {
   /** Türkiye Kupası şampiyonu (kupa oynanmadıysa yok). */
   cupWinnerId?: string;
   cupWinnerName?: string;
+  /** Avrupa kupaları şampiyonları (oynandıysa). */
+  clWinnerName?: string;
+  elWinnerName?: string;
 }

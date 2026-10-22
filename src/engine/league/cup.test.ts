@@ -14,10 +14,10 @@ import {
   cupParticipants,
   cupRoundDate,
   FINAL_ROUND,
-  fixtureLabel,
   fixtureWinner,
   leagueFixtures,
 } from './cup';
+import { fixtureLabel } from './competitions';
 import { computeStandings } from './standings';
 
 const START = '2026-07-01';

@@ -2977,6 +2977,40 @@ select {
 .pdot-card.yellow { background: #ffd43b; }
 .pdot-card.red { background: #ef4444; }
 
+/* Daha önce görülen sarı kart: noktanın sağ üstünde küçük */
+.pdot-card.mini {
+  left: calc(var(--u) * 0.85);
+  top: calc(var(--u) * -1.9);
+  width: calc(var(--u) * 0.7);
+  height: calc(var(--u) * 0.95);
+  border-radius: 1px;
+}
+
+/* Sakatlanan oyuncu yerde: nokta yatık ve soluk */
+.pdot-body.down {
+  transform: scale(1.25, 0.55);
+  filter: brightness(0.8);
+}
+
+.pdot-name.above {
+  top: auto;
+  bottom: calc(var(--u) * 1.6);
+}
+
+/* Oyuncu değişikliği: giren yeşil, çıkan kırmızı ok (noktanın solunda) */
+.pdot-sub {
+  position: absolute;
+  left: calc(var(--u) * -2.9);
+  top: calc(var(--u) * -0.8);
+  font-size: calc(var(--u) * 1.5);
+  line-height: 1;
+  font-weight: 700;
+  text-shadow: 0 0 2px #000;
+}
+
+.pdot-sub.in { color: #4ade80; }
+.pdot-sub.out { color: #f87171; }
+
 .pdot-injury {
   position: absolute;
   left: calc(var(--u) * -2.4);

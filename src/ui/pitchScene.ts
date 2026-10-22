@@ -4,7 +4,7 @@
  * arkadaşına gider; motorun seçtiği gerçek oyuncular (asist, şutu çeken, kaleci, faul yapan) rollerini oynar.
  * Ara karelerin yerleri dakikaya bağlı sabit hash'ten gelir; son kare her zaman ballSpot ile aynıdır.
  */
-import type { MatchPlay, MatchState, Side } from '../engine';
+import type { MatchPlay, MatchState, PlaySub, Side } from '../engine';
 import { ballSpot, formationRoles, hash01, PITCH_LENGTH, PITCH_WIDTH, shotOrigin, teamShape, teamSpots, type Point } from './pitch';
 
 const MID_Y = PITCH_WIDTH / 2;
@@ -36,6 +36,10 @@ export interface SceneFrame {
   focusId?: number;
   /** Santra dizilişi (gol sonrası). */
   kickoff?: boolean;
+  /** Oyuncu değişikliği karesi: girenin ve çıkanın adı ve oku gösterilir. */
+  subs?: PlaySub[];
+  /** Değişiklikten önceki karelerde girenin yerinde çıkan oyuncu görünür: [giren, çıkan]. */
+  standIns?: [number, number][];
 }
 
 export interface SetPiece {
@@ -83,6 +87,85 @@ function spotOf(match: MatchState, side: Side, id: number, ball: Point): Point {
  */
 export function buildScene(match: MatchState, play: MatchPlay | null, minute: number): SceneFrame[] {
   if (!play) return [{ ball: ballSpot(null, minute), carrierId: null, carrierSide: 'home', placed: [], move: 'none' }];
+  const subs = play.subs ?? [];
+  const early = subs.filter((s) => s.early);
+  const late = subs.filter((s) => !s.early);
+  // Yalnızca değişiklik olan sakin dakika: oyun durur, değişiklik yapılır
+  if (!playHighlight(play) && subs.length > 0) {
+    const pause: SceneFrame = { ball: ballSpot(play, minute), carrierId: null, carrierSide: play.side, placed: [], move: 'none' };
+    const frames = substitutionFrames(match, subs, pause);
+    frames[0]!.result = true;
+    return frames;
+  }
+  const core = playFrames(match, play, minute);
+  const result = core[core.length - 1]!;
+  const scene = [...core];
+  if (play.card?.type === 'red') scene.push(sendOff(result, play.card.playerId, match.players[play.card.playerId]?.side ?? other(play.side)));
+  if (play.kind === 'goal') scene.push(...celebration(match, play, result));
+  if (late.length > 0) {
+    // Dakikanın sonundaki değişiklik: o ana kadar çıkan oyuncu sahada (girenin yerinde)
+    const swap = new Map(late.map((s) => [s.inId, s.outId]));
+    for (const f of scene) {
+      f.standIns = late.map((s) => [s.inId, s.outId]);
+      if (f.carrierId !== null) f.carrierId = swap.get(f.carrierId) ?? f.carrierId;
+      f.placed = f.placed.map((p) => ({ ...p, id: swap.get(p.id) ?? p.id }));
+    }
+    scene.push(...substitutionFrames(match, late, scene[scene.length - 1]!));
+  }
+  if (early.length > 0) scene.unshift(...substitutionFrames(match, early, core[0]!));
+  return scene;
+}
+
+/** Değişiklikte oyuncuların girip çıktığı yer: orta çizginin hizasında, alt kenarın hemen dışı (yedek kulübesi). */
+const BENCH_Y = PITCH_WIDTH + 0.6;
+const BENCH_X = PITCH_LENGTH / 2;
+
+/** Kırmızı kart: atılan oyuncu yedek kulübesinin önünden sahayı terk eder. */
+function sendOff(result: SceneFrame, playerId: number, side: Side): SceneFrame {
+  return {
+    ...result,
+    result: undefined,
+    move: 'none',
+    placed: [...result.placed.filter((p) => p.id !== playerId), { id: playerId, side, at: { x: BENCH_X, y: BENCH_Y } }],
+  };
+}
+
+/**
+ * Oyuncu değişikliği (3 kare): çıkan oyuncu yerinden kenara yürür, giren kenarda bekler →
+ * kenarda el sıkışırlar, giren sahaya koşar → giren yerinde, çıkan sahadan ayrılmış.
+ * `base`: oyunun durduğu kare (top ve diziliş buna göre).
+ */
+function substitutionFrames(match: MatchState, subs: readonly PlaySub[], base: SceneFrame): SceneFrame[] {
+  const still: SceneFrame = {
+    ball: base.ball,
+    carrierId: base.kickoff ? base.carrierId : null,
+    carrierSide: base.carrierSide,
+    placed: [],
+    move: 'none',
+    kickoff: base.kickoff,
+    setPiece: base.setPiece,
+    subs: [...subs],
+  };
+  const field = frameSpots(match, still, false);
+  const toward = (from: Point, to: Point, t: number): Point => ({ x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t });
+  const walk: SceneFrame = { ...still, placed: [] };
+  const swap: SceneFrame = { ...still, placed: [] };
+  const enter: SceneFrame = { ...still, placed: [] };
+  subs.forEach((s, i) => {
+    // Aynı anda birden çok değişiklik: kenar boyunca yan yana
+    const x = BENCH_X + (i - (subs.length - 1) / 2) * 6;
+    const outAt = { x: x - 1.5, y: BENCH_Y };
+    const inAt = { x: x + 1.5, y: BENCH_Y };
+    // Girenin sahadaki yeri, çıkanın oynadığı yerdir
+    const spot = field.get(s.inId)?.at ?? { x, y: PITCH_WIDTH - 6 };
+    walk.placed.push({ id: s.outId, side: s.side, at: toward(spot, outAt, 0.5) }, { id: s.inId, side: s.side, at: inAt });
+    swap.placed.push({ id: s.outId, side: s.side, at: outAt }, { id: s.inId, side: s.side, at: toward(inAt, spot, 0.35) });
+  });
+  return [walk, swap, enter];
+}
+
+/** Dakikanın anının kareleri (değişiklik ve gol sevinci hariç); son kare sonuç karesi. */
+function playFrames(match: MatchState, play: MatchPlay, minute: number): SceneFrame[] {
   const side = play.side;
   const opp = other(side);
   const h = (salt: number) => hash01(minute, salt + 10);
@@ -228,7 +311,6 @@ export function buildScene(match: MatchState, play: MatchPlay | null, minute: nu
   }
   const core = frames.slice(-5);
   core[core.length - 1]!.result = true;
-  if (play.kind === 'goal') core.push(...celebration(match, play, core[core.length - 1]!));
   return core;
 }
 
@@ -289,13 +371,18 @@ export const QUIET_MINUTE_MS = 1000;
 
 const HIGHLIGHT_KINDS: ReadonlySet<MatchPlay['kind']> = new Set(['goal', 'save', 'miss', 'blocked', 'penalty', 'corner', 'freekick']);
 
+/** Anın kendisi önemli mi: şutlar, gol, penaltı, korner, serbest vuruş, kart, sakatlık. */
+function playHighlight(play: MatchPlay): boolean {
+  return HIGHLIGHT_KINDS.has(play.kind) || play.card !== undefined || play.injuredId !== undefined;
+}
+
 /**
- * 2D sahada gösterilen önemli an mı: şutlar, gol, penaltı, korner, serbest vuruş, kart, sakatlık.
- * Kartsız orta saha faulleri ve şutsuz ataklar sakin dakika sayılır.
+ * 2D sahada gösterilen önemli an mı: şutlar, gol, penaltı, korner, serbest vuruş, kart, sakatlık,
+ * oyuncu değişikliği. Kartsız orta saha faulleri ve şutsuz ataklar sakin dakika sayılır.
  */
 export function isHighlight(play: MatchPlay | null): boolean {
   if (!play) return false;
-  return HIGHLIGHT_KINDS.has(play.kind) || play.card !== undefined || play.injuredId !== undefined;
+  return playHighlight(play) || (play.subs?.length ?? 0) > 0;
 }
 
 const KIND_LABELS: Partial<Record<MatchPlay['kind'], string>> = {
@@ -308,7 +395,7 @@ const KIND_LABELS: Partial<Record<MatchPlay['kind'], string>> = {
   penalty: 'Penaltı kaçtı',
 };
 
-/** Sahanın üstündeki etiket: anın türü; yoksa kart ya da sakatlık. */
+/** Sahanın üstündeki etiket: anın türü; yoksa kart, sakatlık ya da oyuncu değişikliği. */
 export function playLabel(play: MatchPlay | null): string | undefined {
   if (!play) return undefined;
   if (play.kind === 'goal' && play.fromPenalty) return 'GOL! (Penaltı)';
@@ -316,6 +403,7 @@ export function playLabel(play: MatchPlay | null): string | undefined {
   if (kind) return kind;
   if (play.card) return play.card.type === 'red' ? 'Kırmızı kart' : 'Sarı kart';
   if (play.injuredId !== undefined) return 'Sakatlık';
+  if (play.subs?.length) return 'Oyuncu değişikliği';
   return undefined;
 }
 
@@ -337,6 +425,13 @@ export function frameSpots(match: MatchState, frame: SceneFrame, kickoff: boolea
     for (const [id, point] of setPieceSpots(match, frame.setPiece, frame.setPiece.spot, frame.carrierId)) {
       spots.set(id, { side: spots.get(id)?.side ?? frame.setPiece.side, at: point });
     }
+  }
+  // Değişiklikten önce: girenin yerinde (duran top dizilişi dahil) çıkan oyuncu
+  for (const [inId, outId] of frame.standIns ?? []) {
+    const spot = spots.get(inId);
+    if (!spot) continue;
+    spots.delete(inId);
+    spots.set(outId, spot);
   }
   if (frame.carrierId !== null) {
     // Topun 1.6 m gerisinde (hücum yönüne göre)

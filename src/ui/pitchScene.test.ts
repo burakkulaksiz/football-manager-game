@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clubPlayers, createMatch, createWorld, stepMatch, type MatchPlay, type MatchState } from '../engine';
+import { clubPlayers, createMatch, createWorld, stepMatch, substitute, type MatchPlay, type MatchState } from '../engine';
 import { autoSelectLineup } from '../engine/match/formation';
 import { gameData } from '../gameData';
 import { ballSpot, PITCH_LENGTH, PITCH_WIDTH } from './pitch';
@@ -26,7 +26,8 @@ describe('2D saha sahnesi', () => {
   const plays = [9, 10, 11].flatMap((seed) => playAll(match(seed)));
 
   it('sonuca kadar 1–5 kare, sonuç karesi motorun anıyla aynı yerde, top saha içinde (gol/aut hariç)', () => {
-    for (const { minute, play, state } of plays) {
+    // Değişiklik ve kırmızı kart sahnesi uzatır (ayrı testlerde)
+    for (const { minute, play, state } of plays.filter((p) => !p.play.subs && p.play.card?.type !== 'red')) {
       const scene = buildScene(state, play, minute);
       const reveal = revealIndex(scene);
       expect(reveal).toBeGreaterThanOrEqual(0);
@@ -82,14 +83,17 @@ describe('2D saha sahnesi', () => {
     const saves = plays.filter((p) => p.play.kind === 'save');
     expect(saves.length).toBeGreaterThan(0);
     for (const { minute, play, state } of saves) {
-      const last = buildScene(state, play, minute).at(-1)!;
+      const scene = buildScene(state, play, minute);
+      const last = scene[revealIndex(scene)]!;
       const keeper = frameSpots(state, last, false).get(play.keeperId!)!;
       expect(Math.hypot(keeper.at.x - last.ball.x, keeper.at.y - last.ball.y)).toBeLessThan(2);
     }
-    const fouls = plays.filter((p) => p.play.kind === 'foul' && p.play.defenderId != null);
+    // Değişiklik olan sakin dakikada sahnede yalnızca değişiklik görünür
+    const fouls = plays.filter((p) => p.play.kind === 'foul' && p.play.defenderId != null && !p.play.subs);
     expect(fouls.length).toBeGreaterThan(0);
     for (const { minute, play, state } of fouls) {
-      const last = buildScene(state, play, minute).at(-1)!;
+      const scene = buildScene(state, play, minute);
+      const last = scene[revealIndex(scene)]!;
       const fouler = frameSpots(state, last, false).get(play.defenderId!)!;
       expect(Math.hypot(fouler.at.x - last.ball.x, fouler.at.y - last.ball.y)).toBeLessThan(3);
     }
@@ -99,7 +103,8 @@ describe('2D saha sahnesi', () => {
     const carded = plays.filter((p) => p.play.card);
     expect(carded.length).toBeGreaterThan(0);
     for (const { minute, play, state } of carded) {
-      const last = buildScene(state, play, minute).at(-1)!;
+      const scene = buildScene(state, play, minute);
+      const last = scene[revealIndex(scene)]!;
       expect(frameSpots(state, last, false).has(play.card!.playerId)).toBe(true);
     }
   });
@@ -180,5 +185,69 @@ describe('2D saha sahnesi', () => {
     const last = buildScene(m, { side: 'home', kind: 'hold', playerId: null, injuredId: injured }, 40).at(-1)!;
     expect(last.injuredId).toBe(injured);
     expect(frameSpots(m, last, false).has(injured)).toBe(true);
+  });
+
+  it('dakika sonundaki değişiklik: önce çıkan oyuncu oynar, sonra kenarda değişir, giren yerine geçer', () => {
+    const m = match();
+    const outId = m.home.onPitch.find((id) => m.players[id]!.slot === 'MC')!;
+    const inId = m.home.bench[0]!;
+    m.minute = 60;
+    m.period = 'second';
+    m.home.userControlled = false;
+    // Motorun dakika içinde yaptığı değişiklik gibi: maç durumu değişiklikten sonraki hâli
+    expect(substitute(m, world.players, 'home', outId, inId)).toBe(true);
+    const sub = { side: 'home' as const, outId, inId };
+    m.pendingSubs = [];
+    const play: MatchPlay = { side: 'home', kind: 'save', playerId: m.home.onPitch.find((id) => m.players[id]!.slot === 'ST')!, keeperId: m.away.onPitch[0]!, subs: [sub] };
+    const scene = buildScene(m, play, 60);
+    const reveal = revealIndex(scene);
+    expect(scene.length - 1 - reveal).toBe(3);
+    for (const f of scene.slice(0, reveal + 1)) {
+      const spots = frameSpots(m, f, false);
+      expect(spots.has(outId)).toBe(true);
+      expect(spots.has(inId)).toBe(false);
+    }
+    const [walk, swap, enter] = scene.slice(-3);
+    expect(walk!.subs).toEqual([sub]);
+    // Kenarda (alt çizginin dışı) buluşurlar
+    expect(frameSpots(m, swap!, false).get(outId)!.at.y).toBeGreaterThan(PITCH_WIDTH);
+    expect(frameSpots(m, walk!, false).get(inId)!.at.y).toBeGreaterThan(PITCH_WIDTH);
+    const end = frameSpots(m, enter!, false);
+    expect(end.has(outId)).toBe(false);
+    expect(end.get(inId)!.at.y).toBeLessThan(PITCH_WIDTH);
+  });
+
+  it('kullanıcının dakikalar arasındaki değişikliği sıradaki dakikanın sahnesinin başında görünür', () => {
+    const m = match();
+    stepMatch(m, world.players);
+    stepMatch(m, world.players);
+    const outId = m.home.onPitch.find((id) => m.players[id]!.slot !== 'GK')!;
+    const inId = m.home.bench[0]!;
+    expect(substitute(m, world.players, 'home', outId, inId)).toBe(true);
+    expect(m.pendingSubs).toEqual([{ side: 'home', outId, inId, early: true }]);
+    stepMatch(m, world.players);
+    expect(m.pendingSubs).toEqual([]);
+    expect(m.lastPlay!.subs).toEqual([{ side: 'home', outId, inId, early: true }]);
+    expect(isHighlight(m.lastPlay)).toBe(true);
+    const scene = buildScene(m, m.lastPlay, m.minute);
+    expect(scene[0]!.subs).toHaveLength(1);
+    expect(frameSpots(m, scene[0]!, false).has(outId)).toBe(true);
+    expect(playLabel({ side: 'home', kind: 'hold', playerId: null, subs: [{ side: 'home', outId, inId }] })).toBe('Oyuncu değişikliği');
+  });
+
+  it('yapay zekânın değişiklikleri o dakikanın anında kaydedilir', () => {
+    const all = playAll(match(13));
+    const subs = all.flatMap((p) => p.play.subs ?? []);
+    expect(subs.length).toBeGreaterThan(0);
+    for (const s of subs) expect(s.early).toBeUndefined();
+  });
+
+  it('kırmızı kart gören oyuncu sonuçtan sonra kenara yürüyerek sahayı terk eder', () => {
+    const m = match();
+    const red = m.away.onPitch.find((id) => m.players[id]!.slot === 'DC')!;
+    const scene = buildScene(m, { side: 'home', kind: 'foul', playerId: null, defenderId: red, card: { playerId: red, type: 'red' } }, 30);
+    const reveal = revealIndex(scene);
+    expect(scene.length - 1 - reveal).toBe(1);
+    expect(frameSpots(m, scene.at(-1)!, false).get(red)!.at.y).toBeGreaterThan(PITCH_WIDTH);
   });
 });

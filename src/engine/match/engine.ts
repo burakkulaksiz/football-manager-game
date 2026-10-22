@@ -311,6 +311,7 @@ export function createMatch(setup: MatchSetup, lookup: PlayerLookup): MatchState
     possessionTicks: { home: 0, away: 0 },
     momentum: [],
     lastPlay: null,
+    pendingSubs: [],
     shots: [],
     timeline: '',
     rngState: rng.getState(),
@@ -328,6 +329,8 @@ interface Ctx {
   rng: Rng;
   /** Bu dakikanın taktik etkileri (dakika dışı işlemlerde etkisiz). */
   effects: Record<Side, InstructionEffects>;
+  /** Dakika oynanırken (değişiklik dakikanın anına yazılır; dışında sıradaki dakikaya bekler). */
+  inMinute?: boolean;
 }
 
 /** 2D saha için dakikanın anlarının önemi: aynı dakikada daha önemli olan gösterilir. */
@@ -347,8 +350,9 @@ function recordPlay(
   if (current && PLAY_PRIORITY[current.kind] > PLAY_PRIORITY[kind]) return;
   const play: MatchPlay = { side, kind, playerId };
   for (const [k, v] of Object.entries(extra)) if (v !== undefined && v !== null && v !== false) (play as unknown as Record<string, unknown>)[k] = v;
-  // Kart dakikaya aittir: daha önemli bir an gelse de kaybolmaz
+  // Kart ve değişiklikler dakikaya aittir: daha önemli bir an gelse de kaybolmaz
   if (current?.card) play.card = current.card;
+  if (current?.subs) play.subs = current.subs;
   // Penaltı / serbest vuruş şutunda faulü yapan, önceki andan (faul) taşınır
   if ((play.fromPenalty || play.fromFreeKick) && play.defenderId == null && current?.side === side && current.defenderId != null) {
     play.defenderId = current.defenderId;
@@ -762,6 +766,9 @@ function makeSubstitution(ctx: Ctx, side: Side, outId: number, inId: number): bo
   team.onPitch = team.onPitch.map((id) => (id === outId ? inId : id));
   team.bench = team.bench.filter((id) => id !== inId);
   team.subsUsed++;
+  // 2D saha: dakika içindeki değişiklik o dakikanın sahnesinde, dakikalar arasındaki sıradaki dakikada
+  if (ctx.inMinute && state.lastPlay) (state.lastPlay.subs ??= []).push({ side, outId, inId });
+  else state.pendingSubs.push({ side, outId, inId, early: true });
   emit(ctx, 'sub', side, 'sub', { team: team.name, in: nameOf(ctx, inId), out: nameOf(ctx, outId) });
   return true;
 }
@@ -858,6 +865,11 @@ function simulateMinute(ctx: Ctx): void {
   const side: Side = rng.chance(mh ** pe / (mh ** pe + ma ** pe)) ? 'home' : 'away';
   state.possessionTicks[side]++;
   state.lastPlay = { side, kind: 'hold', playerId: null };
+  if (state.pendingSubs.length > 0) {
+    state.lastPlay.subs = state.pendingSubs;
+    state.pendingSubs = [];
+  }
+  ctx.inMinute = true;
 
   const eventsBefore = state.events.length;
   let attacked = false;

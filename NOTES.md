@@ -373,6 +373,18 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
         ve topa daha çok kayar (yoğun preste daha da çok). Varsayılan talimatlarda top bizdeyken yerleşim eskisi gibi.
         pitchScene: oyun kurma ve asistsiz son pasın koridoru genişliğe göre (lane). Yapay zekâ mentaliteyi skora göre
         değiştirdiği için onun şekli de maç içinde değişir. Taktik ekranındaki formalı saha (kadro yerleştirme) sabit.
+  - [x] Kart / sakatlık / değişiklik görselleri. Motor: MatchPlay.subs (PlaySub {side, outId, inId, early?}); dakika
+        içindeki değişiklik (yapay zekâ, sakatlık, kaleci atılınca) o dakikanın anına, dakikalar arasındaki (kullanıcı)
+        MatchState.pendingSubs'a yazılır ve sıradaki oynanan dakikanın anına taşınır (early). recordPlay subs'ı korur.
+        pitchScene: isHighlight değişikliği de sayar (etiket "Oyuncu değişikliği"). Değişiklik 3 kare (substitutionFrames):
+        çıkan yerinden kenara yürür / giren orta çizgi hizasında alt kenarın dışında (BENCH_Y) bekler → kenarda buluşurlar,
+        giren sahaya koşar → giren yerinde, çıkan yok. early: sahnenin başında; diğerleri sonunda (gol sevincinden de sonra)
+        ve o ana kadarki karelerde girenin yerinde çıkan görünür (SceneFrame.standIns, frameSpots duran top dizilişinden
+        sonra uygular). Kartsız faul gibi sakin bir dakikada yalnızca değişiklik kareleri (sonuç = ilk kare).
+        Kırmızı kart: sonuç karesinden sonra atılan oyuncu kenara yürür (sendOff). PitchView: sarı kartı olanın üstünde
+        küçük kart (bu dakikanın kartı sonuç karesine kadar gizli), sakatlanan sonuç karesinde yerde (.pdot-body.down),
+        değişiklikte yeşil ▲ / kırmızı ▼ ve adlar; alt kenardaki oyuncunun adı noktanın üstünde (.pdot-name.above,
+        sahne kutusu taşanı keser). Değişiklik başına sahne ~3,75 sn.
   - [ ] Sıradaki: FIKIRLER.md'den seçilecek.
 
 ## Açık konular / ileride

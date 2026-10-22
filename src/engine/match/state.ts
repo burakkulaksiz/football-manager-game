@@ -66,6 +66,16 @@ export interface MatchPlay {
   card?: { playerId: number; type: 'yellow' | 'red' };
   /** Bu dakika sakatlanan oyuncu. */
   injuredId?: number;
+  /** Bu dakikanın sahnesinde gösterilen oyuncu değişiklikleri. */
+  subs?: PlaySub[];
+}
+
+export interface PlaySub {
+  side: Side;
+  outId: number;
+  inId: number;
+  /** Dakikalar arasında (kullanıcı) yapıldı: sahnenin başında gösterilir; yoksa dakikanın sonunda. */
+  early?: boolean;
 }
 
 export interface MatchEvent {
@@ -153,6 +163,8 @@ export interface MatchState {
   momentum: number[];
   /** Son oynanan dakikanın en önemli anı (2D saha); maç / ikinci yarı başlarken null (santra). */
   lastPlay: MatchPlay | null;
+  /** Dakikalar arasında yapılan değişiklikler: sıradaki dakikanın anına (lastPlay.subs) taşınır. */
+  pendingSubs: PlaySub[];
   /** Maçın şutları (şut haritası). */
   shots: ShotRecord[];
   /** Oynanan dakikaların anları, dakika başına bir harf; devreler '|' ile ayrılır (ısı haritası). */

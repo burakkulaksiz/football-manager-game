@@ -148,7 +148,7 @@ function useFitHeight(ref: React.RefObject<HTMLDivElement | null>, layoutKey: st
 
 /**
  * Canlı maçın 2D görünümü (FM'deki "önemli anlar" gibi): yalnızca önemli anlar (şut, gol, duran top,
- * kart, sakatlık) kısa bir sahne olarak yavaşça oynar; sakin dakikalarda saha boştur.
+ * kart, sakatlık, oyuncu değişikliği) kısa bir sahne olarak yavaşça oynar; sakin dakikalarda saha boştur.
  * Maç başlamadan ve devre arasında takımlar başlama dizilişinde görünür.
  */
 export type CameraMode = 'full' | 'follow';
@@ -219,8 +219,11 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
       .map(([id, { side, at }]) => {
         const keeper = match.players[id]?.slot === 'GK';
         const carrier = frame.carrierId === id || frame.focusId === id;
-        // Topu taşıyanın (sevinçte golcünün), kart görenin ve sakatlananın adı noktanın altında
-        const named = carrier || card?.playerId === id || injuredId === id;
+        const sub = frame.subs?.find((s) => s.inId === id || s.outId === id);
+        // Topu taşıyanın (sevinçte golcünün), kart görenin, sakatlananın ve değişikliktekilerin adı noktanın altında
+        const named = carrier || card?.playerId === id || injuredId === id || sub !== undefined;
+        // Daha önce sarı kart görmüşse küçük kart; bu dakikanın kartı sonuç karesine kadar gizli
+        const booked = match.players[id]?.yellow === true && card?.playerId !== id && !(play?.card?.playerId === id && !revealed);
         const p = toScreen(at, cam, stageWidth);
         // Forma (üst) ve şort (alt); kalecinin forması koyu, şortu takım renginde
         const shirt = keeper ? KEEPER_KIT : kits[side].fill;
@@ -228,14 +231,17 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
         return (
           <div key={id} className="pdot" style={{ transform: `translate3d(${p.x}px, ${p.y}px, 0)` }}>
             <div
-              className={`pdot-body${carrier ? ' involved' : ''}`}
+              className={`pdot-body${carrier ? ' involved' : ''}${frame.injuredId === id ? ' down' : ''}`}
               style={{ background: `linear-gradient(${shirt} ${SHIRT_SPLIT}%, ${shorts} ${SHIRT_SPLIT}%)`, color: keeper ? '#fff' : ink(side) }}
             >
               {world.players[id]?.squadNumber ?? ''}
             </div>
-            {named && <div className="pdot-name">{world.players[id]?.lastName ?? ''}</div>}
+            {/* Alt kenardaki (değişiklik, atılan oyuncu) adı noktanın üstünde: sahne kutusu taşanı keser */}
+            {named && <div className={`pdot-name${at.y > PITCH_WIDTH - 2.5 ? ' above' : ''}`}>{world.players[id]?.lastName ?? ''}</div>}
             {card?.playerId === id && <div className={`pdot-card ${card.type}`} />}
+            {booked && <div className="pdot-card yellow mini" />}
             {injuredId === id && <div className="pdot-injury">✚</div>}
+            {sub && <div className={`pdot-sub ${sub.inId === id ? 'in' : 'out'}`}>{sub.inId === id ? '▲' : '▼'}</div>}
           </div>
         );
       })

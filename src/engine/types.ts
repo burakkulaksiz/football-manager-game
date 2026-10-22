@@ -43,6 +43,27 @@ export interface Contract {
   /** Yıllık brüt maaş (€). */
   wage: number;
   expires: GameDate;
+  /** Sözleşmede verilen rol (yalnızca menajerle pazarlıkla imzalanan sözleşmelerde). */
+  role?: SquadRole;
+  /** Serbest kalma bedeli: bu bedeli ödeyen kulübe satış reddedilemez. */
+  releaseClause?: number;
+  /** Oynadığı maç başına prim (€). */
+  appearanceBonus?: number;
+  /** Attığı gol başına prim (€). */
+  goalBonus?: number;
+}
+
+/** Sözleşmedeki rol: önemli oyuncu (ilk 11), rotasyon, yedek. */
+export type SquadRole = 'star' | 'rotation' | 'backup';
+
+/** Menajerin tavrı: makul, açgözlü (yüksek ücret), sert (yüksek maaş, az sabır, serbest kalma bedeli şartı). */
+export type AgentStyle = 'fair' | 'greedy' | 'tough';
+
+/** Oyuncu menajeri; oyuncular kimliklerine göre menajerlere dağılır (bkz. transfer/agents.ts). */
+export interface Agent {
+  id: number;
+  name: string;
+  style: AgentStyle;
 }
 
 export interface Injury {
@@ -239,7 +260,7 @@ export interface MatchResult {
 /* ------------------------------------------------------------------ */
 
 export type IncomeCategory = 'tickets' | 'tv' | 'sponsor' | 'transfersIn' | 'prize';
-export type ExpenseCategory = 'wages' | 'bonuses' | 'transfersOut' | 'signingBonuses' | 'scouting';
+export type ExpenseCategory = 'wages' | 'bonuses' | 'transfersOut' | 'signingBonuses' | 'agentFees' | 'scouting';
 
 /** Bir ayın gelir/gider dökümü (giderler pozitif sayı). */
 export interface MonthReport {
@@ -398,6 +419,8 @@ export interface GameWorld {
   promises: PlayingPromise[];
   /** Gözlemciler: oyuncu bilgisi, görevler, raporlar (yalnızca kullanıcının kulübü). */
   scouting: ScoutingState;
+  /** Oyuncu menajerleri. */
+  agents: Agent[];
 }
 
 /* ------------------------------------------------------------------ */

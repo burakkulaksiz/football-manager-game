@@ -3,10 +3,11 @@ import { gameData } from '../../gameData';
 import { addDays } from '../date';
 import { processMatchFinances, startNewMonth, totalWages } from '../finance/finance';
 import { clubPlayers, createWorld } from '../generation/worldGenerator';
-import { ageOn, marketValue } from '../player';
+import { marketValue } from '../player';
 import { playSeason } from '../testing';
 import type { GameWorld, Player } from '../types';
-import { askingPrice, loanFeeAsk, playerImportance, preferredYears, returnLoans, wageDemand } from './market';
+import { agentProfile, contractDemand } from './agents';
+import { askingPrice, loanFeeAsk, playerImportance, returnLoans, type TransferTerms } from './market';
 import {
   acceptCounter,
   makeOffer,
@@ -26,6 +27,12 @@ function setup(): { world: GameWorld; target: Player; reserve: Player } {
   world.finances.kasimpasa!.wageBudget = 60_000_000;
   const squad = clubPlayers(world, 'konyaspor').sort((a, b) => b.currentAbility - a.currentAbility);
   return { world, target: squad[0]!, reserve: squad[squad.length - 1]! };
+}
+
+/** Oyuncunun ve menajerinin tam talebi, sözleşme şartı olarak. */
+function demandTerms(world: GameWorld, player: Player): TransferTerms {
+  const d = contractDemand(world, player, 'kasimpasa');
+  return { wage: d.wage, years: d.years, signingBonus: 0, agentFee: d.agentFee, role: d.role, releaseClause: d.releaseClause };
 }
 
 /** Bir gün ilerletip teklifleri işler. */
@@ -68,14 +75,16 @@ describe('kullanıcının teklifleri', () => {
 
     const buyerBefore = world.finances.kasimpasa!.balance;
     const sellerBefore = world.finances.konyaspor!.balance;
-    const demand = wageDemand(world, target, 'kasimpasa');
-    const years = preferredYears(ageOn(target.birthDate, world.date))[0];
-    const result = negotiateTransfer(world, offer.id, { wage: demand, years, signingBonus: 0 });
+    const terms = demandTerms(world, target);
+    const result = negotiateTransfer(world, offer.id, terms);
     expect(result.outcome).toBe('signed');
     expect(target.clubId).toBe('kasimpasa');
-    expect(target.contract.wage).toBe(demand);
-    expect(target.contract.expires).toBe(`${2026 + years}-06-30`);
-    expect(world.finances.kasimpasa!.balance).toBe(buyerBefore - fee);
+    expect(target.contract.wage).toBe(terms.wage);
+    expect(target.contract.role).toBe(terms.role);
+    expect(target.contract.expires).toBe(`${2026 + terms.years}-06-30`);
+    // Bonservis ve menajer ücreti ödenir
+    expect(world.finances.kasimpasa!.balance).toBe(buyerBefore - fee - terms.agentFee!);
+    expect(world.finances.kasimpasa!.current.expense.agentFees).toBe(terms.agentFee);
     expect(world.finances.konyaspor!.balance).toBe(sellerBefore + fee);
     const numbers = clubPlayers(world, 'kasimpasa').map((p) => p.squadNumber);
     expect(new Set(numbers).size).toBe(numbers.length);
@@ -101,14 +110,15 @@ describe('kullanıcının teklifleri', () => {
     expect(offer.status).toBe('rejected');
   });
 
-  it('düşük maaşı oyuncu reddeder; sabrı tükenince anlaşma bozulur', () => {
+  it('düşük maaşı oyuncu reddeder; menajerin sabrı tükenince anlaşma bozulur', () => {
     const { world, target } = setup();
     const offer = makeOffer(world, target.id, 'transfer', askingPrice(world, target));
     if (typeof offer === 'string') throw new Error(offer);
+    const patience = agentProfile(world, target).patience;
+    expect(offer.patience).toBe(patience);
     nextDay(world);
     const low = { wage: 20_000, years: 3, signingBonus: 0 };
-    expect(negotiateTransfer(world, offer.id, low).outcome).toBe('rejected');
-    expect(negotiateTransfer(world, offer.id, low).outcome).toBe('rejected');
+    for (let i = 1; i < patience; i++) expect(negotiateTransfer(world, offer.id, low).outcome).toBe('rejected');
     expect(negotiateTransfer(world, offer.id, low).outcome).toBe('collapsed');
     expect(offer.status).toBe('collapsed');
     expect(target.clubId).toBe('konyaspor');
@@ -119,9 +129,8 @@ describe('kullanıcının teklifleri', () => {
     const offer = makeOffer(world, target.id, 'transfer', askingPrice(world, target));
     if (typeof offer === 'string') throw new Error(offer);
     nextDay(world);
-    const demand = wageDemand(world, target, 'kasimpasa');
-    const years = preferredYears(ageOn(target.birthDate, world.date))[0];
-    const result = negotiateTransfer(world, offer.id, { wage: demand * 0.8, years, signingBonus: demand * 0.25 * years });
+    const terms = demandTerms(world, target);
+    const result = negotiateTransfer(world, offer.id, { ...terms, wage: terms.wage * 0.8, signingBonus: terms.wage * 0.25 * terms.years });
     expect(result.outcome).toBe('signed');
   });
 
@@ -224,10 +233,10 @@ describe('sözleşme yenileme', () => {
   it('talebi karşılayan yeni sözleşme imzalanır', () => {
     const { world } = setup();
     const player = clubPlayers(world, 'kasimpasa')[0]!;
-    const demand = wageDemand(world, player, 'kasimpasa');
-    expect(negotiateRenewal(world, player.id, { wage: demand * 0.5, years: 3, signingBonus: 0 }).outcome).not.toBe('signed');
-    expect(negotiateRenewal(world, player.id, { wage: demand, years: 3, signingBonus: 0 }).outcome).toBe('signed');
-    expect(player.contract.wage).toBe(demand);
+    const terms = demandTerms(world, player);
+    expect(negotiateRenewal(world, player.id, { ...terms, wage: terms.wage * 0.5 }).outcome).not.toBe('signed');
+    expect(negotiateRenewal(world, player.id, terms).outcome).toBe('signed');
+    expect(player.contract.wage).toBe(terms.wage);
   });
 });
 

@@ -5,7 +5,7 @@ import { advance } from '../gameFlow';
 import { clubPlayers, createWorld, getClub, leagueClubs } from '../generation/worldGenerator';
 import { computeStandings } from '../league/standings';
 import { negotiateFreeAgent } from '../transfer/offers';
-import { wageDemand } from '../transfer/market';
+import { contractDemand } from '../transfer/agents';
 import { makeResult } from '../testing';
 import type { GameWorld } from '../types';
 import { boardAfterMatch, MIN_ROUNDS_BEFORE_SACK } from './board';
@@ -97,12 +97,13 @@ describe('serbest oyuncular', () => {
     const player = clubPlayers(world, 'konyaspor')[5]!;
     player.clubId = null;
     player.squadNumber = null;
-    const demand = wageDemand(world, player, 'kasimpasa');
+    const d = contractDemand(world, player, 'kasimpasa');
     const balance = world.finances.kasimpasa!.balance;
-    const result = negotiateFreeAgent(world, player.id, { wage: demand * 1.2, years: 2, signingBonus: 0 });
+    const result = negotiateFreeAgent(world, player.id, { wage: d.wage * 1.2, years: d.years, signingBonus: 0, agentFee: d.agentFee, releaseClause: d.releaseClause });
     expect(result.outcome).toBe('signed');
     expect(player.clubId).toBe('kasimpasa');
-    expect(world.finances.kasimpasa!.balance).toBe(balance);
+    // Bonservis yok; yalnızca menajer ücreti
+    expect(world.finances.kasimpasa!.balance).toBe(balance - d.agentFee);
   });
 });
 

@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import {
+  agentOf,
   ageOn,
   askingPrice,
   canSendToAcademy,
@@ -36,6 +37,7 @@ import { AbilityStars, AttrValue, KnowledgeBar, PotentialStars, ScoutButton, Ver
 import { Stars } from '../components/Stars';
 import { ContractDialog, ListDialog, OfferDialog } from '../components/TransferDialogs';
 import {
+  AGENT_STYLE_LABELS,
   ATTRIBUTE_LABELS,
   familiarityLabel,
   FOOT_LABELS,
@@ -47,6 +49,7 @@ import {
   nationName,
   abilityStars,
   POSITION_NAMES,
+  ROLE_LABELS,
   trendSymbol,
 } from '../labels';
 import { PositionBoxes } from './SquadScreen';
@@ -245,6 +248,12 @@ export function PlayerProfile() {
             <Row label="Piyasa Değeri">{formatMoney(marketValue(player, world.date))}</Row>
             <Row label="Maaş">{formatMoney(player.contract.wage)} / yıl</Row>
             <Row label="Sözleşme Bitişi">{formatDateShort(player.contract.expires)}</Row>
+            {player.contract.role && <Row label="Rolü">{ROLE_LABELS[player.contract.role]}</Row>}
+            {player.contract.releaseClause !== undefined && <Row label="Serbest Kalma Bedeli">{formatMoney(player.contract.releaseClause)}</Row>}
+            {Boolean(player.contract.appearanceBonus || player.contract.goalBonus) && (
+              <Row label="Primler">{formatMoney(player.contract.appearanceBonus ?? 0)} / maç · {formatMoney(player.contract.goalBonus ?? 0)} / gol</Row>
+            )}
+            <Row label="Menajeri">{agentOf(world, player).name} ({AGENT_STYLE_LABELS[agentOf(world, player).style]})</Row>
           </div>
 
           {isGK ? (

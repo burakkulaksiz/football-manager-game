@@ -20,7 +20,7 @@ import {
   willingToJoin,
   type PositionGroup,
 } from './market';
-import { isActive, MIN_SQUAD_TO_SELL } from './offers';
+import { isActive, MIN_SQUAD_TO_SELL, triggerReleaseClause } from './offers';
 import { transferWindow } from './window';
 
 /** Kadroda istenen en az oyuncu sayısı (mevki grubuna göre). */
@@ -131,9 +131,16 @@ function attemptOfferToUser(world: GameWorld, rng: Rng): void {
     willingToJoin(world, p, buyer.id) &&
     !world.offers.some((o) => o.playerId === p.id && isActive(o)));
   if (targets.length === 0) return;
-  // İyi oyunculara ilgi daha fazla
-  const player = targets[rng.weightedIndex(targets.map((p) => p.currentAbility ** 2))]!;
+  // İyi oyunculara ve ucuz serbest kalma bedeli olanlara ilgi daha fazla
+  const cheapClause = (p: Player) => p.contract.releaseClause !== undefined && p.contract.releaseClause <= marketValue(p, world.date) * 1.5;
+  const player = targets[rng.weightedIndex(targets.map((p) => p.currentAbility ** 2 * (cheapClause(p) ? 3 : 1)))]!;
   const value = marketValue(player, world.date);
+  // Serbest kalma bedeli makulse ve bütçe yetiyorsa kulüp bedeli öder: satış reddedilemez
+  const clause = player.contract.releaseClause;
+  if (clause !== undefined && clause <= fin.transferBudget && clause <= value * 1.6) {
+    triggerReleaseClause(world, player, buyer.id);
+    return;
+  }
   const fee = Math.min(fin.transferBudget, roundNice(value * rng.float(0.8, 1.15)));
   const maxFee = Math.max(fee, roundNice(value * rng.float(1.1, 1.4)));
 

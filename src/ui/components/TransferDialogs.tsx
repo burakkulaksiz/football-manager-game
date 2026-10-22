@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import {
+  AGENT_PROFILES,
+  agentOf,
   ageOn,
   askingPrice,
   getClub,
@@ -10,22 +12,25 @@ import {
   negotiateFreeAgent,
   negotiateRenewal,
   negotiateTransfer,
-  NEGOTIATION_PATIENCE,
   preferredYears,
   respondToIncoming,
+  expectedRole,
+  ROLE_ORDER,
   suggestedListPrice,
   transferWindow,
+  type ContractDemand,
   type ListingKind,
   type NegotiationResult,
   type Player,
+  type SquadRole,
   type TransferOffer,
 } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
-import { formatMoney } from '../labels';
+import { AGENT_STYLE_HINTS, AGENT_STYLE_LABELS, formatMoney, ROLE_LABELS } from '../labels';
 import { Modal } from './Modal';
 
 /** Tutar girişi: "bin €" cinsinden yazılır, altında okunur hâli görünür. */
-function MoneyInput({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+function MoneyInput({ label, value, onChange, step = 50 }: { label: string; value: number; onChange: (v: number) => void; step?: number }) {
   return (
     <label className="field">
       <span>{label}</span>
@@ -33,7 +38,7 @@ function MoneyInput({ label, value, onChange }: { label: string; value: number; 
         <input
           type="number"
           min={0}
-          step={50}
+          step={step}
           value={Math.round(value / 1000)}
           onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0) * 1000)}
         />
@@ -102,8 +107,8 @@ export function OfferDialog({ player, kind, onClose }: { player: Player; kind: T
 }
 
 /**
- * Sözleşme görüşmesi: transfer (kabul edilmiş teklif) ya da kendi oyuncumuzla yenileme.
- * Oyuncu talebini ilk yanıtında söyler; transferde sabrı sınırlıdır.
+ * Sözleşme görüşmesi: transfer (kabul edilmiş teklif), serbest oyuncu ya da kendi oyuncumuzla yenileme.
+ * Karşıda oyuncunun menajeri vardır: tavrı talebi ve sabrı belirler; talebini ilk yanıtında söyler.
  */
 export function ContractDialog({ player, offer, onClose }: { player: Player; offer?: TransferOffer; onClose: () => void }) {
   const world = useWorld();
@@ -112,26 +117,41 @@ export function ContractDialog({ player, offer, onClose }: { player: Player; off
   const age = ageOn(player.birthDate, world.date);
   const freeAgent = !offer && player.clubId === null;
   const [minYears, maxYears] = preferredYears(age);
+  const agent = agentOf(world, player);
+  const expected = expectedRole(world, player, world.playerClubId);
   const [wage, setWage] = useState(player.contract.wage);
   const [years, setYears] = useState(minYears);
   const [bonus, setBonus] = useState(0);
+  const [agentFee, setAgentFee] = useState(0);
+  const [role, setRole] = useState<SquadRole>(player.contract.role ?? expected);
+  const [clause, setClause] = useState(player.contract.releaseClause ?? 0);
+  const [appearanceBonus, setAppearanceBonus] = useState(player.contract.appearanceBonus ?? 0);
+  const [goalBonus, setGoalBonus] = useState(player.contract.goalBonus ?? 0);
   const [response, setResponse] = useState<NegotiationResult | null>(null);
   const done = response?.outcome === 'signed' || response?.outcome === 'collapsed';
 
   const submit = () => {
-    const terms = { wage, years, signingBonus: bonus };
+    const terms = { wage, years, signingBonus: bonus, agentFee, role, releaseClause: clause, appearanceBonus, goalBonus };
     const result = worldAction((w) =>
       offer ? negotiateTransfer(w, offer.id, terms) : freeAgent ? negotiateFreeAgent(w, player.id, terms) : negotiateRenewal(w, player.id, terms),
     );
     setResponse(result);
-    if (result.demand) {
-      // Talebi forma yansıt ki kullanıcı oradan pazarlık edebilsin.
-      setYears(result.demand.years);
-    }
     if (result.outcome === 'signed') showNotice(result.message);
   };
 
+  /** Menajerin talebini forma yaz (pazarlık oradan sürer). */
+  const fillDemand = (d: ContractDemand) => {
+    setWage(d.wage);
+    setYears(d.years);
+    setAgentFee(d.agentFee);
+    setRole(d.role);
+    if (d.releaseClause !== null) setClause(d.releaseClause);
+  };
+
   const patience = offer ? world.offers.find((o) => o.id === offer.id)?.patience ?? 0 : null;
+  const maxPatience = AGENT_PROFILES[agent.style].patience;
+  // Bugün ödenecek: bonservis (transferde) + imza bonusu + menajer ücreti
+  const upfront = (offer?.fee ?? 0) + bonus + agentFee;
 
   return (
     <Modal
@@ -154,33 +174,59 @@ export function ContractDialog({ player, offer, onClose }: { player: Player; off
         <strong>{player.firstName} {player.lastName}</strong> ({age} yaşında) —{' '}
         {offer ? `bonservis ${formatMoney(offer.fee)} üzerinde anlaşıldı.` : freeAgent ? 'serbest oyuncu, bonservis yok.' : 'mevcut sözleşmesini yenile.'}
       </p>
+      <div className="kv">
+        <span className="kv-label">Menajeri</span>
+        <span className="kv-value">
+          {agent.name} <span className={`agent-style ${agent.style}`}>{AGENT_STYLE_LABELS[agent.style]}</span>
+        </span>
+      </div>
+      <div className="agent-hint">{AGENT_STYLE_HINTS[agent.style]}</div>
       <div className="kv"><span className="kv-label">Şu anki maaşı</span><span className="kv-value">{formatMoney(player.contract.wage)} / yıl</span></div>
       <div className="kv"><span className="kv-label">Tercih ettiği süre</span><span className="kv-value">{minYears}–{maxYears} yıl</span></div>
+      <div className="kv"><span className="kv-label">Beklediği rol</span><span className="kv-value">{ROLE_LABELS[expected]}</span></div>
       {patience !== null && (
         <div className="kv">
-          <span className="kv-label">Oyuncunun sabrı</span>
+          <span className="kv-label">Menajerin sabrı</span>
           <span className="kv-value patience">
-            {Array.from({ length: NEGOTIATION_PATIENCE }, (_, i) => <i key={i} className={i < patience ? 'on' : ''} />)}
+            {Array.from({ length: Math.max(maxPatience, patience) }, (_, i) => <i key={i} className={i < patience ? 'on' : ''} />)}
           </span>
         </div>
       )}
       <div className="dialog-gap" />
       {!done && (
-        <>
-          <MoneyInput label="Yıllık maaş" value={wage} onChange={setWage} />
-          <label className="field">
-            <span>Süre</span>
-            <select value={years} onChange={(e) => setYears(Number(e.target.value))}>
-              {[1, 2, 3, 4, 5].map((y) => <option key={y} value={y}>{y} yıl</option>)}
-            </select>
-          </label>
-          <MoneyInput label="İmza bonusu (tek seferlik)" value={bonus} onChange={setBonus} />
+        <div className="contract-form">
+          <fieldset>
+            <legend>Maaş ve süre</legend>
+            <MoneyInput label="Yıllık maaş" value={wage} onChange={setWage} />
+            <label className="field">
+              <span>Süre</span>
+              <select value={years} onChange={(e) => setYears(Number(e.target.value))}>
+                {[1, 2, 3, 4, 5].map((y) => <option key={y} value={y}>{y} yıl</option>)}
+              </select>
+            </label>
+            <MoneyInput label="İmza bonusu (tek seferlik)" value={bonus} onChange={setBonus} />
+            <MoneyInput label="Menajer ücreti (tek seferlik)" value={agentFee} onChange={setAgentFee} />
+          </fieldset>
+          <fieldset>
+            <legend>Sözleşme maddeleri</legend>
+            <label className="field">
+              <span>Rol</span>
+              <select value={role} onChange={(e) => setRole(e.target.value as SquadRole)}>
+                {[...ROLE_ORDER].reverse().map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+              </select>
+            </label>
+            {role === 'star' && <div className="field-note">Önemli oyuncu rolü forma sözü sayılır: ilk 11'de oynamazsa morali bozulur.</div>}
+            <MoneyInput label="Serbest kalma bedeli (0 = yok)" value={clause} onChange={setClause} />
+            <MoneyInput label="Maç başına prim" value={appearanceBonus} onChange={setAppearanceBonus} step={1} />
+            <MoneyInput label="Gol primi" value={goalBonus} onChange={setGoalBonus} step={1} />
+          </fieldset>
+          <div className="kv"><span className="kv-label">Bugün ödenecek</span><span className="kv-value">{formatMoney(upfront)}</span></div>
           {response?.demand && (
-            <button className="btn btn-small" onClick={() => setWage(response.demand!.wage)}>
-              Talebini yaz ({formatMoney(response.demand.wage)})
+            <button className="btn btn-small" onClick={() => fillDemand(response.demand!)}>
+              Talebini yaz
             </button>
           )}
-        </>
+        </div>
       )}
       {response && (
         <div className={`negotiation ${response.outcome}`}>{response.message}</div>

@@ -1997,6 +1997,63 @@ select {
 .negotiation.collapsed,
 .negotiation.error { background: rgba(214, 69, 61, 0.2); color: #ffb3aa; }
 
+/* Sözleşme görüşmesi: menajer tavrı ve iki bölümlük form */
+.agent-style {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.agent-style.fair { background: rgba(34, 163, 90, 0.25); color: #b7f5c9; }
+.agent-style.greedy { background: rgba(246, 207, 60, 0.18); color: var(--accent); }
+.agent-style.tough { background: rgba(214, 69, 61, 0.22); color: #ffb3aa; }
+
+.agent-hint {
+  margin: 2px 0 6px;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.contract-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px 14px;
+}
+
+.contract-form fieldset {
+  margin: 0;
+  padding: 8px 10px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+}
+
+.contract-form legend {
+  padding: 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+.contract-form > .kv,
+.contract-form > .btn {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.contract-form > .kv {
+  justify-self: stretch;
+}
+
+.field-note {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--accent);
+}
+
 .patience {
   display: inline-flex;
   gap: 4px;

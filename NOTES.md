@@ -54,13 +54,15 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
                        gelen tekliflere yanıt, günlük teklif işleme (processOffers).
   transfer/ai.ts       Yapay zekâ alımları ve kullanıcıya teklifler (aiTransferDay).
   transfer/listing.ts  Transfer / kiralık listesi: listPlayer, unlistPlayer, listedOffersDay, refreshAiListings.
-  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 12; migrateWorld GameData de alır).
+  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 13; migrateWorld GameData de alır).
   squad/training.ts    Antrenman odağı/yoğunluğu ve etkileri (INTENSITY_EFFECTS, FOCUS_ATTRS).
   squad/injuries.ts    Sakatlık türleri, maç/antrenman sakatlığı, günlük iyileşme.
   squad/discipline.ts  Kart cezaları (maç sonrası).
   squad/morale.ts      Maç sonrası moral, günlük ortalamaya dönüş.
   generation/foreign.ts Yurtdışı kulüpleri: ekleme (ayrı rng), yaz genç katılımı, finans payları, bölge filtresi.
   transfer/scouting.ts Gözlemciler: oyuncu bilgisi (0–100), özellik aralıkları, görevler, raporlar, gözlemci görüşü.
+  transfer/agents.ts   Oyuncu menajerleri (world.agents, agentOf), sözleşme talebi (contractDemand), oyuncunun şartlara
+                       bakışı (evaluateTerms), sözleşme maddeleri (contractFromTerms), maç/gol primi ödemesi.
   squad/career.ts      Oyuncu kariyeri: sezon satırları (kulüp başına), kulüp hareketleri, toplamlar.
   squad/hierarchy.ts   Takım hiyerarşisi (etki, seviyeler), kaptan değişikliği etkileri, liderlerin havası.
   squad/talks.ts       Oyuncu görüşmeleri: talepler (playerRequests), yanıtlar, menajer görüşmeleri, forma sözü takibi.
@@ -385,6 +387,22 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
         küçük kart (bu dakikanın kartı sonuç karesine kadar gizli), sakatlanan sonuç karesinde yerde (.pdot-body.down),
         değişiklikte yeşil ▲ / kırmızı ▼ ve adlar; alt kenardaki oyuncunun adı noktanın üstünde (.pdot-name.above,
         sahne kutusu taşanı keser). Değişiklik başına sahne ~3,75 sn.
+  - [x] Menajer pazarlığı (kullanıcı seçti: menajer kişiliği + menajer ücreti + sözleşme maddeleri; menajerlerin oyuncu
+        önermesi istenmedi). Kayıt sürümü 13: world.agents (30 menajer, ayrı rng AGENT_SEED_SALT, tr isim havuzu; %50 makul,
+        %30 açgözlü, %20 sert). Oyuncuda alan yok: agentOf kimliği karıştırıp menajer seçer. AGENT_PROFILES:
+        makul (ücret toplam maaşın %4'ü, sabır 4), açgözlü (%10, ücretin %60'ı verilmezse imza yok, ücret maaşla 1:1
+        takas, sabır 3), sert (maaş ×1.08, sabır 2, piyasa değerinin ≤ 2.5 katı serbest kalma bedeli şart).
+        evaluateTerms "yıllık maaş karşılığı": maaş + imza bonusu/yıl + primler (rolün beklenen maçı × %60) +
+        feeWeight × (ücret − istenen)/yıl ≥ talep × süre (×1.1 tercih dışı) × rol (beklenenin altı kademe başına ×1.15,
+        üstü ×0.97) × serbest kalma bedeli (≤ 1.5×değer ×0.95, ≤ 3× ×0.98). expectedRole: kulüpte kendisinden iyi
+        oyuncu sayısı (<9 önemli, <16 rotasyon), 21 yaş altı bir kademe aşağı. Verilmeyen ücret istenen kadar, rol beklenen
+        sayılır (completeTerms). Teklifin sabrı menajerden. "Önemli oyuncu" rolü imzada forma sözü olur
+        (promisePlayingTime). Contract: role, releaseClause, appearanceBonus, goalBonus (yalnızca kullanıcının imzaladığı
+        sözleşmelerde). Menajer ücreti transferde transfer bütçesinden, yenilemede kasadan; gider kalemi agentFees.
+        Primler applyResult → payContractBonuses ("Primler"). Serbest kalma bedeli: yapay zekâ kullanıcıya teklif
+        ederken bedel ≤ 1.6×değer ve bütçesi yetiyorsa triggerReleaseClause (satış reddedilemez); ucuz bedelli
+        oyuncu 3× daha çok seçilir. Arayüz: ContractDialog (menajer ve tavrı, sabır, iki bölüm: maaş/süre/imza/ücret ve
+        rol/bedel/primler, "Talebini yaz" tüm talebi doldurur), profilde rol, bedel, primler, menajer.
   - [ ] Sıradaki: FIKIRLER.md'den seçilecek.
 
 ## Açık konular / ileride

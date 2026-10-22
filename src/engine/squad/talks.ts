@@ -77,6 +77,11 @@ export function nextTalkDate(world: GameWorld, p: Player): GameDate | null {
   return next > world.date ? next : null;
 }
 
+/** Forma şansı sözü (görüşmede ya da sözleşmedeki "önemli oyuncu" rolüyle); önceki söz yerine geçer. */
+export function promisePlayingTime(world: GameWorld, p: Player): void {
+  makePromise(world, p);
+}
+
 function makePromise(world: GameWorld, p: Player): void {
   world.promises = world.promises.filter((pr) => pr.playerId !== p.id);
   world.promises.push({ playerId: p.id, made: world.date, matches: 0, starts: 0 });

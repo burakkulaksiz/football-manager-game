@@ -174,6 +174,24 @@ export function splitDateTR(formatted: string): { day: string; date: string } {
   return { day, date };
 }
 
+export const ROLE_LABELS: Record<import('../engine').SquadRole, string> = {
+  star: 'Önemli oyuncu',
+  rotation: 'Rotasyon',
+  backup: 'Yedek',
+};
+
+export const AGENT_STYLE_LABELS: Record<import('../engine').AgentStyle, string> = {
+  fair: 'Makul',
+  greedy: 'Açgözlü',
+  tough: 'Sert',
+};
+
+export const AGENT_STYLE_HINTS: Record<import('../engine').AgentStyle, string> = {
+  fair: 'Talepleri ölçülü, sabırlı; menajer ücreti düşük.',
+  greedy: 'Yüksek menajer ücreti ister, ücretsiz imza yok; ücret verilirse maaştan iner.',
+  tough: 'Yüksek maaş ister, sabrı az; serbest kalma bedeli şart koşar.',
+};
+
 export const MENTALITY_LABELS: Record<-2 | -1 | 0 | 1 | 2, string> = {
   [-2]: 'Çok Defansif',
   [-1]: 'Defansif',
@@ -274,6 +292,7 @@ export const EXPENSE_LABELS: Record<import('../engine').ExpenseCategory, string>
   bonuses: 'Primler',
   transfersOut: 'Transfer Gideri',
   signingBonuses: 'İmza Bonusu',
+  agentFees: 'Menajer Ücretleri',
   scouting: 'Gözlemcilik',
 };
 

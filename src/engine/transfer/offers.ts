@@ -7,10 +7,11 @@ import { addExpense, totalWages } from '../finance/finance';
 import { clubPlayers, getClub } from '../generation/worldGenerator';
 import { addNews } from '../news';
 import { ageOn, roundNice } from '../player';
-import type { GameWorld, Player, TransferOffer } from '../types';
+import { promisePlayingTime } from '../squad/talks';
+import type { GameWorld, Player, SquadRole, TransferOffer } from '../types';
+import { agentOf, agentProfile, contractDemand, contractFromTerms, evaluateTerms, type ContractDemand } from './agents';
 import {
   askingPrice,
-  contractExpiry,
   formatPlain,
   loanFeeAsk,
   loanPlayer,
@@ -23,8 +24,6 @@ import {
 } from './market';
 import { isWindowOpen } from './window';
 
-/** Sözleşme görüşmesinde oyuncunun sabrı (kaç ret hakkı). */
-export const NEGOTIATION_PATIENCE = 3;
 /** Satıcı kulübün kadrosu bu sayının altına düşecekse satmaz. */
 export const MIN_SQUAD_TO_SELL = 20;
 
@@ -80,7 +79,7 @@ export function makeOffer(world: GameWorld, playerId: number, kind: TransferOffe
     status: 'pending',
     created: world.date,
     respondOn: addDays(world.date, 1),
-    patience: NEGOTIATION_PATIENCE,
+    patience: agentProfile(world, player).patience,
     maxFee: null,
     note: 'Kulübün yanıtı bekleniyor.',
   };
@@ -123,23 +122,8 @@ export function withdrawOffer(world: GameWorld, offerId: number): void {
 export interface NegotiationResult {
   outcome: 'signed' | 'counter' | 'rejected' | 'collapsed' | 'error';
   message: string;
-  /** Oyuncunun istediği (karşı teklif). */
-  demand?: TransferTerms;
-}
-
-/** Oyuncunun bu şartlara bakışı; maaş + yıllara bölünmüş imza bonusu talebi karşılamalı. */
-export function evaluateTerms(world: GameWorld, player: Player, clubId: string, terms: TransferTerms): { ok: boolean; close: boolean; demand: TransferTerms } {
-  const demandWage = wageDemand(world, player, clubId);
-  const [minYears, maxYears] = preferredYears(ageOn(player.birthDate, world.date));
-  const years = Math.min(maxYears, Math.max(minYears, terms.years));
-  // İstediği süre dışında bir sözleşme için daha fazla para ister.
-  const required = demandWage * (terms.years >= minYears && terms.years <= maxYears ? 1 : 1.1);
-  const effective = terms.wage + terms.signingBonus / Math.max(1, terms.years);
-  return {
-    ok: effective >= required,
-    close: effective >= required * 0.8,
-    demand: { wage: roundNice(required), years, signingBonus: 0 },
-  };
+  /** Oyuncunun ve menajerinin istediği (karşı teklif). */
+  demand?: ContractDemand;
 }
 
 function wageBudgetError(world: GameWorld, player: Player, wage: number): string | null {
@@ -149,29 +133,59 @@ function wageBudgetError(world: GameWorld, player: Player, wage: number): string
   return current + wage > budget ? `Maaş bütçesi yetersiz: en fazla €${formatPlain(Math.max(0, budget - current))}/yıl verebilirsin.` : null;
 }
 
+/** Pazarlıkta verilmeyen maddeler: menajer ücreti istenen kadar, rol beklenen. */
+function completeTerms(world: GameWorld, player: Player, clubId: string, terms: TransferTerms): TransferTerms {
+  const demand = contractDemand(world, player, clubId, terms.years);
+  return { ...terms, agentFee: terms.agentFee ?? demand.agentFee, role: terms.role ?? demand.role };
+}
+
+/** Menajerin talebi tek cümlede. */
+function describeDemand(d: ContractDemand): string {
+  const parts = [`yıllık €${formatPlain(d.wage)}`, `${d.years} yıllık sözleşme`];
+  if (d.agentFee > 0) parts.push(`€${formatPlain(d.agentFee)} menajer ücreti`);
+  parts.push(`"${ROLE_NAMES[d.role]}" rolü`);
+  if (d.releaseClause !== null) parts.push(`en çok €${formatPlain(d.releaseClause)} serbest kalma bedeli`);
+  return parts.join(', ');
+}
+
+const ROLE_NAMES: Record<SquadRole, string> = { star: 'önemli oyuncu', rotation: 'rotasyon', backup: 'yedek' };
+
+/** Oyuncunun (menajerinin ağzından) yanıtı; `patience` kalan ret hakkı. */
 function respond(world: GameWorld, player: Player, clubId: string, terms: TransferTerms, patience: number): NegotiationResult & { patienceLeft: number } {
   const verdict = evaluateTerms(world, player, clubId, terms);
   if (verdict.ok) return { outcome: 'signed', message: `${fullName(player)} sözleşmeyi kabul etti!`, patienceLeft: patience };
+  const agent = agentOf(world, player).name;
   const left = patience - 1;
   if (left <= 0) {
-    return { outcome: 'collapsed', message: `${fullName(player)} görüşmeleri kesti; anlaşma sağlanamadı.`, demand: verdict.demand, patienceLeft: 0 };
+    return { outcome: 'collapsed', message: `Menajeri ${agent} görüşmeleri kesti; anlaşma sağlanamadı.`, demand: verdict.demand, patienceLeft: 0 };
   }
-  const want = `Yıllık €${formatPlain(verdict.demand.wage)} ve ${verdict.demand.years} yıllık sözleşme istiyor.`;
+  const want = `İsteğimiz: ${describeDemand(verdict.demand)}.`;
+  const say = (text: string) => `Menajeri ${agent}: "${text} ${want}"`;
+  if (verdict.problem === 'fee') return { outcome: 'rejected', message: say('Menajer ücreti konuşulmadan imza yok.'), demand: verdict.demand, patienceLeft: left };
+  if (verdict.problem === 'clause' && verdict.close) {
+    return { outcome: 'counter', message: say('Müvekkilim serbest kalma bedeli olmadan imza atmaz.'), demand: verdict.demand, patienceLeft: left };
+  }
   return verdict.close
-    ? { outcome: 'counter', message: `Teklif yakın ama yeterli değil. ${want}`, demand: verdict.demand, patienceLeft: left }
-    : { outcome: 'rejected', message: `Teklif çok düşük bulundu. ${want}`, demand: verdict.demand, patienceLeft: left };
+    ? { outcome: 'counter', message: say('Yakınız ama yeterli değil.'), demand: verdict.demand, patienceLeft: left }
+    : { outcome: 'rejected', message: say('Bu teklif müvekkilimin değerinin çok altında.'), demand: verdict.demand, patienceLeft: left };
 }
 
-/** Kabul edilmiş transfer teklifinde oyuncuyla sözleşme görüşmesi. */
-export function negotiateTransfer(world: GameWorld, offerId: number, terms: TransferTerms): NegotiationResult {
+/** İmzadan sonra: "önemli oyuncu" rolü forma sözü olarak takip edilir. */
+function afterSigning(world: GameWorld, player: Player, terms: TransferTerms): void {
+  if (terms.role === 'star') promisePlayingTime(world, player);
+}
+
+/** Kabul edilmiş transfer teklifinde oyuncu ve menajeriyle sözleşme görüşmesi. */
+export function negotiateTransfer(world: GameWorld, offerId: number, offered: TransferTerms): NegotiationResult {
   const offer = world.offers.find((o) => o.id === offerId);
   if (!offer || offer.status !== 'accepted' || offer.kind !== 'transfer') {
     return { outcome: 'error', message: 'Görüşülecek bir anlaşma yok.' };
   }
   const player = world.players[offer.playerId]!;
+  const terms = completeTerms(world, player, world.playerClubId, offered);
   const fin = world.finances[world.playerClubId]!;
-  if (offer.fee + terms.signingBonus > fin.transferBudget) {
-    return { outcome: 'error', message: 'Bonservis ve imza bonusu için transfer bütçen yetersiz.' };
+  if (offer.fee + terms.signingBonus + terms.agentFee! > fin.transferBudget) {
+    return { outcome: 'error', message: 'Bonservis, imza bonusu ve menajer ücreti için transfer bütçen yetersiz.' };
   }
   const budgetError = wageBudgetError(world, player, terms.wage);
   if (budgetError) return { outcome: 'error', message: budgetError };
@@ -180,6 +194,7 @@ export function negotiateTransfer(world: GameWorld, offerId: number, terms: Tran
   offer.patience = result.patienceLeft;
   if (result.outcome === 'signed') {
     transferPlayer(world, player, world.playerClubId, offer.fee, terms);
+    afterSigning(world, player, terms);
     offer.status = 'completed';
     offer.note = 'Transfer tamamlandı.';
   } else if (result.outcome === 'collapsed') {
@@ -192,35 +207,45 @@ export function negotiateTransfer(world: GameWorld, offerId: number, terms: Tran
 }
 
 /** Serbest oyuncuyla sözleşme (bonservis yok; transfer dönemi şartı yok). */
-export function negotiateFreeAgent(world: GameWorld, playerId: number, terms: TransferTerms): NegotiationResult {
+export function negotiateFreeAgent(world: GameWorld, playerId: number, offered: TransferTerms): NegotiationResult {
   const player = world.players[playerId];
   if (!player || player.clubId) return { outcome: 'error', message: 'Oyuncu serbest değil.' };
+  const terms = completeTerms(world, player, world.playerClubId, offered);
   const budgetError = wageBudgetError(world, player, terms.wage);
   if (budgetError) return { outcome: 'error', message: budgetError };
   const fin = world.finances[world.playerClubId]!;
-  if (terms.signingBonus > fin.transferBudget) return { outcome: 'error', message: 'İmza bonusu için transfer bütçen yetersiz.' };
+  if (terms.signingBonus + terms.agentFee! > fin.transferBudget) {
+    return { outcome: 'error', message: 'İmza bonusu ve menajer ücreti için transfer bütçen yetersiz.' };
+  }
   const result = respond(world, player, world.playerClubId, terms, Infinity);
-  if (result.outcome === 'signed') transferPlayer(world, player, world.playerClubId, 0, terms);
+  if (result.outcome === 'signed') {
+    transferPlayer(world, player, world.playerClubId, 0, terms);
+    afterSigning(world, player, terms);
+  }
   return result;
 }
 
 /** Kendi oyuncumuzla sözleşme yenileme (sabır sınırı yok; talep altında kabul etmez). */
-export function negotiateRenewal(world: GameWorld, playerId: number, terms: TransferTerms): NegotiationResult {
+export function negotiateRenewal(world: GameWorld, playerId: number, offered: TransferTerms): NegotiationResult {
   const player = world.players[playerId];
   if (!player || player.clubId !== world.playerClubId || player.loan) {
     return { outcome: 'error', message: 'Bu oyuncuyla sözleşme yenilenemez.' };
   }
+  const terms = completeTerms(world, player, world.playerClubId, offered);
   const budgetError = wageBudgetError(world, player, terms.wage);
   if (budgetError) return { outcome: 'error', message: budgetError };
   const fin = world.finances[world.playerClubId]!;
-  if (terms.signingBonus > fin.balance) return { outcome: 'error', message: 'İmza bonusu için kasada yeterli para yok.' };
+  const agentFee = terms.agentFee!;
+  if (terms.signingBonus + agentFee > fin.balance) return { outcome: 'error', message: 'İmza bonusu ve menajer ücreti için kasada yeterli para yok.' };
 
   const result = respond(world, player, world.playerClubId, terms, Infinity);
   if (result.outcome !== 'signed') return result;
   // Yenilemede süre bu sezonun sonundan itibaren sayılır.
-  player.contract = { wage: terms.wage, expires: contractExpiry(world.date, terms.years) };
+  player.contract = contractFromTerms(world.date, terms);
   player.morale = Math.min(100, player.morale + 8);
   if (terms.signingBonus > 0) addExpense(fin, 'signingBonuses', terms.signingBonus);
+  if (agentFee > 0) addExpense(fin, 'agentFees', agentFee);
+  afterSigning(world, player, terms);
   addNews(world, {
     category: 'contract',
     title: `${fullName(player)} sözleşme yeniledi`,
@@ -230,6 +255,40 @@ export function negotiateRenewal(world: GameWorld, playerId: number, terms: Tran
     clubId: world.playerClubId,
   });
   return result;
+}
+
+/**
+ * Yapay zekâ kulübü oyuncumuzun serbest kalma bedelini öder: satış reddedilemez, transfer hemen tamamlanır.
+ */
+export function triggerReleaseClause(world: GameWorld, player: Player, buyerId: string): void {
+  const fee = player.contract.releaseClause!;
+  const offer: TransferOffer = {
+    id: world.nextOfferId++,
+    playerId: player.id,
+    buyerId,
+    sellerId: world.playerClubId,
+    kind: 'transfer',
+    fee,
+    counterFee: null,
+    status: 'pending',
+    created: world.date,
+    respondOn: world.date,
+    patience: 0,
+    maxFee: fee,
+    note: '',
+  };
+  world.offers.push(offer);
+  const name = fullName(player);
+  addNews(world, {
+    category: 'offer',
+    title: `${getClub(world, buyerId).name}, ${name} için serbest kalma bedelini ödedi`,
+    body: `${getClub(world, buyerId).name}, ${name} sözleşmesindeki €${formatPlain(fee)} serbest kalma bedelini ödedi. Sözleşme gereği satış reddedilemez.`,
+    important: true,
+    playerId: player.id,
+    clubId: buyerId,
+  });
+  completeAiPurchase(world, offer, fee);
+  offer.note = 'Serbest kalma bedeli ödendi.';
 }
 
 /* ------------------------------------------------------------------ */

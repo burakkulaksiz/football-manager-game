@@ -42,7 +42,7 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
 - [x] Gözlemci sistemi (bilinmeyen oyuncuların özellikleri gizli, gözlemciyle açılır)
 - [x] Yurtdışı ligleri ve yabancı kulüplerden transfer (maç oynanmayan 40 kulüp, 8 ülke)
 - [ ] Satın alma opsiyonlu kiralık, sonradan satış payı gibi sözleşme maddeleri
-- [ ] Menajer pazarlığı / oyuncu ajanları
+- [x] Menajer pazarlığı / oyuncu ajanları (menajerlerin oyuncu önermesi hariç)
 
 ## Lig ve rekabet
 - [ ] Türkiye Kupası

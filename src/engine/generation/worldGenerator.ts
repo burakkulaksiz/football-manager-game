@@ -11,6 +11,7 @@ import { divisionOf, initialBoard } from '../season/expectation';
 import { recordGrowth } from '../squad/growth';
 import { refreshAiListings } from '../transfer/listing';
 import { emptyScouting } from '../transfer/scouting';
+import { AGENT_SEED_SALT, generateAgents } from '../transfer/agents';
 import { DEFAULT_TRAINING } from '../squad/training';
 import { addForeignClubs, FOREIGN_SEED_SALT } from './foreign';
 
@@ -172,6 +173,7 @@ export function createWorld(
     nextRequestId: 1,
     promises: [],
     scouting: emptyScouting(),
+    agents: generateAgents(new Rng((seed ^ AGENT_SEED_SALT) >>> 0), data),
   };
   fillAcademies(world, data, new Rng((seed ^ ACADEMY_SEED_SALT) >>> 0));
   addForeignClubs(world, data, new Rng((seed ^ FOREIGN_SEED_SALT) >>> 0));

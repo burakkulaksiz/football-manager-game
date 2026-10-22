@@ -8,7 +8,8 @@ import { removePlayer } from '../match/tactics';
 import { addNews } from '../news';
 import { recordMove } from '../squad/career';
 import { ageOn, baseWage, marketValue, primaryPosition, roundNice } from '../player';
-import type { GameWorld, Player, Position } from '../types';
+import type { GameWorld, Player, Position, SquadRole } from '../types';
+import { contractFromTerms } from './agents';
 
 /** Sezonun bittiği yıl: Temmuz'dan itibaren bir sonraki yıl. */
 export function seasonEndYear(date: GameDate): number {
@@ -151,6 +152,13 @@ export interface TransferTerms {
   wage: number;
   years: number;
   signingBonus: number;
+  /** Menajer ücreti (tek seferlik). Pazarlıkta verilmezse menajerin istediği kadar sayılır; transferde verilmezse 0. */
+  agentFee?: number;
+  role?: SquadRole;
+  /** Serbest kalma bedeli (0 / null = yok). */
+  releaseClause?: number | null;
+  appearanceBonus?: number;
+  goalBonus?: number;
 }
 
 /**
@@ -161,8 +169,10 @@ export function transferPlayer(world: GameWorld, player: Player, buyerId: string
   const sellerId = player.clubId;
   const buyerFin = world.finances[buyerId]!;
   addExpense(buyerFin, 'transfersOut', fee);
-  buyerFin.transferBudget = Math.max(0, buyerFin.transferBudget - fee - terms.signingBonus);
+  const agentFee = terms.agentFee ?? 0;
+  buyerFin.transferBudget = Math.max(0, buyerFin.transferBudget - fee - terms.signingBonus - agentFee);
   if (terms.signingBonus > 0) addExpense(buyerFin, 'signingBonuses', terms.signingBonus);
+  if (agentFee > 0) addExpense(buyerFin, 'agentFees', agentFee);
   if (sellerId) {
     const sellerFin = world.finances[sellerId]!;
     addIncome(sellerFin, 'transfersIn', fee);
@@ -179,7 +189,7 @@ export function transferPlayer(world: GameWorld, player: Player, buyerId: string
   delete player.listing;
   // Yeni kulüp, yeni heyecan
   player.morale = Math.max(player.morale, 72);
-  player.contract = { wage: terms.wage, expires: contractExpiry(world.date, terms.years) };
+  player.contract = contractFromTerms(world.date, terms);
   player.squadNumber = freeSquadNumber(world, player, buyerId);
   cancelOffersFor(world, player.id);
 

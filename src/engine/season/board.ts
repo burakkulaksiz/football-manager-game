@@ -29,7 +29,7 @@ export function userPosition(world: GameWorld): number {
 }
 
 function roundsPlayed(world: GameWorld): number {
-  return world.season.fixtures.filter((f) => f.result && (f.homeId === world.playerClubId || f.awayId === world.playerClubId)).length;
+  return world.season.fixtures.filter((f) => f.result && f.competition !== 'cup' && (f.homeId === world.playerClubId || f.awayId === world.playerClubId)).length;
 }
 
 /** Kullanıcının maçından sonra: galibiyet +1.5, yenilgi −2.5 (büyük hedefli kulüpte daha sert). */

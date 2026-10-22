@@ -30,6 +30,8 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
   league/schedule.ts   Çift devreli fikstür (çember yöntemi + açgözlü ev/dep), hafta tarihleri.
   league/standings.ts  Puan durumu + eşitlik kuralları.
   league/stats.ts      Gol/asist/puan sıralamaları, oyuncu sezon istatistikleri (maç kayıtlarından türetilir).
+  league/cup.ts        Türkiye Kupası: turlar (CUP_ROUNDS), kura (cupDay), kazanan (fixtureWinner, penaltılar),
+                       tur sonrası ödül/haber (cupAfterMatch), etiketler (fixtureLabel, scoreLine), leagueFixtures.
   match/state.ts       Canlı maç durumu tipleri (düz veri, serileştirilebilir), dakika gösterimi.
   match/formation.ts   6 diziliş + saha yerleşimi (FORMATION_LAYOUT), mevki uyumu (slotFit = yanlış mevki cezası),
                        otomatik ilk 11 + 9 yedek, chooseFormation (yapay zekâ), assignToFormation.
@@ -403,6 +405,22 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
         ederken bedel ≤ 1.6×değer ve bütçesi yetiyorsa triggerReleaseClause (satış reddedilemez); ucuz bedelli
         oyuncu 3× daha çok seçilir. Arayüz: ContractDialog (menajer ve tavrı, sabır, iki bölüm: maaş/süre/imza/ücret ve
         rol/bedel/primler, "Talebini yaz" tüm talebi doldurur), profilde rol, bedel, primler, menajer.
+  - [x] Türkiye Kupası. Kupa maçları sezon fikstüründe (`Fixture.competition: 'cup'`, round = tur 1–5); ayrı durum
+        saklanmaz, kayıt dönüşümü gerekmez (eski kayıtta kura sıradaki gün çekilir, tarihler gerekirse ileri kayar).
+        26 kulüp (Süper Lig + 1. Lig): 32'ye eksik kadar (6) en yüksek itibarlı Süper Lig kulübü 1. Turu bay geçer →
+        1. Tur 10 maç, Son 16, Çeyrek Final, Yarı Final, Final (tarafsız saha: MatchState.neutral, iç saha avantajı yok).
+        Tarihler çarşamba (cupRoundDate: 23 Eyl, 28 Eki, 27 Oca, 3 Mar, 5 May sonrası ilk çarşamba; final ligin son
+        haftasından önce). Kura: 1. Tur maçtan 14 gün önce, sonrakiler önceki tur bitince (processDay → cupDay), ayrı
+        tohumlu rng (ana rastgeleliği değiştirmez); farklı ligdekilerden alt ligdeki evinde. Eleme: MatchState.knockout,
+        beraberlikte 90 dakikadan sonra doğrudan penaltı atışları (uzatma yok): 5'er atış + tek tek; vurucu sırası
+        seçilen penaltıcı, sonra penaltı becerisi, kaleci en son; olasılık penaltı/soğukkanlılık − kalecinin refleks/
+        bire bir. MatchResult.penalties. Turu geçene ödül (100 bin → 3 Mn €, 'prize'); kullanıcıya kura/tur/veda
+        haberleri ('cup'); alt lig takımına elenmek güven −4, kupayı kazanmak +15 ve manager.cups. Puan durumu
+        (computeStandings), yönetimin hafta sayısı, lig istatistikleri ve sezon ödülleri yalnızca lig maçları;
+        oyuncu sezon istatistikleri, kariyer, form, ceza ve menajer G/B/M kaydı kupayı da sayar. SeasonSummary.cupWinner*.
+        Arayüz: Fikstür'de "Türkiye Kupası" sekmesi (turlar, bay geçenler, durumumuz), Kulübüm listesi tarih sırasında
+        kupa etiketiyle, skorlar "2 - 2 (P 4-3)", maç ve rapor başlığında fixtureLabel, tabelada penaltılar, haber
+        bandı son maç gününün sonuçları, geçmiş sezonlarda kupa şampiyonu, menajer kartında kupa sayısı.
   - [ ] Sıradaki: FIKIRLER.md'den seçilecek.
 
 ## Açık konular / ileride

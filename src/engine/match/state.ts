@@ -29,6 +29,7 @@ export type MatchEventType =
   | 'injury'
   | 'sub'
   | 'tackle'
+  | 'shootout'
   | 'info';
 
 /** 2D saha için: dakikanın en önemli anı (motor sonucu etkilemez, yalnızca gösterim). */
@@ -68,6 +69,12 @@ export interface MatchPlay {
   injuredId?: number;
   /** Bu dakikanın sahnesinde gösterilen oyuncu değişiklikleri. */
   subs?: PlaySub[];
+}
+
+export interface Shootout {
+  home: number;
+  away: number;
+  kicks: { side: Side; playerId: number; scored: boolean }[];
 }
 
 export interface PlaySub {
@@ -163,6 +170,12 @@ export interface MatchState {
   momentum: number[];
   /** Son oynanan dakikanın en önemli anı (2D saha); maç / ikinci yarı başlarken null (santra). */
   lastPlay: MatchPlay | null;
+  /** Eleme maçı (kupa): beraberlikte penaltı atışları. */
+  knockout?: boolean;
+  /** Tarafsız saha (kupa finali): iç saha avantajı yok. */
+  neutral?: boolean;
+  /** Penaltı atışları (oynandıysa). */
+  penalties?: Shootout;
   /** Dakikalar arasında yapılan değişiklikler: sıradaki dakikanın anına (lastPlay.subs) taşınır. */
   pendingSubs: PlaySub[];
   /** Maçın şutları (şut haritası). */

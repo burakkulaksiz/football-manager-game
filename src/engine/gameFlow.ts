@@ -12,7 +12,7 @@ import { Rng } from './rng';
 import type { Fixture, GameWorld, NewsItem } from './types';
 
 export type AdvanceResult =
-  | { kind: 'played'; round: number; fixtures: Fixture[] }
+  | { kind: 'played'; round: number; cup: boolean; fixtures: Fixture[] }
   | { kind: 'userMatch'; fixture: Fixture }
   /** Takvim ilerledi; kullanıcıyı ilgilendiren haber geldiyse o gün durur. */
   | { kind: 'moved'; days: number; news: NewsItem[] };
@@ -94,7 +94,8 @@ export function finishUserMatch(world: GameWorld, state: MatchState): Fixture[] 
   applyResult(world, fixture, buildResult(state), rng);
   world.rngState = rng.getState();
   playTodaysMatches(world);
-  return world.season.fixtures.filter((f) => f.round === fixture.round);
+  // Aynı haftanın (kupada aynı turun) maçları
+  return world.season.fixtures.filter((f) => f.round === fixture.round && f.competition === fixture.competition);
 }
 
 /**
@@ -114,7 +115,7 @@ export function advance(world: GameWorld, data: GameData, options: { autoPlayUse
   const today = todaysFixtures(world);
   if (today.length > 0) {
     const fixtures = playTodaysMatches(world);
-    return { kind: 'played', round: fixtures[0]!.round, fixtures };
+    return { kind: 'played', round: fixtures[0]!.round, cup: fixtures[0]!.competition === 'cup', fixtures };
   }
   // Sezon arasında bir sonraki durak yeni sezonun başlangıcıdır (1 Temmuz).
   const next = nextMatchDate(world) ?? makeDate(world.season.year + 1, 7, 1);

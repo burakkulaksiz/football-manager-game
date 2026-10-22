@@ -5,6 +5,7 @@ import { processDiscipline } from '../squad/discipline';
 import { injurePlayer } from '../squad/injuries';
 import { applyMatchMorale } from '../squad/morale';
 import { trackPromises } from '../squad/talks';
+import { cupAfterMatch, FINAL_ROUND, isCupFixture } from '../league/cup';
 import { payContractBonuses } from '../transfer/agents';
 import { learnFromMatch } from '../transfer/scouting';
 import { clubPlayers, getClub } from '../generation/worldGenerator';
@@ -48,6 +49,8 @@ export function setupFixture(world: GameWorld, fixture: Fixture, seed: number): 
     home: teamSetup(world, fixture.homeId),
     away: teamSetup(world, fixture.awayId),
     seed,
+    // Kupa: eleme (beraberlikte penaltılar), final tarafsız sahada
+    ...(isCupFixture(fixture) ? { knockout: true, neutral: fixture.round === FINAL_ROUND } : {}),
   };
 }
 
@@ -90,4 +93,5 @@ export function applyResult(world: GameWorld, fixture: Fixture, result: MatchRes
   payContractBonuses(world, result);
   learnFromMatch(world, fixture.homeId, fixture.awayId, result.players);
   boardAfterMatch(world, fixture);
+  if (isCupFixture(fixture)) cupAfterMatch(world, fixture);
 }

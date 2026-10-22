@@ -1,4 +1,4 @@
-import { getClub, type GameWorld } from '../../engine';
+import { getClub, scoreLine, type GameWorld } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { formatDayMonth } from '../labels';
 import { pageHeading } from './pageHeading';
@@ -21,10 +21,11 @@ function resultItems(world: GameWorld): string[] {
       first ? `Süper Lig ${formatDayMonth(first.date)} tarihinde başlıyor` : 'Yeni sezon yakında',
     ];
   }
-  const lastRound = Math.max(...played.map((f) => f.round));
+  // Son maç gününün sonuçları (lig haftası ya da kupa turu)
+  const lastDate = played.reduce((max, f) => (f.date > max ? f.date : max), played[0]!.date);
   return played
-    .filter((f) => f.round === lastRound)
-    .map((f) => `${getClub(world, f.homeId).name} ${f.result!.homeGoals}-${f.result!.awayGoals} ${getClub(world, f.awayId).name}`);
+    .filter((f) => f.date === lastDate)
+    .map((f) => `${f.competition === 'cup' ? 'Kupa: ' : ''}${getClub(world, f.homeId).name} ${scoreLine(f).replace(' - ', '-')} ${getClub(world, f.awayId).name}`);
 }
 
 export function StatusBar() {

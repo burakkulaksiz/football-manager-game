@@ -1,7 +1,9 @@
 import {
+  fixtureLabel,
   formatDateTR,
   formatMinute,
   getClub,
+  isCupFixture,
   matchTimeline,
   primaryPosition,
   teamAppearances,
@@ -175,7 +177,7 @@ export function MatchReportScreen() {
       .map((e) => `${world.players[e.playerId]?.lastName ?? '?'} ${formatMinute(e.minute, e.extra)}${e.kind === 'penalty' ? ' (P)' : ''}`);
 
   const showRound = () => {
-    setFixturesView('round', fixture.round);
+    setFixturesView(isCupFixture(fixture) ? 'cup' : 'round', fixture.round);
     setScreen('fixtures');
   };
 
@@ -193,6 +195,7 @@ export function MatchReportScreen() {
           <div className="sb-score">
             {result.homeGoals}<span className="sb-dash">–</span>{result.awayGoals}
           </div>
+          {result.penalties && <div className="sb-penalties">Penaltılar {result.penalties.home}-{result.penalties.away}</div>}
           <div className="sb-clock">Maç Sonu</div>
         </div>
         <div className="sb-side right">
@@ -206,7 +209,7 @@ export function MatchReportScreen() {
 
       <div className="report-meta">
         <span>{formatDateTR(fixture.date)}</span>
-        <span>Süper Lig · {fixture.round}. Hafta</span>
+        <span>{fixtureLabel(fixture)}</span>
         <span>{home.stadium}</span>
         {result.attendance !== undefined && <span>Seyirci: {formatNumber(result.attendance)}</span>}
       </div>

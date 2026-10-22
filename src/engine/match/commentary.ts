@@ -15,6 +15,10 @@ const TEMPLATES = {
   halftime: ['İlk yarı sona erdi. {home} {hg}-{ag} {away}'],
   secondhalf: ['İkinci yarı başladı.'],
   fulltime: ['Maç sona erdi! {home} {hg}-{ag} {away}'],
+  shootoutStart: ['Eşitlik bozulmadı; kazanan penaltı atışlarıyla belirlenecek!'],
+  shootoutGoal: ['{player} penaltıyı gole çevirdi. ({hp}-{ap})', '{player} kaleciyi ters köşeye yatırdı. ({hp}-{ap})'],
+  shootoutMiss: ['{player} kaçırdı, {keeper} kurtardı! ({hp}-{ap})', '{player} topu direğin dışına gönderdi! ({hp}-{ap})'],
+  shootoutEnd: ['{winner} penaltı atışlarını {hp}-{ap} kazandı ve turu geçti!'],
   goal: [
     'GOL! {player} topu ağlara gönderdi! {score}',
     'GOOOL! {player} fileleri havalandırıyor! {score}',

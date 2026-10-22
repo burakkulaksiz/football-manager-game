@@ -39,6 +39,7 @@ export * from './squad/hierarchy';
 export * from './squad/career';
 export * from './transfer/scouting';
 export * from './transfer/agents';
+export * from './league/cup';
 export * from './generation/foreign';
 export * from './season/expectation';
 export * from './season/board';

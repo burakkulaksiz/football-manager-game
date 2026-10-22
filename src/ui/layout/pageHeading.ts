@@ -1,4 +1,4 @@
-import { getClub, nextFixtureFor, primaryPosition, seasonLabel, type GameWorld } from '../../engine';
+import { CUP_NAME, fixtureLabel, getClub, nextFixtureFor, primaryPosition, seasonLabel, type GameWorld } from '../../engine';
 import type { ScreenId } from '../../store/gameStore';
 import { nationName, POSITION_NAMES } from '../labels';
 import { screenInfo } from '../screens';
@@ -31,9 +31,9 @@ export function pageHeading(
       : 'Maç Raporu';
     return {
       title,
-      subtitle: fixture ? `Maç Raporu · ${fixture.round}. Hafta` : 'Maç Raporu',
+      subtitle: fixture ? `Maç Raporu · ${fixtureLabel(fixture)}` : 'Maç Raporu',
       colors: LEAGUE_COLORS,
-      breadcrumb: ['Süper Lig', 'Fikstür', 'Maç Raporu'],
+      breadcrumb: [fixture?.competition === 'cup' ? CUP_NAME : 'Süper Lig', 'Fikstür', 'Maç Raporu'],
     };
   }
 
@@ -63,9 +63,9 @@ export function pageHeading(
       : 'Maç';
     return {
       title,
-      subtitle: fixture ? `Süper Lig · ${fixture.round}. Hafta` : 'Süper Lig',
+      subtitle: fixture ? fixtureLabel(fixture) : 'Süper Lig',
       colors: LEAGUE_COLORS,
-      breadcrumb: ['Süper Lig', 'Maç Günü', title],
+      breadcrumb: [fixture?.competition === 'cup' ? CUP_NAME : 'Süper Lig', 'Maç Günü', title],
     };
   }
 

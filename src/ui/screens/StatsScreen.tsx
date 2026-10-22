@@ -1,8 +1,10 @@
 import {
   cleanSheets,
   computeStandings,
+  CUP_NAME,
   getClub,
   leagueClubs,
+  leagueFixtures,
   seasonLabel,
   topAssists,
   topRatings,
@@ -75,7 +77,8 @@ function LeaderTable({ world, title, unit, rows, empty, ratings = false }: {
 
 export function StatsScreen() {
   const world = useWorld();
-  const fixtures = world.season.fixtures;
+  // Lig istatistikleri (kupa maçları hariç)
+  const fixtures = leagueFixtures(world.season.fixtures);
   const roundsPlayed = new Set(fixtures.filter((f) => f.result).map((f) => f.round)).size;
   // Puan sıralamasına girmek için oynanan haftaların en az üçte biri kadar maç gerekir.
   const minApps = Math.max(1, Math.ceil(roundsPlayed / 3));
@@ -167,6 +170,7 @@ function SeasonHistory({ world }: { world: GameWorld }) {
                   {s.userPosition}. (hedef {s.targetPosition}.)
                 </span>
               </div>
+              {s.cupWinnerName && <div className="kv"><span className="kv-label">{CUP_NAME}</span><span className="kv-value">{s.cupWinnerName}</span></div>}
               <div className="kv"><span className="kv-label">Küme düşenler</span><span className="kv-value neg">{s.relegatedNames.join(', ')}</span></div>
               <div className="kv"><span className="kv-label">1. Lig'den çıkanlar</span><span className="kv-value">{s.promotedNames.join(', ')}</span></div>
               {s.awards.map((a) => (

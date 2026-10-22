@@ -113,6 +113,7 @@ function Scoreboard({ match, held }: { match: MatchState; held: Held | null }) {
         <div className="sb-score">
           {held?.home ?? match.score.home}<span className="sb-dash">–</span>{held?.away ?? match.score.away}
         </div>
+        {match.penalties && !held && <div className="sb-penalties">Penaltılar {match.penalties.home}-{match.penalties.away}</div>}
         <div className={`sb-clock${live ? ' live' : ''}`}>{clockText(match)}</div>
       </div>
       <div className="sb-side right">

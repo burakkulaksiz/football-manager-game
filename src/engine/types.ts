@@ -253,6 +253,8 @@ export interface MatchResult {
   shots?: ShotRecord[];
   /** Dakikaların anı, dakika başına bir harf (ısı haritası; bkz. PLAY_CODES); eski kayıtlarda yok. */
   timeline?: string;
+  /** Eleme maçında beraberlik: penaltı atışlarının skoru. */
+  penalties?: { home: number; away: number };
 }
 
 /* ------------------------------------------------------------------ */
@@ -337,7 +339,8 @@ export type NewsCategory =
   | 'board'
   | 'season'
   | 'academy'
-  | 'scouting';
+  | 'scouting'
+  | 'cup';
 
 /* ------------------------------------------------------------------ */
 /* Antrenman                                                           */
@@ -366,13 +369,15 @@ export interface NewsItem {
 
 export interface Fixture {
   id: number;
-  /** 1–34 */
+  /** Ligde hafta (1–34); kupada tur (1 = 1. Tur … 5 = Final). */
   round: number;
   date: GameDate;
   homeId: string;
   awayId: string;
   /** Oynanmadıysa null. */
   result: MatchResult | null;
+  /** Türkiye Kupası maçı; yoksa lig maçı. */
+  competition?: 'cup';
 }
 
 export interface Season {
@@ -437,6 +442,8 @@ export interface ManagerInfo {
   lost: number;
   /** Lig şampiyonlukları. */
   titles: number;
+  /** Türkiye Kupası zaferleri. */
+  cups?: number;
 }
 
 export interface BoardState {
@@ -468,4 +475,7 @@ export interface SeasonSummary {
   userPosition: number;
   targetPosition: number;
   awards: SeasonAward[];
+  /** Türkiye Kupası şampiyonu (kupa oynanmadıysa yok). */
+  cupWinnerId?: string;
+  cupWinnerName?: string;
 }

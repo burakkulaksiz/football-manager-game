@@ -75,7 +75,9 @@ function sortTiedGroup(group: StandingRow[], fixtures: readonly Fixture[]): Stan
   });
 }
 
-export function computeStandings(clubIds: readonly string[], fixtures: readonly Fixture[]): StandingRow[] {
+export function computeStandings(clubIds: readonly string[], allFixtures: readonly Fixture[]): StandingRow[] {
+  // Yalnızca lig maçları (kupa maçları puan durumunu ve ikili averajı etkilemez)
+  const fixtures = allFixtures.filter((f) => f.competition !== 'cup');
   const rows = [...tally(clubIds, fixtures).values()].sort((a, b) => b.points - a.points);
   for (const row of rows) row.form = row.form.slice(-5);
 

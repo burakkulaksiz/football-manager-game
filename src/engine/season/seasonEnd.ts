@@ -6,6 +6,7 @@ import { addIncome } from '../finance/finance';
 import { formatPlain } from '../transfer/market';
 import { getClub, leagueClubs } from '../generation/worldGenerator';
 import { computeStandings, goalDifference } from '../league/standings';
+import { CUP_NAME, cupChampion, leagueFixtures } from '../league/cup';
 import { topAssists, topRatings, topScorers } from '../league/stats';
 import { addNews } from '../news';
 import { ageOn, primaryPosition } from '../player';
@@ -26,7 +27,7 @@ export function prizeFor(position: number, clubCount: number): number {
 }
 
 function seasonAwards(world: GameWorld): SeasonAward[] {
-  const fixtures = world.season.fixtures;
+  const fixtures = leagueFixtures(world.season.fixtures);
   const awards: SeasonAward[] = [];
   const add = (title: string, playerId: number | undefined, clubId: string | undefined, value: string) => {
     if (playerId === undefined || clubId === undefined) return;
@@ -111,6 +112,11 @@ export function endSeason(world: GameWorld, rng: Rng): SeasonSummary {
     targetPosition: world.board.targetPosition,
     awards: seasonAwards(world),
   };
+  const cupWinner = cupChampion(world);
+  if (cupWinner) {
+    summary.cupWinnerId = cupWinner;
+    summary.cupWinnerName = getClub(world, cupWinner).name;
+  }
   world.history.push(summary);
   recordSeasonCareers(world);
   world.seasonState = 'ended';
@@ -122,7 +128,7 @@ export function endSeason(world: GameWorld, rng: Rng): SeasonSummary {
     title: `Sezon sona erdi: ${champion} şampiyon!`,
     body:
       `${summary.year}/${String((summary.year + 1) % 100).padStart(2, '0')} sezonu tamamlandı. Şampiyon: ${champion}. ` +
-      `Küme düşenler: ${summary.relegatedNames.join(', ')}. 1. Lig'den çıkanlar: ${summary.promotedNames.join(', ')}. ` +
+      `${summary.cupWinnerName ? `${CUP_NAME}: ${summary.cupWinnerName}. ` : ''}Küme düşenler: ${summary.relegatedNames.join(', ')}. 1. Lig'den çıkanlar: ${summary.promotedNames.join(', ')}. ` +
       `${userName} ligi ${userPosition}. sırada bitirdi (hedef ${summary.targetPosition}.) ve €${formatPlain(prizeFor(userPosition, table.length))} sıralama primi kazandı. ` +
       `Ödüller: ${summary.awards.map((a) => `${a.title}: ${a.playerName} (${a.clubName}, ${a.value})`).join('; ')}. ` +
       `Yeni sezon 1 Temmuz'da başlıyor; sözleşmesi 30 Haziran'da biten oyuncular kulüpten ayrılacak.`,

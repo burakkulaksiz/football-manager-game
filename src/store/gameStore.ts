@@ -82,7 +82,7 @@ interface GameState {
   /** Karşılaştırma için seçilen oyuncular (en fazla 2). */
   compareIds: number[];
   /** Fikstür ekranı: kendi maçlarımız mı, haftalık görünüm mü; seçili hafta. */
-  fixturesTab: 'club' | 'round';
+  fixturesTab: 'club' | 'round' | 'cup';
   fixturesRound: number;
   /** Oynanmakta olan kendi maçımız (yoksa null). */
   liveMatch: MatchState | null;
@@ -109,7 +109,7 @@ interface GameState {
   setSquadFilters: (change: Partial<SquadFilters>) => void;
   toggleCompare: (playerId: number) => void;
   clearCompare: () => void;
-  setFixturesView: (tab: 'club' | 'round', round?: number) => void;
+  setFixturesView: (tab: 'club' | 'round' | 'cup', round?: number) => void;
   /**
    * "Devam": maç günüyse maçları oynatır, değilse bir sonraki maç gününe ilerler.
    * Maçlar oynanınca o haftanın sonuçları gösterilir.
@@ -331,7 +331,8 @@ export const useGameStore = create<GameState>()((set, get) => {
       }
       touch(world);
       if (result.kind === 'played') {
-        set({ fixturesTab: 'round', fixturesRound: result.round });
+        // Kupa günü: kupa sekmesi; lig haftasında hafta sekmesi
+        set(result.cup ? { fixturesTab: 'cup' } : { fixturesTab: 'round', fixturesRound: result.round });
         get().navigate({ screen: 'fixtures' });
         runAutosave();
       } else if (result.news.length > 0) {
@@ -406,7 +407,9 @@ export const useGameStore = create<GameState>()((set, get) => {
       const fixtureId = liveMatch.fixtureId;
       const round = finishUserMatch(world, liveMatch);
       touch(world);
-      set({ liveMatch: null, fixturesTab: 'round', fixturesRound: round[0]?.round ?? 1 });
+      set(round[0]?.competition === 'cup'
+        ? { liveMatch: null, fixturesTab: 'cup' }
+        : { liveMatch: null, fixturesTab: 'round', fixturesRound: round[0]?.round ?? 1 });
       get().navigate({ screen: 'report', fixtureId });
       runAutosave();
     },

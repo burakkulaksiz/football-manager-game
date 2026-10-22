@@ -36,6 +36,7 @@ import {
   type PlayerMatchState,
   type MatchPlay,
   type PlayKind,
+  type Shootout,
   type Side,
   type TeamState,
 } from './state';
@@ -234,6 +235,10 @@ export interface MatchSetup {
   home: TeamSetup;
   away: TeamSetup;
   seed: number;
+  /** Eleme maçı: beraberlikte penaltı atışları. */
+  knockout?: boolean;
+  /** Tarafsız saha: iç saha avantajı yok. */
+  neutral?: boolean;
 }
 
 function newPlayerState(rng: Rng, p: Player, side: Side, slot: Position | null): PlayerMatchState {
@@ -312,6 +317,8 @@ export function createMatch(setup: MatchSetup, lookup: PlayerLookup): MatchState
     momentum: [],
     lastPlay: null,
     pendingSubs: [],
+    ...(setup.knockout ? { knockout: true } : {}),
+    ...(setup.neutral ? { neutral: true } : {}),
     shots: [],
     timeline: '',
     rngState: rng.getState(),
@@ -592,7 +599,7 @@ function resolveAttack(ctx: Ctx, side: Side, units: Record<Side, Units>): void {
   const { state, rng } = ctx;
   const oppSide = other(side);
 
-  const homeBoost = side === 'home' ? TUNING.homeAttack : 1;
+  const homeBoost = side === 'home' && !state.neutral ? TUNING.homeAttack : 1;
   const threat = (units[side].att * homeBoost) / Math.max(units[oppSide].def, 1);
   // Kendi taktiğimiz ve rakibin verdiği açık şut olasılığını değiştirir.
   const pShot = Math.max(0.05, Math.min(0.9,
@@ -859,7 +866,7 @@ function simulateMinute(ctx: Ctx): void {
   ctx.effects = effects;
 
   // Top hakimiyeti: orta saha gücü × kendi talimatları × rakibin presi
-  const mh = units.home.mid * TUNING.homeMidfield * effects.home.midfield * effects.away.oppMidfield;
+  const mh = units.home.mid * (state.neutral ? 1 : TUNING.homeMidfield) * effects.home.midfield * effects.away.oppMidfield;
   const ma = units.away.mid * effects.away.midfield * effects.home.oppMidfield;
   const pe = TUNING.possessionExponent;
   const side: Side = rng.chance(mh ** pe / (mh ** pe + ma ** pe)) ? 'home' : 'away';
@@ -895,6 +902,66 @@ function simulateMinute(ctx: Ctx): void {
   applyFatigue(ctx, state.away);
   autoSubstitutions(ctx, 'home');
   autoSubstitutions(ctx, 'away');
+}
+
+/**
+ * Eleme maçında beraberlik: penaltı atışları. Önce 5'er atış (sonuç belli olunca biter), sonra tek tek.
+ * Vurucular sahadakiler (seçilen penaltıcı önce, sonra penaltı becerisine göre; kaleci en son).
+ */
+function penaltyShootout(ctx: Ctx): void {
+  const { state, rng, lookup } = ctx;
+  const lineup = (side: Side) => {
+    const team = teamOf(state, side);
+    const keeper = team.onPitch.find((id) => state.players[id]!.slot === 'GK');
+    const takers = team.onPitch
+      .filter((id) => id !== keeper)
+      .sort((a, b) => Number(b === team.penaltyTakerId) - Number(a === team.penaltyTakerId) ||
+        lookup[b]!.attributes.penaltyTaking - lookup[a]!.attributes.penaltyTaking);
+    if (keeper !== undefined) takers.push(keeper);
+    return { takers, keeper };
+  };
+  const sides = { home: lineup('home'), away: lineup('away') };
+  const pens: Shootout = { home: 0, away: 0, kicks: [] };
+  state.penalties = pens;
+  emit(ctx, 'shootout', null, 'shootoutStart');
+
+  const kick = (side: Side, n: number) => {
+    const { takers } = sides[side];
+    if (takers.length === 0) return;
+    const taker = takers[n % takers.length]!;
+    const keeper = sides[other(side)].keeper;
+    const a = lookup[taker]!.attributes;
+    const skill = (a.penaltyTaking * 2 + a.composure) / 3;
+    const save = keeper !== undefined ? (lookup[keeper]!.attributes.reflexes + lookup[keeper]!.attributes.oneOnOnes) / 2 : 5;
+    const scored = rng.chance(Math.max(0.5, Math.min(0.92, 0.75 + (skill - 12) * 0.012 - (save - 12) * 0.01)));
+    if (scored) pens[side]++;
+    pens.kicks.push({ side, playerId: taker, scored });
+    emit(ctx, 'shootout', side, scored ? 'shootoutGoal' : 'shootoutMiss', {
+      player: nameOf(ctx, taker),
+      keeper: keeper !== undefined ? nameOf(ctx, keeper) : '',
+      hp: pens.home,
+      ap: pens.away,
+    });
+  };
+  /** İlk 5 atışta kalan atışlar yetişemiyorsa, sonrasında eşit sayıda atıştan sonra fark varsa biter. */
+  const decided = (homeTaken: number, awayTaken: number) => {
+    if (homeTaken <= 5 && awayTaken <= 5) {
+      const homeLeft = 5 - homeTaken;
+      const awayLeft = 5 - awayTaken;
+      return pens.home > pens.away + awayLeft || pens.away > pens.home + homeLeft;
+    }
+    return homeTaken === awayTaken && pens.home !== pens.away;
+  };
+  for (let n = 0; n < 40; n++) {
+    kick('home', n);
+    if (decided(n + 1, n)) break;
+    kick('away', n);
+    if (decided(n + 1, n + 1)) break;
+  }
+  // Çok uzun seride (pratikte olmaz) yazı tura
+  if (pens.home === pens.away) pens[rng.chance(0.5) ? 'home' : 'away']++;
+  const winner = pens.home > pens.away ? state.home.name : state.away.name;
+  emit(ctx, 'shootout', null, 'shootoutEnd', { winner, hp: pens.home, ap: pens.away });
 }
 
 /** Maç sonu puan düzeltmeleri: galibiyet/mağlubiyet, gol yemeyen savunma. */
@@ -944,6 +1011,7 @@ export function stepMatch(state: MatchState, lookup: PlayerLookup): void {
       state.period = 'full';
       finalizeRatings(ctx);
       emit(ctx, 'fulltime', null, 'fulltime', vars());
+      if (state.knockout && state.score.home === state.score.away) penaltyShootout(ctx);
     }
   }
   state.rngState = ctx.rng.getState();
@@ -1040,5 +1108,6 @@ export function buildResult(state: MatchState): MatchResult {
     manOfTheMatch: best?.playerId ?? null,
     shots: [...state.shots],
     timeline: state.timeline,
+    ...(state.penalties ? { penalties: { home: state.penalties.home, away: state.penalties.away } } : {}),
   };
 }

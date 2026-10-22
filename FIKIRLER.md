@@ -45,7 +45,7 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
 - [x] Menajer pazarlığı / oyuncu ajanları (menajerlerin oyuncu önermesi hariç)
 
 ## Lig ve rekabet
-- [ ] Türkiye Kupası
+- [x] Türkiye Kupası (tek maç eleme, beraberlikte penaltılar; uzatma yok)
 - [ ] Avrupa kupaları (Şampiyonlar Ligi, Avrupa Ligi)
 - [ ] Milli takım ve milli maç arası
 - [ ] 1. Lig'in gerçekten oynanması (şu an çıkanlar rastgele seçiliyor)

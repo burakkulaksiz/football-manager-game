@@ -3,16 +3,22 @@ import { gameData } from '../../gameData';
 import { ageOn } from '../player';
 import { advance } from '../gameFlow';
 import { clubPlayers, createWorld, getClub, leagueClubs } from '../generation/worldGenerator';
+import { CUP_ROUNDS, cupFixtures, fixtureWinner } from '../league/cup';
 import { computeStandings } from '../league/standings';
 import { negotiateFreeAgent } from '../transfer/offers';
 import { contractDemand } from '../transfer/agents';
 import { makeResult } from '../testing';
-import type { GameWorld } from '../types';
+import type { Fixture, GameWorld } from '../types';
 import { boardAfterMatch, MIN_ROUNDS_BEFORE_SACK } from './board';
 import { divisionOf } from './expectation';
 import { prizeFor } from './seasonEnd';
 
 const START = '2026-07-01';
+
+/** Kulübün kupada geçtiği turların ödülleri. */
+function cupPrizes(world: GameWorld, clubId: string): number {
+  return cupFixtures(world).filter((f) => fixtureWinner(f) === clubId).reduce((sum, f) => sum + CUP_ROUNDS[f.round - 1]!.prize, 0);
+}
 
 /** Belirtilen tarihe kadar oyunu oynatır (kendi maçımız da otomatik). */
 function playUntil(world: GameWorld, date: string): void {
@@ -37,7 +43,7 @@ describe('sezon döngüsü', () => {
     for (const id of summary.promotedIds) expect(lowerIds).toContain(id);
     expect(summary.awards.length).toBeGreaterThanOrEqual(4);
     expect(world.finances[summary.championId]!.current.income.prize + world.finances[summary.championId]!.history.reduce((s, r) => s + (r.income.prize ?? 0), 0))
-      .toBe(prizeFor(1, 18));
+      .toBe(prizeFor(1, 18) + cupPrizes(world, summary.championId));
     expect(world.news.some((n) => n.category === 'season')).toBe(true);
   });
 
@@ -46,7 +52,12 @@ describe('sezon döngüsü', () => {
     const table = computeStandings(leagueClubs(world).map((c) => c.id), world.season.fixtures);
     const row = table.find((r) => r.clubId === 'galatasaray')!;
     expect(world.manager.name).toBe('Menajer');
-    expect([world.manager.won, world.manager.drawn, world.manager.lost]).toEqual([row.won, row.drawn, row.lost]);
+    // Lig ve kupa maçları (penaltılarla biten kupa maçı beraberlik sayılır)
+    const cup = cupFixtures(world).filter((f) => f.homeId === 'galatasaray' || f.awayId === 'galatasaray');
+    const goals = (f: Fixture) => (f.homeId === 'galatasaray' ? [f.result!.homeGoals, f.result!.awayGoals] : [f.result!.awayGoals, f.result!.homeGoals]);
+    const cupWon = cup.filter((f) => goals(f)[0]! > goals(f)[1]!).length;
+    const cupDrawn = cup.filter((f) => goals(f)[0] === goals(f)[1]).length;
+    expect([world.manager.won, world.manager.drawn, world.manager.lost]).toEqual([row.won + cupWon, row.drawn + cupDrawn, row.lost + cup.length - cupWon - cupDrawn]);
     expect(world.manager.titles).toBe(world.history[0]!.championId === 'galatasaray' ? 1 : 0);
   });
 

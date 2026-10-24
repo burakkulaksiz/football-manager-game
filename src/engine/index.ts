@@ -37,6 +37,7 @@ export * from './squad/assistant';
 export * from './squad/talks';
 export * from './squad/hierarchy';
 export * from './squad/career';
+export * from './squad/compare';
 export * from './transfer/scouting';
 export * from './transfer/agents';
 export * from './league/cup';

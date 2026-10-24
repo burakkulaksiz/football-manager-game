@@ -2,42 +2,32 @@ import { useMemo, useState, type ReactNode } from 'react';
 import {
   abilityEstimate,
   ageOn,
-  attributeEstimate,
   clubPlayers,
   getClub,
-  GOALKEEPING_ATTRS,
   HOME_NATION,
-  knowledgeOf,
   marketValue,
-  MENTAL_ATTRS,
   naturalPositions,
-  PHYSICAL_ATTRS,
   playerSeasonStats,
   POSITIONS,
   primaryPosition,
   seasonEndYear,
-  TECHNICAL_ATTRS,
-  type AttributeKey,
   type GameWorld,
   type Player,
   type PlayerSeasonStats,
 } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { ClubOptions } from '../components/ClubOptions';
-import { Modal } from '../components/Modal';
-import { AbilityStars, AttrValue, PotentialStars } from '../components/ScoutViews';
+import { CompareBar } from '../components/CompareDialog';
+import { AbilityStars, PotentialStars } from '../components/ScoutViews';
 import { StatusTags } from '../components/StatusTags';
 import {
-  abilityStarsFor,
   LISTING_LABELS,
   potentialStarsFor,
-  ATTRIBUTE_LABELS,
   formatDateShort,
   formatMoney,
   moraleLabel,
   nationName,
   POSITION_LABELS,
-  POSITION_NAMES,
   positionGroup,
   ratingClass,
   trendSymbol,
@@ -203,114 +193,6 @@ const VIEW_COLUMNS: Record<SquadView, Column[]> = {
 };
 
 /* ------------------------------------------------------------------ */
-/* Karşılaştırma                                                        */
-/* ------------------------------------------------------------------ */
-
-/** Yüksek olması iyi ya da kötü sayılamayan özellikler (vurgulanmaz, sayılmaz). */
-const NEUTRAL_ATTRS: ReadonlySet<AttributeKey> = new Set(['aggression', 'eccentricity']);
-
-function CompareRow({ label, a, b, aValue, bValue, higherIsBetter = true }: {
-  label: string;
-  a: ReactNode;
-  b: ReactNode;
-  aValue?: number;
-  bValue?: number;
-  higherIsBetter?: boolean;
-}) {
-  const better = aValue === undefined || bValue === undefined || aValue === bValue
-    ? null
-    : (aValue > bValue) === higherIsBetter ? 'a' : 'b';
-  return (
-    <div className="cmp-row">
-      <span className={`cmp-val${better === 'a' ? ' better' : ''}`}>{a}</span>
-      <span className="cmp-label">{label}</span>
-      <span className={`cmp-val${better === 'b' ? ' better' : ''}`}>{b}</span>
-    </div>
-  );
-}
-
-function CompareDialog({ ids, onClose }: { ids: [number, number]; onClose: () => void }) {
-  const world = useWorld();
-  const openPlayer = useGameStore((s) => s.openPlayer);
-  const [a, b] = ids.map((id) => world.players[id]!) as [Player, Player];
-  const sa = playerSeasonStats(world.season.fixtures, a.id);
-  const sb = playerSeasonStats(world.season.fixtures, b.id);
-  const potA = potentialStarsFor(world, a);
-  const potB = potentialStarsFor(world, b);
-  const abA = abilityStarsFor(world, a);
-  const abB = abilityStarsFor(world, b);
-  // Tanımadığımız oyuncuda özellikler aralık; karşılaştırma aralığın ortasıyla
-  const kA = knowledgeOf(world, a);
-  const kB = knowledgeOf(world, b);
-  const est = (p: Player, k: AttributeKey) => attributeEstimate(world, p, k, p === a ? kA : kB);
-  const isGK = (p: Player) => primaryPosition(p) === 'GK';
-  const groups: { title: string; keys: readonly AttributeKey[] }[] = [
-    ...(!isGK(a) || !isGK(b) ? [{ title: 'Teknik', keys: TECHNICAL_ATTRS }] : []),
-    ...(isGK(a) || isGK(b) ? [{ title: 'Kalecilik', keys: GOALKEEPING_ATTRS }] : []),
-    { title: 'Zihinsel', keys: MENTAL_ATTRS },
-    { title: 'Fiziksel', keys: PHYSICAL_ATTRS },
-  ];
-  let aWins = 0;
-  let bWins = 0;
-  for (const g of groups) {
-    for (const k of g.keys) {
-      if (NEUTRAL_ATTRS.has(k)) continue;
-      if (est(a, k) > est(b, k)) aWins++;
-      else if (est(b, k) > est(a, k)) bWins++;
-    }
-  }
-  const header = (p: Player) => (
-    <div className="cmp-head">
-      <button className="cmp-name link" onClick={() => { onClose(); openPlayer(p.id); }}>{p.firstName} {p.lastName}</button>
-      <div className="muted">{p.clubId ? getClub(world, p.clubId).name : 'Serbest'} · {POSITION_NAMES[primaryPosition(p)]}</div>
-      <PositionBoxes player={p} />
-    </div>
-  );
-
-  return (
-    <Modal title="Oyuncu Karşılaştırma" onClose={onClose} footer={<button className="btn" onClick={onClose}>Kapat</button>}>
-      <div className="compare">
-        <div className="cmp-row cmp-header">
-          {header(a)}
-          <span className="cmp-label">vs</span>
-          {header(b)}
-        </div>
-        <div className="sub-head">Genel</div>
-        <CompareRow label="Yaş" a={ageOn(a.birthDate, world.date)} b={ageOn(b.birthDate, world.date)} />
-        <CompareRow label="Piyasa değeri" a={formatMoney(marketValue(a, world.date))} b={formatMoney(marketValue(b, world.date))}
-          aValue={marketValue(a, world.date)} bValue={marketValue(b, world.date)} />
-        <CompareRow label="Maaş" a={formatMoney(a.contract.wage)} b={formatMoney(b.contract.wage)} />
-        <CompareRow label="Yetenek" a={<AbilityStars player={a} />} b={<AbilityStars player={b} />} aValue={abA} bValue={abB} />
-        <CompareRow label="Potansiyel" a={<PotentialStars player={a} />} b={<PotentialStars player={b} />} aValue={potA} bValue={potB} />
-        <CompareRow label="Kondisyon" a={`%${a.condition}`} b={`%${b.condition}`} aValue={a.condition} bValue={b.condition} />
-        <CompareRow label="Moral" a={moraleLabel(a.morale)} b={moraleLabel(b.morale)} aValue={a.morale} bValue={b.morale} />
-        <CompareRow label="Sezon: maç / gol / asist" a={`${sa.apps} / ${sa.goals} / ${sa.assists}`} b={`${sb.apps} / ${sb.goals} / ${sb.assists}`} />
-        <CompareRow label="Sezon: ort. puan" a={sa.avgRating?.toFixed(2) ?? '—'} b={sb.avgRating?.toFixed(2) ?? '—'}
-          aValue={sa.avgRating ?? undefined} bValue={sb.avgRating ?? undefined} />
-        {groups.map((g) => (
-          <div key={g.title}>
-            <div className="sub-head sub-head-gap">{g.title}</div>
-            {g.keys.map((k) => (
-              <CompareRow
-                key={k}
-                label={ATTRIBUTE_LABELS[k]}
-                a={<AttrValue player={a} attr={k} knowledge={kA} />}
-                b={<AttrValue player={b} attr={k} knowledge={kB} />}
-                aValue={NEUTRAL_ATTRS.has(k) ? undefined : est(a, k)}
-                bValue={NEUTRAL_ATTRS.has(k) ? undefined : est(b, k)}
-              />
-            ))}
-          </div>
-        ))}
-        <div className="cmp-summary">
-          {a.lastName} {aWins} özellikte, {b.lastName} {bWins} özellikte önde.
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-/* ------------------------------------------------------------------ */
 /* Ekran                                                                */
 /* ------------------------------------------------------------------ */
 
@@ -325,9 +207,7 @@ export function SquadScreen() {
   const setFilters = useGameStore((s) => s.setSquadFilters);
   const compareIds = useGameStore((s) => s.compareIds);
   const toggleCompare = useGameStore((s) => s.toggleCompare);
-  const clearCompare = useGameStore((s) => s.clearCompare);
   const [sort, setSort] = useState<{ id: string; asc: boolean }>({ id: 'position', asc: true });
-  const [comparing, setComparing] = useState(false);
 
   const own = viewedClubId === world.playerClubId;
   const squad = clubPlayers(world, viewedClubId);
@@ -368,7 +248,6 @@ export function SquadScreen() {
     `${squad.filter((p) => p.injury || p.suspension > 0).length} sakat/cezalı`,
     `${squad.filter((p) => !p.loan && isExpiring(p, world.date)).length} sözleşmesi bitiyor`,
   ];
-  const comparePlayers = compareIds.map((id) => world.players[id]).filter((p): p is Player => p !== undefined);
 
   return (
     <section className="panel">
@@ -414,20 +293,7 @@ export function SquadScreen() {
         {players.length !== squad.length && <span className="muted">— {players.length} gösteriliyor</span>}
       </div>
 
-      {comparePlayers.length > 0 && (
-        <div className="compare-bar">
-          <span>Karşılaştırma:</span>
-          {comparePlayers.map((p) => (
-            <span key={p.id} className="compare-chip">
-              {p.firstName} {p.lastName}
-              <button title="Çıkar" onClick={() => toggleCompare(p.id)}>✕</button>
-            </span>
-          ))}
-          {comparePlayers.length < 2 && <span className="muted">bir oyuncu daha seç (başka kulüpten de olabilir)</span>}
-          <button className="btn btn-small btn-go" disabled={comparePlayers.length < 2} onClick={() => setComparing(true)}>Karşılaştır</button>
-          <button className="btn btn-small" onClick={clearCompare}>Temizle</button>
-        </div>
-      )}
+      <CompareBar />
 
       <table className="data-table clickable">
         <thead>
@@ -457,9 +323,6 @@ export function SquadScreen() {
           )}
         </tbody>
       </table>
-      {comparing && comparePlayers.length === 2 && (
-        <CompareDialog ids={[comparePlayers[0]!.id, comparePlayers[1]!.id]} onClose={() => setComparing(false)} />
-      )}
     </section>
   );
 }

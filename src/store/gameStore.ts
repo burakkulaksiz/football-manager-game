@@ -6,6 +6,7 @@ import {
   clubPlayers,
   createWorld,
   finishUserMatch,
+  MAX_COMPARE,
   SEASON_START_DATE,
   simulateToEnd,
   startUserMatch,
@@ -89,7 +90,7 @@ interface GameState {
   /** Kadro ekranı: görünüm ve filtreler (profil sayfasından dönünce korunur). */
   squadView: SquadView;
   squadFilters: SquadFilters;
-  /** Karşılaştırma için seçilen oyuncular (en fazla 2). */
+  /** Karşılaştırma için seçilen oyuncular (en fazla MAX_COMPARE). */
   compareIds: number[];
   /** Fikstür ekranı: kendi maçlarımız mı, haftalık görünüm mü; seçili hafta. */
   fixturesTab: FixturesTab;
@@ -314,7 +315,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       set((s) => ({
         compareIds: s.compareIds.includes(playerId)
           ? s.compareIds.filter((id) => id !== playerId)
-          : [...s.compareIds, playerId].slice(-2),
+          : [...s.compareIds, playerId].slice(-MAX_COMPARE),
       })),
 
     clearCompare: () => set({ compareIds: [] }),

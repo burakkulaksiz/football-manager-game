@@ -668,6 +668,21 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
   daire / yay / kale ölçüleri değişmez (uzun saha görünümü). cameraTransform / toScreen / screenUnit view alır. Tam ekranda skor
   ve olay şeritleri sahanın üstüne biner, saha ekranın tamamını kullanır.
 
+## Taktik ekranı ve karşılaştırma (kullanıcı istekleri)
+- Taktik: HTML5 sürükle-bırak (listeden oyuncu, dolu saha yeri, dolu yedek hücresi → saha yeri / yedek hücresi; hedefte oyuncu
+  varsa yer değiştirir; sahadan / yedekten kadro listesine bırakılan kadro dışı — removePlayer). Tıkla-seç-tıkla da duruyor.
+  Saha yerinde ve yedekte çift tık profili açar. Düzen: sol sütun (tactics-main) kadro + talimatlar + kaptan + uyarılar,
+  sağ sütun saha + yedekler position: sticky (main.content kaydırılırken ekranda kalır; saha 100vh − 440px yüksekliğe sığar).
+- Karşılaştırma en çok 4 oyuncu (engine/squad/compare.ts MAX_COMPARE; store toggleCompare son 4). Bileşenler
+  ui/components/CompareDialog.tsx: CompareBar (seçilenler, Karşılaştır, Temizle; pencereyi açar) — Kadro ve Taktik ekranında
+  (taktikte ⇆ sütunu ve seçili oyuncu için “Karşılaştırmaya Ekle”); CompareDialog 2–4 sütun (satırda tek başına en iyi değer
+  vurgulu, pencere genişliği oyuncu sayısına göre), başlıkta çıkar düğmesi.
+- Yardımcı antrenör notu: compareAdvice (saf, yapılandırılmış; metni arayüz kurar): pick (aynı mevki grubunda; yetenek + son
+  3 maç formu, sakat seçilmez, yorgun geri düşer), best / close (fark < 4), future (≤ 23 yaş, potansiyeli en iyinin bugününü 8+
+  geçen), inXI (kendi oyuncumuz ilk 11'de), fitsXI / rotation / prospect / notNeeded (başka kulübün oyuncusu, scoutVerdict),
+  value (en iyiye 6 puan yakın, değeri en iyinin %60'ından az), injured, tired (< %75), unknown (bilgi < 45: gözlemci gönder),
+  mixedPositions (farklı mevki grupları; öneri yok). Yetenek / potansiyel gözlemci tahmini (abilityEstimate).
+
 ## Şut ve ısı haritası
 - Motor kaydı (yalnızca gösterim, rng kullanmaz): MatchState.shots / MatchResult.shots — her şut (dakika sayacı,
   ikinci yarı işareti, taraf, oyuncu, sonuç gol / kurtarıldı / aut / engellendi, tür kafa / uzaktan / serbest vuruş /

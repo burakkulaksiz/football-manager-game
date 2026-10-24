@@ -1496,6 +1496,55 @@ select {
   margin-bottom: 0;
 }
 
+/* Sol sütun: kadro listesi, talimatlar, kaptan ve uyarılar (sağdaki saha sayfa boyunca ekranda kalsın) */
+.tactics-main {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.tactics-main .panel,
+.tactics-main .two-columns {
+  margin-bottom: 0;
+}
+
+/* Saha ve yedekler: sayfa kaydırılırken ekranda kalır; saha ekran yüksekliğine sığar */
+.tactics-pitch {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.tactics-pitch .pitch {
+  max-width: min(440px, calc((100vh - 440px) * 68 / 92));
+  min-width: 260px;
+}
+
+/* Sürükle-bırak */
+.tactics-squad tbody tr[draggable='true'],
+.pitch-slot[draggable='true'],
+.bench-cell[draggable='true'] {
+  cursor: grab;
+}
+
+.pitch-slot.drop .shirt-holder,
+.pitch-slot.drop .empty-slot {
+  outline: 3px dashed var(--accent);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+.bench-cell.drop {
+  box-shadow: 0 0 0 2px var(--accent);
+  background: rgba(246, 207, 60, 0.12);
+}
+
+/* Sahadan listeye bırakma: kadro dışı */
+.panel.drop-list {
+  box-shadow: inset 0 0 0 3px rgba(233, 128, 111, 0.6);
+}
+
 .tactics-squad td {
   padding-top: 4px;
   padding-bottom: 4px;
@@ -2689,33 +2738,71 @@ select {
   gap: 6px;
 }
 
-/* Karşılaştırma penceresi */
+/* Karşılaştırma penceresi: oyuncu sayısına göre genişler (2–4 sütun) */
 .modal:has(.compare) {
-  width: min(720px, 100%);
+  width: min(760px, 100%);
+}
+
+.modal:has(.compare.n3) {
+  width: min(960px, 100%);
+}
+
+.modal:has(.compare.n4) {
+  width: min(1160px, 100%);
 }
 
 .cmp-row {
   display: grid;
-  grid-template-columns: 1fr 190px 1fr;
+  grid-template-columns: 170px repeat(var(--cmp-cols, 2), minmax(0, 1fr));
   align-items: center;
   gap: 8px;
   padding: 3px 6px;
   border-bottom: 1px solid var(--row-line);
 }
 
-/* Değer kutusu yalnızca içeriği sarar: soldaki sağa, sağdaki sola yaslı */
-.cmp-row .cmp-val:first-child {
-  justify-self: end;
-}
-
-.cmp-row .cmp-val:last-child {
-  justify-self: start;
+/* Değer kutusu yalnızca içeriği sarar, sütunda ortalı */
+.cmp-row .cmp-val {
+  justify-self: center;
 }
 
 .cmp-label {
-  text-align: center;
   color: var(--text-muted);
   font-size: 12px;
+}
+
+/* Yardımcı antrenörün notu */
+.cmp-advice {
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  background: rgba(246, 207, 60, 0.08);
+}
+
+.cmp-advice-title {
+  margin-bottom: 4px;
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.cmp-advice ul {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.5;
+}
+
+.cmp-remove {
+  align-self: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
 }
 
 .cmp-val {
@@ -2735,22 +2822,13 @@ select {
   border-bottom: none;
 }
 
-.cmp-header .cmp-label {
-  align-self: center;
-  font-family: var(--font-display);
-  font-size: 22px;
-  color: var(--accent);
-}
-
 .cmp-head {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 4px;
-}
-
-.cmp-header .cmp-head:first-child {
-  align-items: flex-end;
-  text-align: right;
+  min-width: 0;
+  text-align: center;
 }
 
 .cmp-name {

@@ -649,6 +649,25 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
   birincileri, sonra en iyi ikinciler; puan, averaj, gol), metin qualifierRuleText.
 - DİKKAT: yeni isim havuzu / kadro dosyası eklenince testler glob sonucunu önbellekten okuyabilir → node_modules/.vitest-cache sil.
 
+## 2D saha akışı (kullanıcı istekleri: akıcılık, falso / yüksek top, top sürme, genişlik, baskı çubuğu, belirgin gol)
+- Animasyon CSS geçişlerinden requestAnimationFrame döngüsüne taşındı (PitchView): oyuncu, top, gölge ve kamera her karede
+  DOM'a doğrudan yazılır; React yalnızca gösterilen kare değişince (adlar, kartlar, etiketler) çizer. Hareket hesabı saf ve
+  testli: ui/pitchMotion.ts — sampleScene (kareler arası easeInOut; girişte oyuncular önceki sahnenin son yerinden süzülür,
+  önceki yoksa belirir), ballPath (ikinci dereceden Bézier: kontrol noktası yolun ortasından curl×2 yana; yükseklik parabol),
+  ballTrack (kavisli iz), dominance. Yakın kamera topu üstel yumuşatmayla izler (CAMERA_LAG_MS 220). Ölçüm: ~60 fps (16,8 ms).
+- pitchScene: FrameMove pass / lob / cross / dribble / shot; SceneFrame.curl, height (shapeBallPaths: korner ortası 6,5–8,5 m,
+  kanattan ceza sahasına orta, 30 m+ pas havadan, serbest vuruş falsolu 3,5–6 m ve 2,2+ m yüksek, uzaktan şut biraz havadan,
+  bazen üstten aut). Top sürme: oyun kurmada ve asistten önce (yarı yarıya), golcü bazen topu geride alıp şut yerine sürer.
+  Bir anın en çok 8 karesi (MAX_PLAY_FRAMES). Süreler harekete göre (frameDurationMs: şut 520, pas 750, havadan/orta/sürme
+  950–1000, sevinç 900 ms); LEAD_IN_MS 400; revealDelayMs (MatchScreen skoru bununla açıklar), sceneDurationMs.
+- Sakin dakika: boş saha yerine soluk saha + baskı çubuğu (DominanceBar): iki takım renginde birbirini iten çubuk, sınırda top;
+  dominance = son 10 dk, yeni dakikalar ağır (0,82^yaş), ataklar %60 + topa sahip olma (timeline harfi) %40.
+- Büyük bant (bannerKind): GOL! (golcü, sevinç boyunca), PENALTI! (penaltı dizilişinden sonuca), PENALTI KAÇTI!, KIRMIZI KART;
+  golde sahada beyaz parlama ve file sallanır; skor tabelası (ve tam ekran şeridi) gol olunca parlar (useGoalFlash).
+- Genişlik: saha boyuna uzatılabilir (pitch.ts makeView(k), stretchFor; en çok MAX_STRETCH 1,4): x koordinatları k ile çarpılır,
+  daire / yay / kale ölçüleri değişmez (uzun saha görünümü). cameraTransform / toScreen / screenUnit view alır. Tam ekranda skor
+  ve olay şeritleri sahanın üstüne biner, saha ekranın tamamını kullanır.
+
 ## Şut ve ısı haritası
 - Motor kaydı (yalnızca gösterim, rng kullanmaz): MatchState.shots / MatchResult.shots — her şut (dakika sayacı,
   ikinci yarı işareti, taraf, oyuncu, sonuç gol / kurtarıldı / aut / engellendi, tür kafa / uzaktan / serbest vuruş /

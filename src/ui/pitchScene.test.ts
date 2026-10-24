@@ -3,7 +3,20 @@ import { clubPlayers, createMatch, createWorld, stepMatch, substitute, type Matc
 import { autoSelectLineup } from '../engine/match/formation';
 import { gameData } from '../gameData';
 import { ballSpot, PITCH_LENGTH, PITCH_WIDTH } from './pitch';
-import { buildScene, frameSpots, isHighlight, revealIndex, playLabel, SCENE_FRAME_MS, SCENE_HOLD_MS, sceneDurationMs } from './pitchScene';
+import {
+  bannerKind,
+  buildScene,
+  frameDurationMs,
+  frameSpots,
+  isHighlight,
+  LEAD_IN_MS,
+  MAX_PLAY_FRAMES,
+  playLabel,
+  revealDelayMs,
+  revealIndex,
+  SCENE_HOLD_MS,
+  sceneDurationMs,
+} from './pitchScene';
 
 const world = createWorld(gameData, 3, 'galatasaray', '2026-07-01');
 
@@ -25,13 +38,13 @@ function playAll(m: MatchState): { minute: number; play: MatchPlay; state: Match
 describe('2D saha sahnesi', () => {
   const plays = [9, 10, 11].flatMap((seed) => playAll(match(seed)));
 
-  it('sonuca kadar 1–5 kare, sonuç karesi motorun anıyla aynı yerde, top saha içinde (gol/aut hariç)', () => {
+  it('sonuca kadar en çok 8 kare, sonuç karesi motorun anıyla aynı yerde, top saha içinde (gol/aut hariç)', () => {
     // Değişiklik ve kırmızı kart sahnesi uzatır (ayrı testlerde)
     for (const { minute, play, state } of plays.filter((p) => !p.play.subs && p.play.card?.type !== 'red')) {
       const scene = buildScene(state, play, minute);
       const reveal = revealIndex(scene);
       expect(reveal).toBeGreaterThanOrEqual(0);
-      expect(reveal).toBeLessThanOrEqual(4);
+      expect(reveal).toBeLessThanOrEqual(MAX_PLAY_FRAMES - 1);
       expect(scene[reveal]!.ball).toEqual(ballSpot(play, minute));
       // Gol dışında sonuç son karedir; golde ardından 3 sevinç karesi
       expect(scene.length - 1 - reveal).toBe(play.kind === 'goal' ? 3 : 0);
@@ -51,10 +64,12 @@ describe('2D saha sahnesi', () => {
     for (const { minute, play, state } of goals) {
       const scene = buildScene(state, play, minute);
       const carriers = scene.map((f) => f.carrierId);
-      // Şut, sonuç karesinden hemen önceki karede (golcü oyun kurulumunda da topla buluşmuş olabilir)
+      // Şut, sonuç karesinden hemen önceki karede; golcü topu biraz sürmüş olabilir, ondan önce topa asist yapan sahip
       const shot = revealIndex(scene) - 1;
       expect(carriers[shot]).toBe(play.playerId);
-      expect(carriers[shot - 1]).toBe(play.assistId);
+      let before = shot - 1;
+      while (before > 0 && carriers[before] === play.playerId) before--;
+      expect(carriers[before]).toBe(play.assistId);
       expect(scene[revealIndex(scene)]!.move).toBe('shot');
     }
   });
@@ -176,7 +191,8 @@ describe('2D saha sahnesi', () => {
     expect(highlights).toBeGreaterThan(10);
     expect(highlights / all.length).toBeLessThan(0.6);
     const scene = buildScene(all[0]!.state, all.find((p) => p.play.kind === 'goal' || p.play.kind === 'save')!.play, 20);
-    expect(sceneDurationMs(scene)).toBe((scene.length - 1) * SCENE_FRAME_MS + SCENE_HOLD_MS);
+    expect(sceneDurationMs(scene)).toBe(LEAD_IN_MS + scene.slice(1).reduce((s, f) => s + frameDurationMs(f), 0) + SCENE_HOLD_MS);
+    expect(revealDelayMs(scene)).toBeLessThan(sceneDurationMs(scene));
   });
 
   it('sakatlanan oyuncu son karede işaretli ve görünür', () => {
@@ -249,5 +265,47 @@ describe('2D saha sahnesi', () => {
     const reveal = revealIndex(scene);
     expect(scene.length - 1 - reveal).toBe(1);
     expect(frameSpots(m, scene.at(-1)!, false).get(red)!.at.y).toBeGreaterThan(PITCH_WIDTH);
+  });
+});
+
+describe('akış: top sürme, havadan top, bantlar', () => {
+  const plays = [9, 10, 11, 12].flatMap((seed) => playAll(match(seed)));
+  const scenes = plays.filter((p) => isHighlight(p.play)).map((p) => ({ ...p, scene: buildScene(p.state, p.play, p.minute) }));
+
+  it('top sürmede topu aynı oyuncu taşır ve top hücum yönünde ilerler', () => {
+    const dribbles = scenes.flatMap(({ scene, play }) => scene.flatMap((f, i) => (f.move === 'dribble' && i > 0 ? [{ f, prev: scene[i - 1]!, side: play.side }] : [])));
+    expect(dribbles.length).toBeGreaterThan(5);
+    for (const { f, prev, side } of dribbles) {
+      expect(f.carrierId).toBe(prev.carrierId);
+      expect(side === 'home' ? f.ball.x - prev.ball.x : prev.ball.x - f.ball.x).toBeGreaterThan(0);
+    }
+  });
+
+  it('korner ortası ve uzun paslar havadan; serbest vuruş şutu falsolu', () => {
+    const corners = scenes.filter(({ play }) => play.fromCorner);
+    expect(corners.length).toBeGreaterThan(0);
+    for (const { scene } of corners) {
+      const cross = scene.find((f) => f.move === 'cross');
+      expect(cross?.height).toBeGreaterThan(5);
+    }
+    const lobs = scenes.flatMap(({ scene }) => scene.filter((f) => f.move === 'lob'));
+    for (const f of lobs) expect(f.height).toBeGreaterThan(2);
+    for (const { scene } of scenes.filter(({ play }) => play.fromFreeKick)) {
+      const shot = scene.find((f) => f.move === 'shot')!;
+      expect(Math.abs(shot.curl ?? 0)).toBeGreaterThan(3);
+    }
+  });
+
+  it('bantlar: penaltı kararı sonuçtan önce, gol sonuçtan sonra (santrada kalkar)', () => {
+    const goal = scenes.find(({ play }) => play.kind === 'goal')!;
+    const reveal = revealIndex(goal.scene);
+    expect(bannerKind(goal.play, goal.scene, reveal - 1, false)).toBeNull();
+    expect(bannerKind(goal.play, goal.scene, reveal, true)).toBe('goal');
+    expect(bannerKind(goal.play, goal.scene, goal.scene.length - 1, true)).toBeNull();
+    const penalty = scenes.find(({ play }) => play.fromPenalty);
+    if (penalty) {
+      const spot = penalty.scene.findIndex((f) => f.setPiece?.kind === 'penalty');
+      expect(bannerKind(penalty.play, penalty.scene, spot, false)).toBe('penalty');
+    }
   });
 });

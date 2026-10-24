@@ -204,8 +204,32 @@ export function colorsClash(a: string, b: string): boolean {
 /* Kamera                                                               */
 /* ------------------------------------------------------------------ */
 
-/** Sahanın çizim alanı (SVG viewBox): kaleler ve kenar payı dahil. */
-export const PITCH_VIEW = { x: -3, y: -2, w: PITCH_LENGTH + 6, h: PITCH_WIDTH + 4 } as const;
+/**
+ * Sahanın çizim alanı (SVG viewBox): kaleler ve kenar payı dahil. `k`: saha boyuna uzatma (geniş ekranda saha
+ * genişliği doldursun diye uzun çizilir; x koordinatları k ile çarpılır, daire / kale gibi ölçüler değişmez).
+ */
+export interface PitchViewBox {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  k: number;
+}
+
+export function makeView(k = 1): PitchViewBox {
+  return { x: -3, y: -2, w: PITCH_LENGTH * k + 6, h: PITCH_WIDTH + 4, k };
+}
+
+export const PITCH_VIEW: PitchViewBox = makeView(1);
+/** En fazla uzatma (daha fazlasında saha göze fazla uzun görünür). */
+export const MAX_STRETCH = 1.4;
+
+/** Kullanılabilir alana (px) göre uzatma: alan sahadan genişse saha uzar, en fazla MAX_STRETCH. */
+export function stretchFor(width: number, height: number): number {
+  if (height <= 0) return 1;
+  const k = ((width / height) * PITCH_VIEW.h - 6) / PITCH_LENGTH;
+  return clamp(k, 1, MAX_STRETCH);
+}
 
 /** Yakın kameranın büyütmesi. */
 export const CAMERA_ZOOM = 1.9;
@@ -222,10 +246,10 @@ export interface CameraTransform {
  * Hedef yoksa ya da büyütme 1 ise tam saha.
  * CSS: transform-origin 0 0; transform: translate(tx·100%, ty·100%) scale(zoom).
  */
-export function cameraTransform(target: Point | null, zoom: number): CameraTransform {
+export function cameraTransform(target: Point | null, zoom: number, view: PitchViewBox = PITCH_VIEW): CameraTransform {
   if (!target || zoom <= 1) return { tx: 0, ty: 0, zoom: 1 };
-  const fx = (target.x - PITCH_VIEW.x) / PITCH_VIEW.w;
-  const fy = (target.y - PITCH_VIEW.y) / PITCH_VIEW.h;
+  const fx = (target.x * view.k - view.x) / view.w;
+  const fy = (target.y - view.y) / view.h;
   return {
     tx: clamp(0.5 - fx * zoom, 1 - zoom, 0),
     ty: clamp(0.5 - fy * zoom, 1 - zoom, 0),
@@ -238,14 +262,14 @@ export function cameraTransform(target: Point | null, zoom: number): CameraTrans
  * Oyuncular büyütülen katmanın dışında çizilir (yazılar yakın kamerada da net kalsın);
  * konum ve birim boyutu (`unit`: metre başına px) kamerayı burada içerir.
  */
-export function toScreen(p: Point, cam: CameraTransform, width: number): Point {
-  const height = (width * PITCH_VIEW.h) / PITCH_VIEW.w;
-  const fx = (p.x - PITCH_VIEW.x) / PITCH_VIEW.w;
-  const fy = (p.y - PITCH_VIEW.y) / PITCH_VIEW.h;
+export function toScreen(p: Point, cam: CameraTransform, width: number, view: PitchViewBox = PITCH_VIEW): Point {
+  const height = (width * view.h) / view.w;
+  const fx = (p.x * view.k - view.x) / view.w;
+  const fy = (p.y - view.y) / view.h;
   return { x: (cam.tx + fx * cam.zoom) * width, y: (cam.ty + fy * cam.zoom) * height };
 }
 
-/** Ekranda bir metrenin px karşılığı (kamera büyütmesiyle). */
-export function screenUnit(cam: CameraTransform, width: number): number {
-  return (width / PITCH_VIEW.w) * cam.zoom;
+/** Ekranda bir metrenin px karşılığı (kamera büyütmesiyle; uzatılmış sahada dikey metre — noktalar yuvarlak kalsın). */
+export function screenUnit(cam: CameraTransform, width: number, view: PitchViewBox = PITCH_VIEW): number {
+  return (width / view.w) * cam.zoom;
 }

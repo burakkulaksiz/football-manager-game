@@ -18,7 +18,7 @@ import { MatchStatRows } from '../components/MatchStatRows';
 import { AssistantPanel } from '../components/AssistantPanel';
 import { MatchMaps } from '../components/MatchMaps';
 import { PitchView, type CameraMode } from '../components/PitchView';
-import { buildScene, isHighlight, QUIET_MINUTE_MS, revealIndex, SCENE_FRAME_MS, sceneDurationMs } from '../pitchScene';
+import { buildScene, isHighlight, QUIET_MINUTE_MS, revealDelayMs, sceneDurationMs } from '../pitchScene';
 import { MENTALITY_LABELS, POSITION_LABELS, positionGroup, ratingClass } from '../labels';
 
 /**
@@ -94,11 +94,29 @@ function scorerLines(world: GameWorld, match: MatchState, side: Side, held: Held
   return [...byPlayer.entries()].map(([id, mins]) => `${world.players[id]?.lastName ?? '?'} ${mins.join(', ')}`);
 }
 
+/** Gösterilen skor arttığında birkaç saniye true (gol anında skor parlasın). */
+function useGoalFlash(total: number): boolean {
+  const [flash, setFlash] = useState(false);
+  const last = useRef(total);
+  useEffect(() => {
+    if (total <= last.current) {
+      last.current = total;
+      return;
+    }
+    last.current = total;
+    setFlash(true);
+    const timer = setTimeout(() => setFlash(false), 2600);
+    return () => clearTimeout(timer);
+  }, [total]);
+  return flash;
+}
+
 function Scoreboard({ match, held }: { match: MatchState; held: Held | null }) {
   const world = useWorld();
   const home = getClub(world, match.home.clubId);
   const away = getClub(world, match.away.clubId);
   const live = match.period === 'first' || match.period === 'second';
+  const flash = useGoalFlash((held?.home ?? match.score.home) + (held?.away ?? match.score.away));
 
   return (
     <div className="scoreboard">
@@ -110,7 +128,7 @@ function Scoreboard({ match, held }: { match: MatchState; held: Held | null }) {
         <div className="sb-scorers">{scorerLines(world, match, 'home', held).map((l) => <div key={l}>{l}</div>)}</div>
       </div>
       <div className="sb-center">
-        <div className="sb-score">
+        <div className={`sb-score${flash ? ' goal-flash' : ''}`}>
           {held?.home ?? match.score.home}<span className="sb-dash">–</span>{held?.away ?? match.score.away}
         </div>
         {match.aggregate && (
@@ -253,10 +271,11 @@ function FullscreenBar({ match, held, running, onToggleRun, onExit }: {
   const world = useWorld();
   const home = getClub(world, match.home.clubId);
   const away = getClub(world, match.away.clubId);
+  const flash = useGoalFlash((held?.home ?? match.score.home) + (held?.away ?? match.score.away));
   return (
     <div className="fs-bar">
       <span className="fs-team" style={{ background: home.colors.primary, color: readableText(home.colors.primary, home.colors.secondary) }}>{home.name}</span>
-      <span className="fs-score">{held?.home ?? match.score.home} – {held?.away ?? match.score.away}</span>
+      <span className={`fs-score${flash ? ' goal-flash' : ''}`}>{held?.home ?? match.score.home} – {held?.away ?? match.score.away}</span>
       <span className="fs-team" style={{ background: away.colors.primary, color: readableText(away.colors.primary, away.colors.secondary) }}>{away.name}</span>
       <span className="fs-clock">{clockText(match)}</span>
       {match.period !== 'full' && (
@@ -575,8 +594,7 @@ export function MatchScreen() {
     if (!match || !before || !showPitch || !isHighlight(match.lastPlay)) return;
     setHeld(before);
     // Sonuç karesine gelince (golde sevinçten önce) açıklanır
-    const reveal = revealIndex(buildScene(match, match.lastPlay, match.minute));
-    const timer = setTimeout(() => setHeld(null), reveal * SCENE_FRAME_MS);
+    const timer = setTimeout(() => setHeld(null), revealDelayMs(buildScene(match, match.lastPlay, match.minute)));
     return () => {
       clearTimeout(timer);
       setHeld(null);

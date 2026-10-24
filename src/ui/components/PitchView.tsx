@@ -2,51 +2,74 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSPr
 import { getClub, type MatchState, type Side } from '../../engine';
 import { useWorld } from '../../store/gameStore';
 import { readableText } from '../colors';
-import { cameraTransform, CAMERA_ZOOM, colorsClash, PITCH_LENGTH, PITCH_VIEW, PITCH_WIDTH, screenUnit, toScreen } from '../pitch';
-import { buildScene, frameSpots, isHighlight, playLabel, revealIndex, SCENE_FRAME_MS } from '../pitchScene';
+import {
+  cameraTransform,
+  CAMERA_ZOOM,
+  colorsClash,
+  makeView,
+  PITCH_LENGTH,
+  PITCH_WIDTH,
+  screenUnit,
+  stretchFor,
+  toScreen,
+  type CameraTransform,
+  type PitchViewBox,
+} from '../pitch';
+import { ballTrack, dominance, sampleScene, type Spots } from '../pitchMotion';
+import { bannerKind, buildScene, frameSpots, frameStartsMs, isHighlight, playLabel, revealIndex, SCENE_HOLD_MS } from '../pitchScene';
 
 /** Forma/şort sınırı: noktanın yukarıdan %69'u (yarıçap 1.3, merkezin 0.5 altı). */
 const SHIRT_SPLIT = 69;
 const KEEPER_KIT = '#1d1f24';
+/** Yakın kameranın topu izleme yumuşaklığı (ms; büyüdükçe kamera daha ağır kayar). */
+const CAMERA_LAG_MS = 220;
 
-/** Öğenin genişliği (px); boyut değişince güncellenir. */
-function useElementWidth(ref: React.RefObject<HTMLElement | null>): number {
+/** Öğenin iç genişliği (px, dolgu hariç); boyut değişince güncellenir. */
+function useInnerWidth(ref: React.RefObject<HTMLElement | null>): number {
   const [width, setWidth] = useState(0);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    setWidth(el.clientWidth);
-    const observer = new ResizeObserver(() => setWidth(el.clientWidth));
+    const measure = () => {
+      const style = getComputedStyle(el);
+      setWidth(el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
   }, [ref]);
   return width;
 }
 
-/** Şut karesinde top hızlı gider; diğer karelerde oyuncular ve top yavaşça kayar. */
-const SHOT_MOVE_MS = 380;
-const MOVE_MS = Math.round(SCENE_FRAME_MS * 0.8);
-
-export function PitchMarkings() {
-  const L = PITCH_LENGTH;
+/** Saha çizgileri; `k`: boyuna uzatma (x koordinatları uzar, daireler ve yaylar değişmez). */
+export function PitchMarkings({ k = 1 }: { k?: number }) {
+  const L = PITCH_LENGTH * k;
   const W = PITCH_WIDTH;
+  const X = (x: number) => x * k;
   const box = (x: number, depth: number, width: number) =>
     <rect x={x} y={(W - width) / 2} width={depth} height={width} />;
+  // Ceza sahası yayı: penaltı noktasından 9.15 m, ceza sahası çizgisinin dışında kalan kısmı
+  const spotToLine = X(16.5) - X(11);
+  const arc = spotToLine < 9.15 ? Math.sqrt(9.15 ** 2 - spotToLine ** 2) : 0;
   return (
     <g className="pitch-lines">
       <rect x={0} y={0} width={L} height={W} />
       <line x1={L / 2} y1={0} x2={L / 2} y2={W} />
       <circle cx={L / 2} cy={W / 2} r={9.15} />
       <circle cx={L / 2} cy={W / 2} r={0.4} className="spot" />
-      {box(0, 16.5, 40.32)}
-      {box(L - 16.5, 16.5, 40.32)}
-      {box(0, 5.5, 18.32)}
-      {box(L - 5.5, 5.5, 18.32)}
-      <circle cx={11} cy={W / 2} r={0.4} className="spot" />
-      <circle cx={L - 11} cy={W / 2} r={0.4} className="spot" />
-      {/* Ceza sahası yayları */}
-      <path d={`M 16.5 ${W / 2 - 7.31} A 9.15 9.15 0 0 1 16.5 ${W / 2 + 7.31}`} />
-      <path d={`M ${L - 16.5} ${W / 2 - 7.31} A 9.15 9.15 0 0 0 ${L - 16.5} ${W / 2 + 7.31}`} />
+      {box(0, X(16.5), 40.32)}
+      {box(L - X(16.5), X(16.5), 40.32)}
+      {box(0, X(5.5), 18.32)}
+      {box(L - X(5.5), X(5.5), 18.32)}
+      <circle cx={X(11)} cy={W / 2} r={0.4} className="spot" />
+      <circle cx={L - X(11)} cy={W / 2} r={0.4} className="spot" />
+      {arc > 0 && (
+        <>
+          <path d={`M ${X(16.5)} ${W / 2 - arc} A 9.15 9.15 0 0 1 ${X(16.5)} ${W / 2 + arc}`} />
+          <path d={`M ${L - X(16.5)} ${W / 2 - arc} A 9.15 9.15 0 0 0 ${L - X(16.5)} ${W / 2 + arc}`} />
+        </>
+      )}
       {/* Köşe yayları */}
       <path d={`M 0 1 A 1 1 0 0 0 1 0`} />
       <path d={`M ${L - 1} 0 A 1 1 0 0 0 ${L} 1`} />
@@ -56,17 +79,17 @@ export function PitchMarkings() {
   );
 }
 
-const VIEW_BOX = `${PITCH_VIEW.x} ${PITCH_VIEW.y} ${PITCH_VIEW.w} ${PITCH_VIEW.h}`;
-const ASPECT = PITCH_VIEW.w / PITCH_VIEW.h;
+const viewBoxOf = (v: PitchViewBox) => `${v.x} ${v.y} ${v.w} ${v.h}`;
 
-/** Çim ve saha çizgileri: değişmez, yalnızca boyut değişince yeniden çizilir. */
-const PitchBackground = memo(function PitchBackground() {
+/** Çim ve saha çizgileri: değişmez, yalnızca boyut / uzatma değişince yeniden çizilir. */
+const PitchBackground = memo(function PitchBackground({ view }: { view: PitchViewBox }) {
+  const L = PITCH_LENGTH * view.k;
   return (
-    <svg className="pitch-grass" viewBox={VIEW_BOX} role="img" aria-label="2D saha">
+    <svg className="pitch-grass" viewBox={viewBoxOf(view)} role="img" aria-label="2D saha">
       <defs>
-        <pattern id="pitch-stripes" width={PITCH_LENGTH / 9} height={PITCH_WIDTH} patternUnits="userSpaceOnUse">
-          <rect width={PITCH_LENGTH / 18} height={PITCH_WIDTH} fill="#2f7a2a" />
-          <rect x={PITCH_LENGTH / 18} width={PITCH_LENGTH / 18} height={PITCH_WIDTH} fill="#2a6f25" />
+        <pattern id="pitch-stripes" width={L / 9} height={PITCH_WIDTH} patternUnits="userSpaceOnUse">
+          <rect width={L / 18} height={PITCH_WIDTH} fill="#2f7a2a" />
+          <rect x={L / 18} width={L / 18} height={PITCH_WIDTH} fill="#2a6f25" />
         </pattern>
         <linearGradient id="pitch-shade" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#000" stopOpacity="0.28" />
@@ -78,11 +101,11 @@ const PitchBackground = memo(function PitchBackground() {
           <stop offset="1" stopColor="#fff8d0" stopOpacity="0" />
         </radialGradient>
       </defs>
-      <rect x={0} y={0} width={PITCH_LENGTH} height={PITCH_WIDTH} fill="url(#pitch-stripes)" />
+      <rect x={0} y={0} width={L} height={PITCH_WIDTH} fill="url(#pitch-stripes)" />
       {/* Işık: üst tribünün gölgesi ve karşıdan vuran hafif güneş */}
-      <rect x={PITCH_VIEW.x} y={PITCH_VIEW.y} width={PITCH_VIEW.w} height={PITCH_VIEW.h} fill="url(#pitch-shade)" />
-      <rect x={PITCH_VIEW.x} y={PITCH_VIEW.y} width={PITCH_VIEW.w} height={PITCH_VIEW.h} fill="url(#pitch-sun)" />
-      <PitchMarkings />
+      <rect x={view.x} y={view.y} width={view.w} height={view.h} fill="url(#pitch-shade)" />
+      <rect x={view.x} y={view.y} width={view.w} height={view.h} fill="url(#pitch-sun)" />
+      <PitchMarkings k={view.k} />
     </svg>
   );
 });
@@ -91,10 +114,11 @@ const GOAL_DEPTH = 2.2;
 const GOAL_HALF = 3.66;
 
 /** Kale: file (çapraz örgü) ve direkler. Gol anında file dışarı doğru sallanır. */
-function GoalNet({ end, ripple }: { end: 'left' | 'right'; ripple: string | null }) {
-  const x = end === 'left' ? -GOAL_DEPTH : PITCH_LENGTH;
-  const lineX = end === 'left' ? 0 : PITCH_LENGTH;
-  const backX = end === 'left' ? -GOAL_DEPTH : PITCH_LENGTH + GOAL_DEPTH;
+function GoalNet({ end, ripple, k }: { end: 'left' | 'right'; ripple: string | null; k: number }) {
+  const L = PITCH_LENGTH * k;
+  const x = end === 'left' ? -GOAL_DEPTH : L;
+  const lineX = end === 'left' ? 0 : L;
+  const backX = end === 'left' ? -GOAL_DEPTH : L + GOAL_DEPTH;
   const top = PITCH_WIDTH / 2 - GOAL_HALF;
   return (
     <g>
@@ -117,8 +141,8 @@ function GoalNet({ end, ripple }: { end: 'left' | 'right'; ripple: string | null
 
 /** Sahanın altında kalan şerit ve boşluklar (px): saha + şerit ekrana sığsın. */
 const BELOW_PITCH = 64;
-/** Tam ekranda sahanın üstündeki skor şeridi ve altındaki olay şeridi (px). */
-const FULLSCREEN_CHROME = 120;
+/** Tam ekranda skor ve olay şeritleri sahanın üstüne biner: yalnızca kenar boşluğu (px). */
+const FULLSCREEN_MARGIN = 16;
 
 /**
  * Sahanın en fazla yüksekliği: kaydırma alanının (main.content) görünür yüksekliğinden sahanın
@@ -129,7 +153,7 @@ function useFitHeight(ref: React.RefObject<HTMLDivElement | null>, layoutKey: st
   useLayoutEffect(() => {
     const measure = () => {
       if (fullscreen) {
-        setHeight(Math.max(320, window.innerHeight - FULLSCREEN_CHROME));
+        setHeight(Math.max(320, window.innerHeight - FULLSCREEN_MARGIN));
         return;
       }
       const el = ref.current;
@@ -146,10 +170,43 @@ function useFitHeight(ref: React.RefObject<HTMLDivElement | null>, layoutKey: st
   return height;
 }
 
+const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+/** Sakin dakika: boş saha yerine iki takımın birbirini ittiği baskı çubuğu (son dakikaların ataklarına ve topa sahip olmaya göre). */
+function DominanceBar({ match, colors, names }: { match: MatchState; colors: Record<Side, string>; names: Record<Side, string> }) {
+  const d = dominance(match);
+  const home = 50 + d * 42;
+  const play = match.lastPlay;
+  const other = (s: Side): Side => (s === 'home' ? 'away' : 'home');
+  const now = !play
+    ? ''
+    : play.kind === 'attack' ? `${names[play.side]} atakta`
+      : play.kind === 'foul' ? `${names[other(play.side)]} faul yaptı`
+        : `${names[play.side]} oyunu kuruyor`;
+  const caption = Math.abs(d) < 0.15 ? 'Oyun dengede' : `${names[d > 0 ? 'home' : 'away']} baskılı`;
+  return (
+    <div className="pitch-quiet">
+      <div className="dom-names">
+        <span style={{ color: colors.home }}>{names.home}</span>
+        <span className="dom-caption">{caption}</span>
+        <span style={{ color: colors.away }}>{names.away}</span>
+      </div>
+      <div className="dom-bar">
+        <div className="dom-side home" style={{ width: `${home}%`, background: colors.home }}><span className="dom-arrow">›</span></div>
+        <div className="dom-side away" style={{ width: `${100 - home}%`, background: colors.away }}><span className="dom-arrow">‹</span></div>
+        <div className="dom-knot" style={{ left: `${home}%` }} />
+      </div>
+      {now && <div className="dom-now">{now}</div>}
+    </div>
+  );
+}
+
 /**
  * Canlı maçın 2D görünümü (FM'deki "önemli anlar" gibi): yalnızca önemli anlar (şut, gol, duran top,
- * kart, sakatlık, oyuncu değişikliği) kısa bir sahne olarak yavaşça oynar; sakin dakikalarda saha boştur.
+ * kart, sakatlık, oyuncu değişikliği) kısa bir sahne olarak oynar; sakin dakikalarda baskı çubuğu görünür.
  * Maç başlamadan ve devre arasında takımlar başlama dizilişinde görünür.
+ * Akış requestAnimationFrame ile: oyuncular ve top her karede (DOM'a doğrudan) yerleştirilir, React yalnızca
+ * sahnenin karesi değişince (adlar, kartlar, etiketler) yeniden çizer.
  */
 export type CameraMode = 'full' | 'follow';
 
@@ -161,28 +218,104 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
   const visible = kickoff || isHighlight(play);
   // Sahne yalnızca yeni anda yeniden kurulur (değişiklik vb. ile maç nesnesi değişse de baştan başlamaz)
   const scene = useMemo(() => (visible ? buildScene(match, play, match.minute) : []), [play, match.minute, match.period, visible]);
+  const spots = useMemo(() => scene.map((f) => frameSpots(match, f, kickoff)), [scene]);
+  const starts = useMemo(() => frameStartsMs(scene), [scene]);
+  const reveal = scene.length > 0 ? revealIndex(scene) : 0;
 
-  // Sahne kare kare ilerler; yeni anda baştan başlar (eski sahnenin karesi gösterilmez).
-  const [step, setStep] = useState({ scene, index: 0 });
-  const index = step.scene === scene ? step.index : 0;
-  useEffect(() => {
-    if (scene.length <= 1) return;
-    let i = 0;
-    const timer = setInterval(() => {
-      i++;
-      setStep({ scene, index: i });
-      if (i >= scene.length - 1) clearInterval(timer);
-    }, SCENE_FRAME_MS);
-    return () => clearInterval(timer);
-  }, [scene]);
-
+  // Boyut: kullanılabilir genişlik ve yükseklik; alan sahadan genişse saha boyuna uzar (geniş ekranı doldursun)
   const maxHeight = useFitHeight(ref, match.period, fullscreen);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const stageWidth = useElementWidth(stageRef);
+  const available = useInnerWidth(ref);
+  const view = useMemo(() => makeView(available > 0 ? stretchFor(available, maxHeight) : 1), [available, maxHeight]);
+  const stageWidth = available > 0 ? Math.min(available, Math.round((maxHeight * view.w) / view.h)) : 0;
+
+  // Gösterilen kare (adlar, kartlar, etiketler): animasyon döngüsü kare değişince günceller
+  const [shown, setShown] = useState({ scene, index: 0 });
+  const index = shown.scene === scene ? shown.index : 0;
+  const revealed = scene.length > 0 && index >= reveal;
   const frame = scene[Math.min(index, scene.length - 1)];
   const previous = index > 0 ? scene[index - 1] : undefined;
-  // Sonuç (etiket, kart, sakatlık) sonuç karesinden itibaren görünür; golde ardından sevinç gelir
-  const revealed = scene.length > 0 && index >= revealIndex(scene);
+
+  const dotRefs = useRef(new Map<number, HTMLDivElement>());
+  const ballRef = useRef<HTMLDivElement>(null);
+  const shadowRef = useRef<HTMLDivElement>(null);
+  const cameraRef = useRef<HTMLDivElement>(null);
+  const layerRef = useRef<HTMLDivElement>(null);
+  /** Önceki sahnenin son yerleri: yeni sahnenin girişinde oyuncular buradan süzülür (ışınlanmasın). */
+  const lastPlayers = useRef<Spots | undefined>(undefined);
+  const cam = useRef<CameraTransform>({ tx: 0, ty: 0, zoom: 1 });
+  const sceneStart = useRef<{ scene: unknown; at: number }>({ scene: null, at: 0 });
+
+  useEffect(() => {
+    if (scene.length === 0) {
+      lastPlayers.current = undefined;
+      return;
+    }
+    if (stageWidth <= 0) return;
+    // Aynı sahne (yalnızca boyut değişti): baştan başlamaz
+    if (sceneStart.current.scene !== scene) sceneStart.current = { scene, at: performance.now() };
+    const begin = sceneStart.current.at;
+    const from = lastPlayers.current;
+    const reduce = reducedMotion();
+    const end = (starts.at(-1) ?? 0) + SCENE_HOLD_MS;
+    let raf = 0;
+    let lastIndex = -1;
+    let lastTime = performance.now();
+    const tick = (now: number) => {
+      const t = now - begin;
+      let sample = sampleScene(scene, spots, t, from, starts);
+      if (reduce && !sample.leadIn) {
+        sample = { ...sample, players: spots[sample.index]!, ball: scene[sample.index]!.ball, height: 0 };
+      }
+      if (sample.index !== lastIndex) {
+        lastIndex = sample.index;
+        setShown({ scene, index: sample.index });
+      }
+      const target = scene[sample.index]!;
+      // Yakın kamera: topu (sevinçte golcüyü) izler; santra ve başlama dizilişinde tam saha
+      const focus = target.focusId !== undefined ? sample.players.get(target.focusId)?.at : undefined;
+      const follow = camera === 'follow' && !kickoff && !target.kickoff;
+      const desired = cameraTransform(follow ? focus ?? sample.ball : null, CAMERA_ZOOM, view);
+      const dt = Math.min(100, now - lastTime);
+      lastTime = now;
+      const blend = reduce ? 1 : 1 - Math.exp(-dt / CAMERA_LAG_MS);
+      const c = cam.current;
+      c.tx += (desired.tx - c.tx) * blend;
+      c.ty += (desired.ty - c.ty) * blend;
+      c.zoom += (desired.zoom - c.zoom) * blend;
+      if (cameraRef.current) cameraRef.current.style.transform = `translate(${c.tx * 100}%, ${c.ty * 100}%) scale(${c.zoom})`;
+      const unit = screenUnit(c, stageWidth, view);
+      layerRef.current?.style.setProperty('--u', `${unit}px`);
+
+      const fadeIn = sample.leadIn && !from ? sample.u : 1;
+      for (const [id, el] of dotRefs.current) {
+        const s = sample.players.get(id);
+        if (!s) {
+          el.style.opacity = '0';
+          continue;
+        }
+        const p = toScreen(s.at, c, stageWidth, view);
+        el.style.transform = `translate3d(${p.x}px, ${p.y}px, 0)`;
+        el.style.opacity = String(from?.has(id) || !sample.leadIn ? 1 : fadeIn);
+      }
+      // Top: gölgesi yerde, kendisi yüksekliği kadar yukarıda ve büyük (havadan giden top)
+      const ground = toScreen(sample.ball, c, stageWidth, view);
+      const lift = sample.height * unit * 0.55;
+      if (shadowRef.current) {
+        shadowRef.current.style.transform = `translate3d(${ground.x}px, ${ground.y}px, 0) scale(${1 + sample.height * 0.05})`;
+        shadowRef.current.style.opacity = String(fadeIn * Math.max(0.25, 0.55 - sample.height * 0.04));
+      }
+      if (ballRef.current) {
+        ballRef.current.style.transform = `translate3d(${ground.x}px, ${ground.y - lift}px, 0) scale(${1 + sample.height * 0.11})`;
+        ballRef.current.style.opacity = String(fadeIn);
+      }
+      lastPlayers.current = sample.players;
+      // Sahne bitince (kamera da oturunca) dur; son hâl ekranda kalır
+      const settling = Math.abs(desired.tx - c.tx) + Math.abs(desired.ty - c.ty) + Math.abs(desired.zoom - c.zoom) > 0.001;
+      if (t < end || settling) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [scene, spots, starts, stageWidth, view, camera, kickoff]);
 
   const homeClub = getClub(world, match.home.clubId);
   const awayClub = getClub(world, match.away.clubId);
@@ -195,105 +328,122 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
   // Numara ve etiket yazısı formanın üstünde okunmalı
   const ink = (side: Side) => readableText(kits[side].fill, kits[side].stroke);
 
-  const style = { '--pitch-move': `${frame?.move === 'shot' ? SHOT_MOVE_MS : MOVE_MS}ms` } as CSSProperties;
   const label = !kickoff && revealed ? playLabel(play) : undefined;
+  const banner = bannerKind(play, scene, index, revealed);
   const card = play && revealed ? play.card : undefined;
-  const injuredId = revealed ? scene[revealIndex(scene)]?.injuredId : undefined;
-
-  const spots = frame ? frameSpots(match, frame, kickoff) : null;
-  // Yakın kamera: topu (sevinçte golcüyü) takip eder; santra ve sakin dakikada tam saha
-  const target = camera === 'follow' && frame && spots && !kickoff && !frame.kickoff
-    ? (frame.focusId !== undefined ? spots.get(frame.focusId)?.at : undefined) ?? frame.ball
-    : null;
-  const cam = cameraTransform(target, CAMERA_ZOOM);
+  const injuredId = revealed ? scene[reveal]?.injuredId : undefined;
   // Gol karesi ve sevinç: golün girdiği file sallanır (santrada durur)
   const goalRipple = play?.kind === 'goal' && revealed && !frame?.kickoff ? play.side : null;
 
-  // Oyuncular ve top HTML katmanında: kayma animasyonu ekran kartında (ana iş parçacığı serbest).
-  // Konumlar kamerayı içerir; katman büyütülmediği için yazılar yakın kamerada da net.
-  const unit = screenUnit(cam, stageWidth);
-  const dots = frame && spots && stageWidth > 0
-    // Topu taşıyan / vurgulanan en son çizilir: adı kalabalıkta (ör. gol sevinci) üstte kalsın
-    ? [...spots]
-      .sort(([a], [b]) => Number(a === frame.carrierId || a === frame.focusId) - Number(b === frame.carrierId || b === frame.focusId))
-      .map(([id, { side, at }]) => {
-        const keeper = match.players[id]?.slot === 'GK';
-        const carrier = frame.carrierId === id || frame.focusId === id;
-        const sub = frame.subs?.find((s) => s.inId === id || s.outId === id);
-        // Topu taşıyanın (sevinçte golcünün), kart görenin, sakatlananın ve değişikliktekilerin adı noktanın altında
-        const named = carrier || card?.playerId === id || injuredId === id || sub !== undefined;
-        // Daha önce sarı kart görmüşse küçük kart; bu dakikanın kartı sonuç karesine kadar gizli
-        const booked = match.players[id]?.yellow === true && card?.playerId !== id && !(play?.card?.playerId === id && !revealed);
-        const p = toScreen(at, cam, stageWidth);
-        // Forma (üst) ve şort (alt); kalecinin forması koyu, şortu takım renginde
-        const shirt = keeper ? KEEPER_KIT : kits[side].fill;
-        const shorts = keeper ? kits[side].fill : kits[side].stroke;
-        return (
-          <div key={id} className="pdot" style={{ transform: `translate3d(${p.x}px, ${p.y}px, 0)` }}>
-            <div
-              className={`pdot-body${carrier ? ' involved' : ''}${frame.injuredId === id ? ' down' : ''}`}
-              style={{ background: `linear-gradient(${shirt} ${SHIRT_SPLIT}%, ${shorts} ${SHIRT_SPLIT}%)`, color: keeper ? '#fff' : ink(side) }}
-            >
-              {world.players[id]?.squadNumber ?? ''}
-            </div>
-            {/* Alt kenardaki (değişiklik, atılan oyuncu) adı noktanın üstünde: sahne kutusu taşanı keser */}
-            {named && <div className={`pdot-name${at.y > PITCH_WIDTH - 2.5 ? ' above' : ''}`}>{world.players[id]?.lastName ?? ''}</div>}
-            {card?.playerId === id && <div className={`pdot-card ${card.type}`} />}
-            {booked && <div className="pdot-card yellow mini" />}
-            {injuredId === id && <div className="pdot-injury">✚</div>}
-            {sub && <div className={`pdot-sub ${sub.inId === id ? 'in' : 'out'}`}>{sub.inId === id ? '▲' : '▼'}</div>}
-          </div>
-        );
-      })
-    : null;
-  const ballAt = frame && stageWidth > 0 ? toScreen(frame.ball, cam, stageWidth) : null;
+  // Sahnede yer alan herkes (bir karede görünmeyen gizlenir)
+  const ids = useMemo(() => [...new Set(spots.flatMap((s) => [...s.keys()]))], [spots]);
+  const sides = useMemo(() => new Map(spots.flatMap((s) => [...s].map(([id, v]) => [id, v.side] as const))), [spots]);
+  const involved = (id: number) => frame?.carrierId === id || frame?.focusId === id;
+
+  const fullName = (id: number | null | undefined) => (id != null ? world.players[id]?.lastName ?? '' : '');
+  const bannerText = banner === 'goal'
+    ? { title: 'GOL!', sub: `${fullName(play?.playerId)}${play?.fromPenalty ? ' (penaltı)' : ''}` }
+    : banner === 'penalty' ? { title: 'PENALTI!', sub: getClub(world, match[play!.side].clubId).name }
+      : banner === 'penaltyMiss' ? { title: 'PENALTI KAÇTI!', sub: fullName(play?.playerId) }
+        : banner === 'red' ? { title: 'KIRMIZI KART', sub: fullName(play?.card?.playerId) }
+          : null;
+  const bannerSide: Side | undefined = banner === 'red' && play?.card ? match.players[play.card.playerId]?.side : play?.side;
 
   return (
-    <div className="pitch-view" style={style} ref={ref}>
+    <div className={`pitch-view${visible ? '' : ' quiet'}`} ref={ref}>
       {/* İki katman: çim ve çizgiler bir kez çizilir; yalnızca oyuncu katmanı boyanır */}
-      <div className="pitch-stage" ref={stageRef} style={{ width: Math.round(maxHeight * ASPECT) }}>
+      <div className="pitch-stage" style={{ width: stageWidth || undefined }}>
         {/* Kamera: yalnızca CSS dönüşümü (saha yeniden çizilmez, ekran kartında kayar) */}
-        <div
-          className="pitch-camera"
-          style={{ transform: `translate(${cam.tx * 100}%, ${cam.ty * 100}%) scale(${cam.zoom})` }}
-        >
-        <PitchBackground />
-        <svg className="pitch-layer" viewBox={VIEW_BOX} aria-hidden="true">
-          <defs>
-            <pattern id="pitch-net" width={0.55} height={0.55} patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-              <path d="M 0 0 H 0.55 M 0 0 V 0.55" stroke="rgba(255,255,255,0.55)" strokeWidth={0.07} />
-            </pattern>
-          </defs>
-          {/* Ev sahibi sağa hücum eder: ev sahibinin golü sağ kaleye */}
-          <GoalNet end="left" ripple={goalRipple === 'away' ? `${match.minute}` : null} />
-          <GoalNet end="right" ripple={goalRipple === 'home' ? `${match.minute}` : null} />
-          {frame && previous && frame.move !== 'none' && (
-            <line
-              key={`${match.minute}-${index}`}
-              className={`pitch-trail ${frame.move}${play?.kind === 'goal' && frame.result ? ' goal' : ''}`}
-              x1={previous.ball.x}
-              y1={previous.ball.y}
-              x2={frame.ball.x}
-              y2={frame.ball.y}
-            />
-          )}
-        </svg>
+        <div className="pitch-camera" ref={cameraRef}>
+          <PitchBackground view={view} />
+          <svg className="pitch-layer" viewBox={viewBoxOf(view)} aria-hidden="true">
+            <defs>
+              <pattern id="pitch-net" width={0.55} height={0.55} patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                <path d="M 0 0 H 0.55 M 0 0 V 0.55" stroke="rgba(255,255,255,0.55)" strokeWidth={0.07} />
+              </pattern>
+            </defs>
+            {/* Ev sahibi sağa hücum eder: ev sahibinin golü sağ kaleye */}
+            <GoalNet end="left" ripple={goalRipple === 'away' ? `${match.minute}` : null} k={view.k} />
+            <GoalNet end="right" ripple={goalRipple === 'home' ? `${match.minute}` : null} k={view.k} />
+            {frame && previous && frame.move !== 'none' && frame.move !== 'dribble' && (
+              <path
+                key={`${match.minute}-${index}`}
+                className={`pitch-trail ${frame.move}${play?.kind === 'goal' && frame.result ? ' goal' : ''}`}
+                d={ballTrack(previous.ball, frame, view.k)}
+              />
+            )}
+          </svg>
         </div>
-        {/* Oyuncu katmanı: büyütülmez; birim (--u, metre başına px) kamerayla gelir */}
-        <div className="pitch-dots" style={{ '--u': `${unit}px` } as CSSProperties}>
-          {dots}
-          {ballAt && <div className="pball" style={{ transform: `translate3d(${ballAt.x}px, ${ballAt.y}px, 0)` }}><div className="pball-body" /></div>}
+        {/* Oyuncu katmanı: büyütülmez; birim (--u, metre başına px) kamerayla gelir; yerleri döngü yazar */}
+        <div className="pitch-dots" ref={layerRef} style={{ '--u': `${screenUnit(cam.current, stageWidth, view)}px` } as CSSProperties}>
+          {visible && ids.map((id) => {
+            const side = sides.get(id) ?? 'home';
+            const keeper = match.players[id]?.slot === 'GK';
+            const sub = frame?.subs?.find((s) => s.inId === id || s.outId === id);
+            const carrier = involved(id);
+            const named = carrier || card?.playerId === id || injuredId === id || sub !== undefined;
+            // Daha önce sarı kart görmüşse küçük kart; bu dakikanın kartı sonuç karesine kadar gizli
+            const booked = match.players[id]?.yellow === true && card?.playerId !== id && !(play?.card?.playerId === id && !revealed);
+            const at = frame ? spots[index]?.get(id)?.at : undefined;
+            const shirt = keeper ? KEEPER_KIT : kits[side].fill;
+            const shorts = keeper ? kits[side].fill : kits[side].stroke;
+            return (
+              <div
+                key={id}
+                className="pdot"
+                ref={(el) => {
+                  if (el) dotRefs.current.set(id, el);
+                  else dotRefs.current.delete(id);
+                }}
+              >
+                <div
+                  className={`pdot-body${carrier ? ' involved' : ''}${frame?.injuredId === id ? ' down' : ''}`}
+                  style={{ background: `linear-gradient(${shirt} ${SHIRT_SPLIT}%, ${shorts} ${SHIRT_SPLIT}%)`, color: keeper ? '#fff' : ink(side) }}
+                >
+                  {world.players[id]?.squadNumber ?? ''}
+                </div>
+                {/* Alt kenardaki (değişiklik, atılan oyuncu) adı noktanın üstünde: sahne kutusu taşanı keser */}
+                {named && <div className={`pdot-name${at && at.y > PITCH_WIDTH - 2.5 ? ' above' : ''}`}>{world.players[id]?.lastName ?? ''}</div>}
+                {card?.playerId === id && <div className={`pdot-card ${card.type}`} />}
+                {booked && <div className="pdot-card yellow mini" />}
+                {injuredId === id && <div className="pdot-injury">✚</div>}
+                {sub && <div className={`pdot-sub ${sub.inId === id ? 'in' : 'out'}`}>{sub.inId === id ? '▲' : '▼'}</div>}
+              </div>
+            );
+          })}
+          {visible && <div className="pball-shadow" ref={shadowRef} />}
+          {visible && <div className="pball" ref={ballRef}><div className="pball-body" /></div>}
         </div>
+        {!visible && (
+          <DominanceBar
+            match={match}
+            colors={{ home: kits.home.fill, away: kits.away.fill }}
+            names={{ home: homeClub.name, away: awayClub.name }}
+          />
+        )}
+        {/* Gol anında saha bir an parlar */}
+        {banner === 'goal' && index === reveal && <div key={`flash-${match.minute}`} className="pitch-flash" />}
       </div>
-      {label && play && (
+      {label && play && !bannerText && play.kind !== 'goal' && (
         <div
           key={`${match.minute}-${play.kind}`}
-          className={`pitch-label${play.kind === 'goal' ? ' goal' : ''}`}
+          className="pitch-label"
           style={{ background: kits[play.side].fill, color: ink(play.side) }}
         >
           {label}
         </div>
       )}
+      {bannerText && bannerSide && (
+        <div
+          key={`${match.minute}-${banner}`}
+          className={`pitch-banner ${banner}`}
+          style={{ '--banner-bg': kits[bannerSide].fill, '--banner-ink': ink(bannerSide), '--banner-edge': kits[bannerSide].stroke } as CSSProperties}
+        >
+          <div className="pitch-banner-title">{bannerText.title}</div>
+          {bannerText.sub && <div className="pitch-banner-sub">{bannerText.sub}</div>}
+        </div>
+      )}
     </div>
   );
 }
+

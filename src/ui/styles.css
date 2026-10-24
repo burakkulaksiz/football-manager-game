@@ -1486,7 +1486,7 @@ select {
 
 .tactics-grid {
   display: grid;
-  grid-template-columns: minmax(420px, 1.15fr) minmax(380px, 1fr);
+  grid-template-columns: minmax(420px, 1fr) minmax(520px, 1fr);
   gap: 14px;
   align-items: start;
   margin-bottom: 14px;
@@ -1516,9 +1516,51 @@ select {
   z-index: 2;
 }
 
+/* Saha ve yedekler yan yana: yedekler sahanın sağında dikey liste, saha ekran yüksekliğinin tamamını kullanır */
+.pitch-area {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 14px 12px;
+}
+
+.pitch-area .pitch-wrap {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+}
+
 .tactics-pitch .pitch {
-  max-width: min(440px, calc((100vh - 440px) * 68 / 92));
+  max-width: min(560px, calc((100vh - 290px) * 68 / 92));
   min-width: 260px;
+}
+
+.bench-side {
+  flex: 0 0 136px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bench-side .bench-head {
+  margin: 0;
+  font-size: 13px;
+}
+
+.bench-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.bench-list .bench-cell {
+  padding: 6px 8px;
+}
+
+.pitch-actions {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
 }
 
 /* Sürükle-bırak */

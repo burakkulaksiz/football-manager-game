@@ -672,7 +672,9 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
 - Taktik: HTML5 sürükle-bırak (listeden oyuncu, dolu saha yeri, dolu yedek hücresi → saha yeri / yedek hücresi; hedefte oyuncu
   varsa yer değiştirir; sahadan / yedekten kadro listesine bırakılan kadro dışı — removePlayer). Tıkla-seç-tıkla da duruyor.
   Saha yerinde ve yedekte çift tık profili açar. Düzen: sol sütun (tactics-main) kadro + talimatlar + kaptan + uyarılar,
-  sağ sütun saha + yedekler position: sticky (main.content kaydırılırken ekranda kalır; saha 100vh − 440px yüksekliğe sığar).
+  sağ sütun saha + yedekler position: sticky (main.content kaydırılırken ekranda kalır). Yedekler sahanın sağında dikey liste
+  (bench-side, kullanıcı isteği: sahaya yer kalsın); saha 100vh − 290px yüksekliğe sığar, en çok 560 px genişlik. Seçili oyuncunun
+  düğmeleri (karşılaştır, kadro dışı) panel başlığında.
 - Karşılaştırma en çok 4 oyuncu (engine/squad/compare.ts MAX_COMPARE; store toggleCompare son 4). Bileşenler
   ui/components/CompareDialog.tsx: CompareBar (seçilenler, Karşılaştır, Temizle; pencereyi açar) — Kadro ve Taktik ekranında
   (taktikte ⇆ sütunu ve seçili oyuncu için “Karşılaştırmaya Ekle”); CompareDialog 2–4 sütun (satırda tek başına en iyi değer

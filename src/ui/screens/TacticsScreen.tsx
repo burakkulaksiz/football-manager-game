@@ -350,101 +350,107 @@ export function TacticsScreen() {
         </div>
         </div>
 
-        {/* Saha + yedekler: kaydırınca da görünür kalır */}
+        {/* Saha + yedekler (sahanın yanında): kaydırınca da görünür kalır */}
         <section className="panel tactics-pitch">
-          <h2 className="panel-title">İlk 11</h2>
-          <div className="pitch-wrap">
-            <div className="pitch">
-              <div className="pitch-line halfway" />
-              <div className="pitch-line center-circle" />
-              <div className="pitch-line box top" />
-              <div className="pitch-line box bottom" />
-              <div className="pitch-line six top" />
-              <div className="pitch-line six bottom" />
-              {formation.map((pos, i) => {
-                const [x, y] = FORMATION_LAYOUT[tactics.formation][i]!;
-                const id = tactics.lineup[i] ?? null;
-                const p = id === null ? undefined : byId.get(id);
-                const fit = fits[i];
-                const target: SquadTarget = { kind: 'slot', index: i };
+          <div className="panel-title panel-title-row">
+            <span>İlk 11</span>
+            {selectedPlayerId !== null && locate(tactics, selectedPlayerId) !== null && (
+              <span className="toolbar pitch-actions">
+                <span className="muted">Seçili: {byId.get(selectedPlayerId)?.lastName}</span>
+                <button className="btn btn-small" onClick={() => toggleCompare(selectedPlayerId)}>
+                  {compareIds.includes(selectedPlayerId) ? 'Karşılaştırmadan Çıkar' : 'Karşılaştırmaya Ekle'}
+                </button>
+                <button
+                  className="btn btn-small"
+                  onClick={() => {
+                    updateTactics((t) => removePlayer(t, selectedPlayerId));
+                    setSelection(null);
+                  }}
+                >
+                  Kadro Dışı Bırak
+                </button>
+              </span>
+            )}
+          </div>
+          <div className="pitch-area">
+            <div className="pitch-wrap">
+              <div className="pitch">
+                <div className="pitch-line halfway" />
+                <div className="pitch-line center-circle" />
+                <div className="pitch-line box top" />
+                <div className="pitch-line box bottom" />
+                <div className="pitch-line six top" />
+                <div className="pitch-line six bottom" />
+                {formation.map((pos, i) => {
+                  const [x, y] = FORMATION_LAYOUT[tactics.formation][i]!;
+                  const id = tactics.lineup[i] ?? null;
+                  const p = id === null ? undefined : byId.get(id);
+                  const fit = fits[i];
+                  const target: SquadTarget = { kind: 'slot', index: i };
+                  return (
+                    <button
+                      key={i}
+                      className={`pitch-slot${sameTarget(selection, target) || (p && selectedPlayerId === p.id) ? ' selected' : ''}${dragOver === targetKey(target) ? ' drop' : ''}`}
+                      style={{ left: `${x}%`, top: `${y}%` }}
+                      onClick={() => clickTarget(target)}
+                      onDoubleClick={() => p && openPlayer(p.id)}
+                      {...(p ? dragFrom(target) : {})}
+                      {...dropOn(target)}
+                      title={p ? `${p.firstName} ${p.lastName} — ${POSITION_NAMES[pos]}` : POSITION_NAMES[pos]}
+                    >
+                      {p ? (
+                        <>
+                          <span className="shirt-holder">
+                            <Shirt primary={club.colors.primary} secondary={club.colors.secondary} number={p.squadNumber} size={40} />
+                            {fit !== null && fit !== undefined && <i className={`fit-dot ${fitClass(fit)}`} />}
+                            {tactics.captainId === p.id && <b className="armband">K</b>}
+                          </span>
+                          <span className="slot-name">{p.lastName}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="empty-slot">+</span>
+                          <span className="slot-name muted">{POSITION_LABELS[pos]}</span>
+                        </>
+                      )}
+                      <span className={`slot-pos pos-${positionGroup(pos)}`}>{POSITION_LABELS[pos]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <aside className="bench-side">
+            <div className="sub-head bench-head">Yedekler ({tactics.bench.length}/{BENCH_SIZE})</div>
+            <div className="bench-list">
+              {Array.from({ length: BENCH_SIZE }, (_, i) => {
+                const id = tactics.bench[i];
+                const p = id === undefined ? undefined : byId.get(id);
+                // Boş hücreler sona eklenir: tıklanınca ilk boş yere konur.
+                const target: SquadTarget = { kind: 'bench', index: Math.min(i, tactics.bench.length) };
                 return (
                   <button
                     key={i}
-                    className={`pitch-slot${sameTarget(selection, target) || (p && selectedPlayerId === p.id) ? ' selected' : ''}${dragOver === targetKey(target) ? ' drop' : ''}`}
-                    style={{ left: `${x}%`, top: `${y}%` }}
+                    className={`bench-cell${p ? '' : ' empty'}${p && selectedPlayerId === p.id ? ' selected' : ''}${dragOver === targetKey(target) ? ' drop' : ''}`}
                     onClick={() => clickTarget(target)}
                     onDoubleClick={() => p && openPlayer(p.id)}
                     {...(p ? dragFrom(target) : {})}
                     {...dropOn(target)}
-                    title={p ? `${p.firstName} ${p.lastName} — ${POSITION_NAMES[pos]}` : POSITION_NAMES[pos]}
                   >
                     {p ? (
                       <>
-                        <span className="shirt-holder">
-                          <Shirt primary={club.colors.primary} secondary={club.colors.secondary} number={p.squadNumber} size={40} />
-                          {fit !== null && fit !== undefined && <i className={`fit-dot ${fitClass(fit)}`} />}
-                          {tactics.captainId === p.id && <b className="armband">K</b>}
-                        </span>
-                        <span className="slot-name">{p.lastName}</span>
+                        <span className={`pos-box pos-${positionGroup(primaryPosition(p))}`}>{POSITION_LABELS[primaryPosition(p)]}</span>
+                        <span className="bench-name">{p.lastName}</span>
                       </>
                     ) : (
-                      <>
-                        <span className="empty-slot">+</span>
-                        <span className="slot-name muted">{POSITION_LABELS[pos]}</span>
-                      </>
+                      <span className="muted">Boş</span>
                     )}
-                    <span className={`slot-pos pos-${positionGroup(pos)}`}>{POSITION_LABELS[pos]}</span>
                   </button>
                 );
               })}
             </div>
+            </aside>
           </div>
-
-          <div className="sub-head bench-head">Yedekler ({tactics.bench.length}/{BENCH_SIZE})</div>
-          <div className="bench-grid">
-            {Array.from({ length: BENCH_SIZE }, (_, i) => {
-              const id = tactics.bench[i];
-              const p = id === undefined ? undefined : byId.get(id);
-              // Boş hücreler sona eklenir: tıklanınca ilk boş yere konur.
-              const target: SquadTarget = { kind: 'bench', index: Math.min(i, tactics.bench.length) };
-              return (
-                <button
-                  key={i}
-                  className={`bench-cell${p ? '' : ' empty'}${p && selectedPlayerId === p.id ? ' selected' : ''}${dragOver === targetKey(target) ? ' drop' : ''}`}
-                  onClick={() => clickTarget(target)}
-                  onDoubleClick={() => p && openPlayer(p.id)}
-                  {...(p ? dragFrom(target) : {})}
-                  {...dropOn(target)}
-                >
-                  {p ? (
-                    <>
-                      <span className={`pos-box pos-${positionGroup(primaryPosition(p))}`}>{POSITION_LABELS[primaryPosition(p)]}</span>
-                      <span className="bench-name">{p.lastName}</span>
-                    </>
-                  ) : (
-                    <span className="muted">Boş</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          {selectedPlayerId !== null && locate(tactics, selectedPlayerId) !== null && (
-            <div className="button-row">
-              <span className="muted">Seçili: {byId.get(selectedPlayerId)?.lastName}</span>
-              <button className="btn" onClick={() => toggleCompare(selectedPlayerId)}>
-                {compareIds.includes(selectedPlayerId) ? 'Karşılaştırmadan Çıkar' : 'Karşılaştırmaya Ekle'}
-              </button>
-              <button
-                className="btn"
-                onClick={() => {
-                  updateTactics((t) => removePlayer(t, selectedPlayerId));
-                  setSelection(null);
-                }}
-              >
-                Kadro Dışı Bırak
-              </button>
-            </div>
-          )}
         </section>
       </div>
 

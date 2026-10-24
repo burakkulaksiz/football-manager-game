@@ -82,8 +82,15 @@ export function scoreLine(f: Fixture): string {
 }
 
 /** Kupaya katılan kulüpler: Süper Lig ve 1. Lig. */
+/** Kupaya katılan 1. Lig kulübü sayısı (itibarı en yüksekler): 18 + 8 = 26 kulüp, 6'sı 1. Turu bay geçer. */
+export const CUP_LOWER_CLUBS = 8;
+
 export function cupParticipants(world: GameWorld): string[] {
-  return world.clubs.filter((c) => divisionOf(c) === 1 || divisionOf(c) === 2).map((c) => c.id);
+  const lower = world.clubs
+    .filter((c) => divisionOf(c) === 2)
+    .sort((a, b) => b.reputation - a.reputation || a.id.localeCompare(b.id))
+    .slice(0, CUP_LOWER_CLUBS);
+  return [...world.clubs.filter((c) => divisionOf(c) === 1), ...lower].map((c) => c.id);
 }
 
 /** Kupa şampiyonu (final oynandıysa). */

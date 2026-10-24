@@ -153,5 +153,5 @@ describe('sezon geçişinde tekrarlanabilirlik', () => {
     playUntil(b, '2027-08-20');
     expect(a.season.fixtures).toEqual(b.season.fixtures);
     expect(a.history).toEqual(b.history);
-  });
+  }, 90_000); // iki sezon (milli maçlar, kalabalık gerçek kadrolar); paralel koşuda 30 sn yetmiyor
 });

@@ -282,7 +282,8 @@ describe('sezon boyunca yapay zekâ transferleri', () => {
     for (const club of world.clubs) {
       const size = clubPlayers(world, club.id).length;
       expect(size).toBeGreaterThanOrEqual(18);
-      expect(size).toBeLessThanOrEqual(30);
+      // Gerçek kadrolar (Transfermarkt) 38'e kadar başlar; yapay zekâ yeni sezonda 30'a indirir
+      expect(size).toBeLessThanOrEqual(40);
       expect(world.finances[club.id]!.transferBudget).toBeGreaterThanOrEqual(0);
     }
   });

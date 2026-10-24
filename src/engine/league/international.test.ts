@@ -19,7 +19,10 @@ import {
   nationalPlayer,
   nationalWinner,
   qualifierFixtures,
+  nationalTeams,
+  qualifierRanking,
   qualifierTable,
+  UEFA_SPOTS,
   selectSquad,
   SQUAD_SIZE,
   TOURNAMENT_FINAL,
@@ -58,11 +61,13 @@ describe('Eleme döngüsü', () => {
   const world = createWorld(gameData, 7, 'galatasaray', START);
   const state = world.international;
 
-  it('ilk döngü Avrupa Şampiyonası 2028: 5\'li 4 grup, çift devre, kuradan önceki son 10 milli günde', () => {
+  it('ilk döngü Avrupa Şampiyonası 2028: en çok 5\'li gruplar, çift devre, kuradan önceki son 10 milli günde', () => {
     expect(state.year).toBe(2028);
     expect(state.kind).toBe('euro');
-    expect(state.qualifierGroups).toHaveLength(4);
-    expect(state.qualifierGroups.every((g) => g.length === 5)).toBe(true);
+    const uefa = nationalTeams(gameData).filter((n) => n.confederation === 'UEFA');
+    expect(state.qualifierGroups).toHaveLength(Math.ceil(uefa.length / 5));
+    expect(state.qualifierGroups.flat().sort()).toEqual(uefa.map((n) => n.code).sort());
+    expect(state.qualifierGroups.every((g) => g.length >= 4 && g.length <= 5)).toBe(true);
     expect(state.qualifierGroups.flat()).toContain(HOME_NATION);
     const qualifiers = qualifierFixtures(state);
     const days = [...new Set(qualifiers.map((f) => f.date))].sort();
@@ -70,7 +75,7 @@ describe('Eleme döngüsü', () => {
     expect(days.at(-1)! < tournamentDrawDate(2028)).toBe(true);
     for (const group of state.qualifierGroups) {
       for (const a of group) {
-        expect(qualifiers.filter((f) => f.homeId === a || f.awayId === a)).toHaveLength(8);
+        expect(qualifiers.filter((f) => f.homeId === a || f.awayId === a)).toHaveLength(2 * (group.length - 1));
         for (const b of group) {
           if (a !== b) expect(qualifiers.filter((f) => f.homeId === a && f.awayId === b)).toHaveLength(1);
         }
@@ -88,7 +93,7 @@ describe('Eleme döngüsü', () => {
   });
 
   it('kadro 23 kişi, 3 kaleci, sakat yok; sanal oyuncular tekrar aynı üretilir', () => {
-    for (const nation of gameData.nations) {
+    for (const nation of nationalTeams(gameData)) {
       const ids = selectSquad(world, gameData, nation.code);
       expect(new Set(ids).size).toBe(SQUAD_SIZE);
       const players = ids.map((id) => nationalPlayer(world, gameData, id)!);
@@ -176,8 +181,12 @@ describe('Turnuvalar', () => {
     finishQualifiersQuickly(world);
     playTournament(world, 2028);
     const state = world.international;
-    const qualified = state.qualifierGroups.flatMap((_, g) => qualifierTable(state, g).slice(0, 2).map((r) => r.clubId));
-    expect(state.qualified).toEqual(qualified);
+    // Grup birincilerinin hepsi, sonra en iyi ikinciler
+    const winners = state.qualifierGroups.map((_, g) => qualifierTable(state, g)[0]!.clubId);
+    const qualified = state.qualified!;
+    expect(qualified).toHaveLength(UEFA_SPOTS);
+    for (const w of winners.slice(0, UEFA_SPOTS)) expect(qualified).toContain(w);
+    expect(qualified).toEqual(qualifierRanking(state).slice(0, UEFA_SPOTS));
     expect(state.tournamentGroups).toHaveLength(2);
     expect(state.tournamentGroups.flat().sort()).toEqual([...qualified].sort());
     expect(tournamentFixtures(state, TOURNAMENT_QUARTER)).toHaveLength(0);

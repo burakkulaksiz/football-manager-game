@@ -49,7 +49,7 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
 - [x] Avrupa kupaları (Şampiyonlar Ligi, Avrupa Ligi; 4'lü gruplar, iki maçlı eleme, tek maç final)
 - [x] Milli takım ve milli maç arası (yalnızca kulüp tarafı: çağrılar, elemeler, iki yılda bir yaz turnuvası)
 - [ ] 1. Lig'in gerçekten oynanması (şu an çıkanlar rastgele seçiliyor)
-- [ ] Gerçek kadrolar (`data/squads/`)
+- [x] Gerçek kadrolar (`data/squads/`; Transfermarkt 2026/27, gerçek Süper Lig ve 1. Lig)
 
 ## Kulüp ve menajer
 - [ ] Başka kulüplerden iş teklifi, istifa, işsiz kalıp yeni iş arama

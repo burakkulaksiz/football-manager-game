@@ -166,7 +166,7 @@ Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
 - `data/nations.json` — `[{ code, name, namePool, weight }]`. `TUR` zorunlu (weight 0: yerli ayrı seçilir).
   weight = yabancı oyuncu üretiminde seçilme ağırlığı.
 - `data/names/<havuz>.json` — `{ firstNames: [], lastNames: [] }`. Yeni dosya eklemek yeterli.
-- `data/lower_league.json` — kurgusal 1. Lig kulüpleri (clubs.json ile aynı biçim, en az 3). Oyunda
+- `data/lower_league.json` — 1. Lig kulüpleri (gerçek 2026/27; clubs.json ile aynı biçim, en az 3). Oyunda
   `division: 2`; kadroları oyun başında üretilir. Küme düşen Süper Lig kulübü de buraya iner.
 - **Kayıt** (IndexedDB, Dexie şema sürümü 2): `saves` = SaveSlot `{ id, name, careerId, clubId, clubName,
   gameDate, season, isAutosave, createdAt, updatedAt, formatVersion, managerName? }`; `saveData` = `{ id, world: GameWorld }`
@@ -450,7 +450,6 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
   - [ ] Sıradaki: FIKIRLER.md'den seçilecek.
 
 ## Açık konular / ileride
-- Elle gerçek kadro girişi (ör. `data/squads/<kulüpId>.json`) yok; kullanıcı "şimdilik gerek yok" dedi.
 - Duran top özellikleri (penaltı, korner) mevkiyle ilgisizse düşük çıkabiliyor — 10. aşamada denge.
 - Beraberlik %25.4 (hedef %27; Süper Lig gerçeği ~%25). Daha fazlası gol ortalamasını düşürüyor.
 - Belki ileride (kullanıcı "sonra ekleriz belki" dedi): maç ortasında kayıt (liveMatch'i de yazmak).
@@ -592,11 +591,11 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
 - Döngü: turnuva çift yıllarda (4'e bölünen Avrupa Şampiyonası, diğerleri Dünya Kupası), haziranda; turnuvadan sonraki
   1 Temmuz'da createInternational (internationalDay içinde) yenisini kurar, history taşınır. Turnuva yılı: elemelere yetecek
   milli gün kalan ilk çift yıl (yeni oyun 2028; Nisan 2027'de dönüştürülen kayıt 2030). Eleme kurası hemen: UEFA ülkeleri
-  (20) güce göre torbalarla 4 gruba (5'er), çember yöntemi + bay, çift devre = 10 maç günü = turnuva kurasından (1 Aralık,
+  güce göre torbalarla en çok 5'li gruplara (34 ülke → 7 grup; bkz. Gerçek kadrolar), çember yöntemi + bay, çift devre = 10 maç günü = turnuva kurasından (1 Aralık,
   turnuvadan önceki yıl) önceki son 10 milli gün (yeni oyunda Kasım 2026 – Kasım 2027). Diğer milli günler ve elemede bay
   geçenler / UEFA dışı için hazırlık maçı (ayrı tohumlu rng ile eşleşme; Türkiye her milli günde oynar). Tüm fikstür
   döngü başında üretilir, yalnızca turnuva eleme turları sonradan.
-- Turnuva: Avrupa 8 (grupların ilk 2'si; 2 grup → yarı final → final), Dünya Kupası 16 (UEFA 8 + UEFA dışından güç + gürültü
+- Turnuva: Avrupa 8 (8 UEFA ülkesi, qualifierRanking; 2 grup → yarı final → final), Dünya Kupası 16 (UEFA 8 + UEFA dışından güç + gürültü
   ile en iyi 8; 4 grup → çeyrek → yarı → final). Kura 1 Aralık; maçlar 10/14/18 Haziran (grup), 22 (çeyrek), 25 (yarı),
   29 (final), hepsi tarafsız; eleme turunda beraberlikte penaltılar (motorun knockout'u). Çeyrek: A1–B2, B1–A2, C1–D2, D1–C2.
 - Güç (torbalar, Dünya Kupası seçimi): nationRating = kadronun en iyi 11'inin ortalama yeteneği (yurtdışı kulüplerindeki
@@ -620,6 +619,35 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
   soluk, kulüpsüz; maçlar, golcüler satırın üstünde), Elemeler (4 grup tablosu), Turnuva (gruplar + eleme turları), Oyuncularımız,
   Geçmiş. Profilde "Milli Takım: X maç, Y gol · şu an milli takımda", kadro/taktik durum etiketinde MİLLİ, gelen kutusunda
   "Milli Takımlar ›" bağlantısı. NationFlag: ülke renklerinde iki şeritli küçük bayrak.
+
+## Gerçek kadrolar (kullanıcı seçti: Transfermarkt, kısa + isteğe bağlı ayrıntı, eksikler rastgele)
+- data/squads/<kulüpId>.json (biçim data/README.md'de; tipler data.ts SquadPlayerData, doğrulama validateSquads).
+  gameData.ts glob ile yükler. generateClubSquad dosya varsa realClubSquad'a gider (createWorld, yurtdışı kulüpleri ve
+  eski kayıt dönüşümleri aynı yoldan) — yalnızca yeni oyunu etkiler, kayıt biçimi değişmedi.
+- realPlayer: generatePlayer (seviye = ability, yaş doğumdan) + dosyadakiler (ad, doğum, mevkiler, ayak, özellikler,
+  gizli özellikler, sözleşme 30 Haziran'a yuvarlanır, maaş, forma no, joined → hiyerarşide kulüpteki süre; oyun başından
+  sonraki katılış oyun başı sayılır). CA özelliklerden yeniden hesaplanır; potential verilirse PA = CA + (pot − güç) × 10,5.
+  Türkiye kulübünde ≤ 18 yaş ve güç < kulüp seviyesi − 3 → U19. A takım < 25 ise şablonun eksik mevki gruplarından
+  (genç → yedek → ilk 11 rolleri) rastgele tamamlanır. Maaşı yazılanlar bütçeden düşülür, kalanı diğerlerine ölçeklenir.
+- scripts/transfermarkt.mjs: TR1 + TR2 lig sayfalarından kulüpler (CLUBS: TM kimliği → oyun kimliği), kadro sayfası
+  (kader/plus/1) curl ile (Node fetch engelleniyor), scripts/.cache'te 24 saat, istekler arası 3,5 sn. Güç = oyunun piyasa
+  değeri formülünün tersi: CA = 17·ln(değer/1500), 29 yaş üstüne yıl başına +17·ln(1/0,82), gençte potansiyel payı düşülür;
+  seviye = 1 + (CA − 1)·19/199 − 0,3. Değeri olmayan 150 bin € sayılır. İlk uyruk esas (bilinmiyorsa raporlanır).
+  --info yeni kulüp için stadyum / kapasite / toplam değer yazdırır.
+  Denge düzeltmesi (ilk sürümde 3,25 gol/maç, %21,8 beraberlik, gol kralı ort. 34 çıktı): mevki payı POSITION_OFFSET
+  (KL +1,4, STP +0,6, bek +0,45, orta saha +0,2, 10 numara +0,3, kanat/forvet −0,25 — piyasa değeri hücumcuyu pahalı gösterir)
+  ve 12,5 çevresinde ×0,72 sıkıştırma (TM'de büyük-küçük farkı oyunun ölçeğinden geniş). Sonuç (~4600 maç): 2,70 gol,
+  %43,7 ev, %26,7 beraberlik, gol kralı ort. 25,1 (en çok 30).
+- Kupa: Süper Lig + itibarı en yüksek 8 1. Lig kulübü (CUP_LOWER_CLUBS; 26 kulüp, 6 bay — eskisi gibi).
+  fillAcademies gerçek kadrodan U19'a inenleri sayar (U19 yine 7–9). Gerçek A takımlar 25–38 kişi (yapay zekâ yeni sezonda 30'a indirir).
+- Lig 2026/27'ye güncellendi: Çorum FK, Amed SK, Erzurumspor çıktı; Antalyaspor, Kayserispor, Karagümrük 1. Lig'e
+  (itibar −5, bütçe ×0,5, maaş bütçesi ×0,6). 1. Lig artık gerçek 20 kulüp (kurgusallar silindi). Yeni kulüplerin itibarı
+  kadro değerinden (log ölçek, mevcut kulüplere göre) tahmin, bütçeler benzer itibarlı kulüplerden.
+- nations.json 29 → 85 ülke (Transfermarkt uyrukları). Yeni Nation.nationalTeam (false: milli takımı yok — küçük ülkeler,
+  Rusya); milli takım sistemi nationalTeams(data) ile. Yeni havuzlar: hu, ro, gr, ar, al, ka, ru, ua, ko. Eleme grupları
+  artık ülke sayısına göre (en çok 5'li; 34 UEFA → 7 grup); turnuvaya 8 UEFA ülkesi: qualifierRanking (önce grup
+  birincileri, sonra en iyi ikinciler; puan, averaj, gol), metin qualifierRuleText.
+- DİKKAT: yeni isim havuzu / kadro dosyası eklenince testler glob sonucunu önbellekten okuyabilir → node_modules/.vitest-cache sil.
 
 ## Şut ve ısı haritası
 - Motor kaydı (yalnızca gösterim, rng kullanmaz): MatchState.shots / MatchResult.shots — her şut (dakika sayacı,

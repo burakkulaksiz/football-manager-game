@@ -40,7 +40,10 @@ describe('yurtdışı kulüpleri', () => {
 
   it('devler Süper Lig devlerinden belirgin güçlü; Belçika orta sınıfı Süper Lig ortasıyla benzer', () => {
     expect(top11(world, 'real-madrid')).toBeGreaterThan(top11(world, 'galatasaray') + 12);
-    expect(Math.abs(top11(world, 'gent') - top11(world, 'trabzonspor'))).toBeLessThan(12);
+    // Süper Lig ortası (gerçek kadrolar): itibar sırasında ortadaki kulüpler
+    const middle = [...gameData.clubs].sort((a, b) => b.reputation - a.reputation).slice(4, 10).map((c) => top11(world, c.id));
+    const median = [...middle].sort((a, b) => a - b)[3]!;
+    expect(Math.abs(top11(world, 'gent') - median)).toBeLessThan(12);
   });
 
   it('Türkiye dünyası yurtdışı eklenmeden önceki hâliyle aynı (ayrı rng): kadrolar ve fikstür', () => {

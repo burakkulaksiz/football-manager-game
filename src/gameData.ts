@@ -1,7 +1,7 @@
 /**
  * data/ klasöründeki JSON dosyalarını yükler ve doğrular.
  * Motor saf kalsın diye dosya okuma burada; motor yalnızca GameData nesnesini alır.
- * data/names/ içine yeni bir <havuz>.json eklemek yeterli, burada değişiklik gerekmez.
+ * data/names/ içine yeni bir <havuz>.json, data/squads/ içine <kulüpId>.json eklemek yeterli, burada değişiklik gerekmez.
  */
 import clubs from '../data/clubs.json';
 import lowerClubs from '../data/lower_league.json';
@@ -20,4 +20,10 @@ for (const [path, pool] of Object.entries(poolModules)) {
   namePools[key] = pool;
 }
 
-export const gameData: GameData = validateGameData({ clubs, lowerClubs, foreignClubs, nations, namePools });
+const squadModules = import.meta.glob<unknown>('../data/squads/*.json', { eager: true, import: 'default' });
+const squads: Record<string, unknown> = {};
+for (const [path, squad] of Object.entries(squadModules)) {
+  squads[path.split('/').pop()!.replace(/\.json$/, '')] = squad;
+}
+
+export const gameData: GameData = validateGameData({ clubs, lowerClubs, foreignClubs, nations, namePools, squads });

@@ -6,7 +6,9 @@ import { ageOn, primaryPosition } from '../player';
 import { clubPlayers, createWorld, SQUAD_TEMPLATE } from './worldGenerator';
 
 const START = '2026-07-01';
-const world = createWorld(gameData, 2026, 'galatasaray', START);
+/** Üretecin kendisi sınanır: gerçek kadro dosyaları olmadan (gerçek kadrolar: realSquads.test.ts). */
+const generatedData = { ...gameData, squads: {} };
+const world = createWorld(generatedData, 2026, 'galatasaray', START);
 const allPlayers = Object.values(world.players);
 
 /** Kulübün en iyi 11 oyuncusunun ortalama CA'sı. */
@@ -20,12 +22,12 @@ function top11Average(clubId: string): number {
 
 describe('dünya üretimi', () => {
   it('aynı seed ile birebir aynı dünyayı üretir', () => {
-    const again = createWorld(gameData, 2026, 'galatasaray', START);
+    const again = createWorld(generatedData, 2026, 'galatasaray', START);
     expect(again).toEqual(world);
   });
 
   it('farklı seed ile farklı oyuncular üretir', () => {
-    const other = createWorld(gameData, 7, 'galatasaray', START);
+    const other = createWorld(generatedData, 7, 'galatasaray', START);
     expect(other.players[1]).not.toEqual(world.players[1]);
   });
 
@@ -70,7 +72,7 @@ describe('dünya üretimi', () => {
     // Birkaç seed ortalaması yerine tek dünyada belirgin fark bekliyoruz.
     const gs = top11Average('galatasaray');
     const fb = top11Average('fenerbahce');
-    const bottom = top11Average('karagumruk');
+    const bottom = top11Average([...gameData.clubs].sort((a, b) => a.reputation - b.reputation)[0]!.id);
     expect(gs - bottom).toBeGreaterThan(20);
     expect(fb - bottom).toBeGreaterThan(20);
 

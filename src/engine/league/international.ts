@@ -26,7 +26,7 @@ import { injurePlayer } from '../squad/injuries';
 import { groupOf, type PositionGroup } from '../transfer/market';
 import type { GameWorld, Player } from '../types';
 import { circlePairings } from './schedule';
-import { tableFrom, type StandingRow } from './standings';
+import { goalDifference, tableFrom, type StandingRow } from './standings';
 
 export type NationalCompetition = 'friendly' | 'qualifier' | 'tournament';
 export type TournamentKind = 'euro' | 'wc';
@@ -118,10 +118,11 @@ export interface InternationalState {
   history: TournamentSummary[];
 }
 
-export const GROUP_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as const;
-const QUALIFIER_GROUPS = 4;
-/** Eleme grubundan turnuvaya gidenler. */
-export const QUALIFIER_SPOTS = 2;
+export const GROUP_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'] as const;
+/** Eleme grubunda en çok bu kadar ülke; grup sayısı UEFA ülke sayısına göre (5'li grupta çift devre 10 maç günü). */
+const MAX_GROUP_SIZE = 5;
+/** Elemeden turnuvaya giden UEFA ülkesi: önce grup birincileri, sonra en iyi ikinciler… (bkz. qualifierRanking). */
+export const UEFA_SPOTS = 8;
 export const SQUAD_SIZE = 23;
 const SQUAD_QUOTA: Record<PositionGroup, number> = { GK: 3, DEF: 8, MID: 8, ATT: 4 };
 
@@ -314,11 +315,20 @@ function dateSalt(date: GameDate): number {
   return Number(date.replaceAll('-', '')) % 1_000_003;
 }
 
-const uefaNations = (data: GameData) => data.nations.filter((n) => n.confederation === 'UEFA').map((n) => n.code);
+/** Milli takımı olan ülkeler (nations.json `nationalTeam: false` olanlar milli maç oynamaz). */
+export function nationalTeams(data: GameData): Nation[] {
+  return data.nations.filter((n) => n.nationalTeam !== false);
+}
 
-/** Grup başına çift devre maç günü sayısı (tek sayılı grupta her turda biri bay). */
+const uefaNations = (data: GameData) => nationalTeams(data).filter((n) => n.confederation === 'UEFA').map((n) => n.code);
+
+function qualifierGroupCount(teams: number): number {
+  return Math.max(1, Math.ceil(teams / MAX_GROUP_SIZE));
+}
+
+/** En kalabalık grubun çift devre maç günü sayısı (tek sayılı grupta her turda biri bay). */
 function qualifierRounds(teams: number): number {
-  const size = Math.ceil(teams / QUALIFIER_GROUPS);
+  const size = Math.ceil(teams / qualifierGroupCount(teams));
   const padded = size + (size % 2);
   return 2 * (padded - 1);
 }
@@ -376,8 +386,8 @@ export function createInternational(world: GameWorld, data: GameData, from: Game
   const days = windowDaysBetween(first, makeDate(year, 3, 31));
   const qualifierDays = days.filter((d) => d < tournamentDrawDate(year)).slice(-rounds);
   const byNation = playersByNation(world);
-  const ratings = new Map(data.nations.map((n) => [n.code, nationRating(world, data, n.code, byNation)]));
-  state.qualifierGroups = drawGroups(intlRng(world, year), ratings, uefa, QUALIFIER_GROUPS);
+  const ratings = new Map(nationalTeams(data).map((n) => [n.code, nationRating(world, data, n.code, byNation)]));
+  state.qualifierGroups = drawGroups(intlRng(world, year), ratings, uefa, qualifierGroupCount(uefa.length));
 
   // Elemeler: çember yöntemi (tek sayılı grupta '' = bay), ikinci devre ev/deplasman tersi
   state.qualifierGroups.forEach((members, g) => {
@@ -397,7 +407,7 @@ export function createInternational(world: GameWorld, data: GameData, from: Game
   // Hazırlık maçları: o gün elemede oynamayan ülkeler eşleşir (Türkiye hep oynar)
   for (const day of days) {
     const busy = new Set(state.fixtures.filter((f) => f.date === day).flatMap((f) => [f.homeId, f.awayId]));
-    const pool = intlRng(world, dateSalt(day)).shuffle(data.nations.map((n) => n.code).filter((c) => !busy.has(c)));
+    const pool = intlRng(world, dateSalt(day)).shuffle(nationalTeams(data).map((n) => n.code).filter((c) => !busy.has(c)));
     if (pool.length % 2 === 1 && pool[pool.length - 1] === HOME_NATION) [pool[0], pool[pool.length - 1]] = [pool[pool.length - 1]!, pool[0]!];
     for (let i = 0; i + 1 < pool.length; i += 2) {
       state.fixtures.push({ id: state.nextFixtureId++, date: day, homeId: pool[i]!, awayId: pool[i + 1]!, competition: 'friendly', round: 0, result: null });
@@ -411,7 +421,7 @@ export function createInternational(world: GameWorld, data: GameData, from: Game
       title: `${tournamentTitle(year)} elemeleri: Türkiye ${GROUP_LETTERS[turkeyGroup]} Grubunda`,
       body: `${tournamentTitle(year)} eleme kurası çekildi. Türkiye'nin rakipleri: ` +
         `${state.qualifierGroups[turkeyGroup]!.filter((c) => c !== HOME_NATION).map((c) => nationName(data, c)).join(', ')}. ` +
-        `Elemeler ${formatDateTR(qualifierDays[0]!)} tarihinde başlıyor; grupların ilk ${QUALIFIER_SPOTS}'si turnuvaya gider.`,
+        `Elemeler ${formatDateTR(qualifierDays[0]!)} tarihinde başlıyor; turnuvaya ${qualifierRuleText(state)} gider.`,
       important: false,
       clubId: world.playerClubId,
     });
@@ -464,11 +474,34 @@ export function nationalFixtureLabel(state: InternationalState, f: NationalFixtu
   return `${tournamentTitle(state.year, state.kind)} · ${stage}`;
 }
 
-/** Elemeler bitti: grupların ilk ikisi; Türkiye'ye haber. */
+/** Elemelerin genel sıralaması: önce tüm grup birincileri (puan, averaj, atılan gol), sonra ikinciler… */
+export function qualifierRanking(state: InternationalState): string[] {
+  const tables = state.qualifierGroups.map((_, g) => qualifierTable(state, g));
+  const depth = Math.max(0, ...tables.map((t) => t.length));
+  const ranked: string[] = [];
+  for (let rank = 0; rank < depth; rank++) {
+    const rows = tables.flatMap((t) => (t[rank] ? [t[rank]!] : []));
+    rows.sort((a, b) => b.points - a.points || goalDifference(b) - goalDifference(a) || b.goalsFor - a.goalsFor || a.clubId.localeCompare(b.clubId));
+    ranked.push(...rows.map((r) => r.clubId));
+  }
+  return ranked;
+}
+
+/** Elemeden turnuvaya kimin gittiği: "grupların ilk 2'si", "7 grup birincisi ve en iyi ikinci"… */
+export function qualifierRuleText(state: InternationalState): string {
+  const groups = state.qualifierGroups.length;
+  const perGroup = Math.floor(UEFA_SPOTS / groups);
+  const extra = UEFA_SPOTS - perGroup * groups;
+  if (perGroup === 2 && extra === 0) return "grupların ilk 2'si";
+  if (perGroup === 1) return extra === 0 ? 'grup birincileri' : `${groups} grup birincisi ve en iyi ${extra > 1 ? `${extra} ` : ''}ikinci`;
+  return `grup sıralamasına göre en iyi ${UEFA_SPOTS} ülke`;
+}
+
+/** Elemeler bitti: turnuvaya gidenler (bkz. qualifierRanking); Türkiye'ye haber. */
 function finishQualifiers(world: GameWorld): void {
   const state = world.international;
   const tables = state.qualifierGroups.map((_, g) => qualifierTable(state, g));
-  state.qualified = tables.flatMap((t) => t.slice(0, QUALIFIER_SPOTS).map((r) => r.clubId));
+  state.qualified = qualifierRanking(state).slice(0, UEFA_SPOTS);
   const g = state.qualifierGroups.findIndex((m) => m.includes(HOME_NATION));
   if (g < 0) return;
   const position = tables[g]!.findIndex((r) => r.clubId === HOME_NATION) + 1;
@@ -478,7 +511,7 @@ function finishQualifiers(world: GameWorld): void {
     title: ok ? `Türkiye turnuvaya gidiyor: ${tournamentTitle(state.year)}` : `Türkiye elemelerde kaldı: ${tournamentTitle(state.year)}`,
     body: `Türkiye eleme grubunu ${position}. sırada bitirdi` +
       (ok ? ` ve ${tournamentTitle(state.year)} biletini aldı. Turnuva kurası ${formatDateTR(tournamentDrawDate(state.year))} tarihinde.`
-        : `; turnuvaya grupların ilk ${QUALIFIER_SPOTS}'si gidiyor.`),
+        : `; turnuvaya ${qualifierRuleText(state)} gidiyor.`),
     important: true,
     clubId: world.playerClubId,
   });
@@ -490,14 +523,12 @@ function drawTournament(world: GameWorld, data: GameData): void {
   const size = TOURNAMENT_TEAMS[state.kind];
   const rng = intlRng(world, state.year * 7 + 1);
   const byNation = playersByNation(world);
-  const ratings = new Map(data.nations.map((n) => [n.code, nationRating(world, data, n.code, byNation)]));
-  // Eleme sırası: grupta önce birinciler, sonra ikinciler, üçüncüler… (gerekirse boşluk doldurmak için)
-  const tables = state.qualifierGroups.map((_, g) => qualifierTable(state, g));
-  const depth = Math.max(0, ...tables.map((t) => t.length));
-  const byRank = Array.from({ length: depth }, (_, rank) => tables.flatMap((t) => (t[rank] ? [t[rank]!.clubId] : []))).flat();
-  let teams = byRank.slice(0, Math.min(size, QUALIFIER_SPOTS * tables.length));
+  const ratings = new Map(nationalTeams(data).map((n) => [n.code, nationRating(world, data, n.code, byNation)]));
+  // Eleme sıralaması (boşluk kalırsa doldurmak için)
+  const byRank = qualifierRanking(state);
+  let teams = (state.qualified ?? byRank).slice(0, Math.min(size, UEFA_SPOTS));
   if (state.kind === 'wc') {
-    const others = data.nations
+    const others = nationalTeams(data)
       .filter((n) => n.confederation !== 'UEFA')
       .map((n) => ({ code: n.code, score: ratings.get(n.code)! + rng.normal(0, 4) }))
       .sort((a, b) => b.score - a.score)

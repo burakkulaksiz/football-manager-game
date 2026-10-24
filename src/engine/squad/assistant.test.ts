@@ -88,7 +88,7 @@ describe('yardımcı antrenör: kadro', () => {
   it('kalabalık / dar kadro ve maaş bütçesi aşımı', () => {
     const w = fresh();
     const squad = clubPlayers(w, w.playerClubId);
-    for (const p of squad.slice(0, 7)) p.clubId = null; // 25 → 18
+    for (const p of squad.slice(0, squad.length - 18)) p.clubId = null; // → 18
     expect(kinds(w)).toContain('squadTooSmall');
     for (const p of squad) p.contract.wage *= 3;
     expect(find(w, 'wagesOver')[0]!.value).toBeGreaterThan(100);

@@ -156,7 +156,7 @@ describe('istatistik doğrulama (binlerce maç)', () => {
     let losses = 0;
     const N = 600;
     for (let seed = 0; seed < N; seed++) {
-      const r = play('galatasaray', 'karagumruk', 10_000 + seed);
+      const r = play('galatasaray', 'erzurumspor', 10_000 + seed);
       if (r.homeGoals > r.awayGoals) wins++;
       if (r.homeGoals < r.awayGoals) losses++;
     }

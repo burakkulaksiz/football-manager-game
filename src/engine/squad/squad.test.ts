@@ -225,7 +225,7 @@ describe('gelişim', () => {
 });
 
 describe('sezon boyunca', () => {
-  const world = createWorld(gameData, 12, 'antalyaspor', START);
+  const world = createWorld(gameData, 12, 'alanyaspor', START);
   const cas = new Map(Object.values(world.players).map((p) => [p.id, p.currentAbility]));
   playSeason(world);
   const results = world.season.fixtures.map((f) => f.result!);

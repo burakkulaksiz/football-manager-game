@@ -1,0 +1,31 @@
+{
+  "source": "Transfermarkt 2026/27",
+  "players": [
+    {"firstName":"Arda","lastName":"Özçimen","born":"2002-01-08","nationality":"TUR","positions":["GK"],"ability":12.3,"number":1,"foot":"left","joined":"2018-07-01","contractExpires":"2027-06-30","marketValue":800000},
+    {"firstName":"Luka","lastName":"Gugeshashvili","born":"1999-04-29","nationality":"GEO","positions":["GK"],"ability":11.7,"number":25,"foot":"left","joined":"2026-07-29","contractExpires":"2027-06-30","marketValue":500000},
+    {"firstName":"Şamil","lastName":"Öztürk","born":"2005-05-09","nationality":"TUR","positions":["GK"],"ability":9.5,"number":33,"foot":"right","joined":"2026-01-10","contractExpires":"2028-06-30","marketValue":100000},
+    {"firstName":"Nevzat","lastName":"Üzel","born":"2007-03-07","nationality":"TUR","positions":["GK"],"ability":9.6,"number":71,"foot":"right","joined":"2026-01-01","contractExpires":"2030-06-30"},
+    {"firstName":"Malcom","lastName":"Bokele","born":"2000-02-12","nationality":"CMR","positions":["DC"],"ability":13.8,"number":26,"foot":"right","joined":"2024-08-13","contractExpires":"2027-06-30","marketValue":5000000},
+    {"firstName":"Taha","lastName":"Altıkardeş","born":"2003-08-22","nationality":"TUR","positions":["DC"],"ability":13.4,"number":4,"foot":"right","joined":"2023-07-04","contractExpires":"2028-06-30","marketValue":4000000},
+    {"firstName":"Ege","lastName":"Yıldırım","born":"2007-04-18","nationality":"TUR","positions":["DC"],"ability":11.3,"number":13,"foot":"left","joined":"2023-07-01","contractExpires":"2029-06-30","marketValue":1000000},
+    {"firstName":"Noah Sonko","lastName":"Sundberg","born":"1996-06-06","nationality":"GAM","positions":["DC"],"ability":12.1,"number":19,"foot":"right","joined":"2026-07-03","contractExpires":"2028-06-30","marketValue":900000},
+    {"firstName":"Furkan","lastName":"Bayır","born":"2000-02-09","nationality":"TUR","positions":["DC"],"ability":11.8,"number":23,"foot":"right","joined":"2025-01-28","contractExpires":"2028-06-30","marketValue":900000},
+    {"firstName":"Allan","lastName":"Godói","born":"1993-04-04","nationality":"BRA","positions":["DC"],"ability":10.2,"number":3,"foot":"right","joined":"2025-07-01","contractExpires":"2027-06-30","marketValue":100000},
+    {"firstName":"Novatus","lastName":"Miroshi","born":"2002-09-02","nationality":"TAN","positions":["DM"],"ability":13.5,"number":20,"foot":"left","joined":"2024-07-23","contractExpires":"2028-06-30","marketValue":5000000},
+    {"firstName":"Tino","lastName":"Anjorin","born":"2001-11-23","nationality":"ENG","positions":["MC"],"ability":13.3,"number":18,"foot":"right","joined":"2026-09-04","contractExpires":"2027-06-30","marketValue":4000000},
+    {"firstName":"Alex","lastName":"Matos","born":"2004-10-03","nationality":"ENG","positions":["MC"],"ability":11.8,"number":6,"foot":"right","joined":"2026-07-01","contractExpires":"2027-06-30","marketValue":1500000},
+    {"firstName":"","lastName":"Rhaldney","born":"1998-11-20","nationality":"BRA","positions":["MC"],"ability":11.7,"number":5,"foot":"right","joined":"2025-07-10","contractExpires":"2028-06-30","marketValue":1000000},
+    {"firstName":"Arda Okan","lastName":"Kurtulan","born":"2002-11-19","nationality":"TUR","positions":["MR"],"ability":14,"number":2,"foot":"right","joined":"2025-07-01","contractExpires":"2029-06-30","marketValue":8000000},
+    {"firstName":"Ogün","lastName":"Bayrak","born":"1998-10-10","nationality":"TUR","positions":["MR"],"ability":11.3,"number":16,"foot":"right","joined":"2023-07-01","contractExpires":"2028-06-30","marketValue":700000},
+    {"firstName":"Richard","lastName":"Akonnor","born":"2004-02-06","nationality":"UAE","positions":["ML"],"ability":12,"number":12,"foot":"left","joined":"2026-08-20","contractExpires":"2027-06-30","marketValue":1500000},
+    {"firstName":"Alexis","lastName":"Antunes","born":"2000-07-31","nationality":"SUI","positions":["AMC"],"ability":12.2,"number":8,"foot":"right","joined":"2026-01-05","contractExpires":"2029-06-30","marketValue":1500000},
+    {"firstName":"Efkan","lastName":"Bekiroğlu","born":"1995-09-14","nationality":"TUR","positions":["AMC"],"ability":11.7,"number":10,"foot":"right","joined":"2025-08-01","contractExpires":"2027-06-30","marketValue":800000},
+    {"firstName":"","lastName":"Juan","born":"2002-03-07","nationality":"BRA","positions":["ST"],"ability":14.3,"number":9,"foot":"right","joined":"2025-08-25","contractExpires":"2029-06-30","marketValue":12000000},
+    {"firstName":"","lastName":"Janderson","born":"1999-05-06","nationality":"BRA","positions":["ST"],"ability":13.4,"number":39,"foot":"right","joined":"2025-07-01","contractExpires":"2028-06-30","marketValue":6000000},
+    {"firstName":"André","lastName":"Henrique","born":"2001-12-17","nationality":"BRA","positions":["ST"],"ability":12.6,"number":7,"foot":"right","joined":"2026-07-01","contractExpires":"2030-06-30","marketValue":3000000},
+    {"firstName":"Sinclair","lastName":"Armstrong","born":"2003-06-22","nationality":"IRL","positions":["ST"],"ability":12.4,"number":22,"foot":"right","joined":"2026-07-01","contractExpires":"2030-06-30","marketValue":2500000},
+    {"firstName":"Bekir Turaç","lastName":"Böke","born":"1999-06-21","nationality":"TUR","positions":["ST"],"ability":11.4,"number":14,"foot":"right","joined":"2026-08-18","contractExpires":"2029-06-30","marketValue":1000000},
+    {"firstName":"Gökdeniz","lastName":"Bayrakdar","born":"2001-11-23","nationality":"TUR","positions":["ST"],"ability":10.9,"number":17,"foot":"left","joined":"2026-08-04","contractExpires":"2029-06-30","marketValue":700000},
+    {"firstName":"Ibrahim","lastName":"Sabra","born":"2006-02-01","nationality":"JOR","positions":["ST"],"ability":10,"foot":"right","joined":"2025-07-01","contractExpires":"2029-06-30","marketValue":500000}
+  ]
+}

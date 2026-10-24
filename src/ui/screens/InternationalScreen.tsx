@@ -13,7 +13,9 @@ import {
   nationalWinner,
   nationFixtures,
   primaryPosition,
-  QUALIFIER_SPOTS,
+  qualifierRanking,
+  qualifierRuleText,
+  nationalTeams,
   qualifierFixtures,
   TOURNAMENT_FINAL,
   TOURNAMENT_GROUP_ROUNDS,
@@ -26,6 +28,7 @@ import {
   tournamentStageName,
   tournamentTable,
   tournamentTitle,
+  UEFA_SPOTS,
   qualifierTable,
   type NationalFixture,
   type Outcome,
@@ -97,7 +100,7 @@ function TeamTab({ code, setCode }: { code: string; setCode: (c: string) => void
     .filter((p): p is Player => p !== undefined);
   const byGroup = GROUP_ORDER.flatMap((g) => players.filter((p) => groupOf(primaryPosition(p)) === g));
   const fixtures = nationFixtures(state, code);
-  const nations = [...gameData.nations].sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+  const nations = [...nationalTeams(gameData)].sort((a, b) => a.name.localeCompare(b.name, 'tr'));
 
   return (
     <>
@@ -187,7 +190,8 @@ function TeamTab({ code, setCode }: { code: string; setCode: (c: string) => void
   );
 }
 
-function GroupTable({ title, rows, spots, onPick }: { title: string; rows: StandingRow[]; spots: number; onPick: (code: string) => void }) {
+/** Grup tablosu; `qualified` turnuvaya (ya da eleme turuna) gidenler (şu anki sıralamayla). */
+function GroupTable({ title, rows, qualified, onPick }: { title: string; rows: StandingRow[]; qualified: ReadonlySet<string>; onPick: (code: string) => void }) {
   return (
     <div className="euro-group">
       <div className="sub-head">{title}</div>
@@ -204,12 +208,12 @@ function GroupTable({ title, rows, spots, onPick }: { title: string; rows: Stand
           </tr>
         </thead>
         <tbody>
-          {rows.map((r, i) => {
+          {rows.map((r) => {
             const gd = goalDifference(r);
             return (
               <tr
                 key={r.clubId}
-                className={[i < spots ? 'zone-cl' : '', r.clubId === HOME_NATION ? 'own-row' : '', 'clickable-row'].filter(Boolean).join(' ')}
+                className={[qualified.has(r.clubId) ? 'zone-cl' : '', r.clubId === HOME_NATION ? 'own-row' : '', 'clickable-row'].filter(Boolean).join(' ')}
                 onClick={() => onPick(r.clubId)}
               >
                 <td className="strong"><NationName code={r.clubId} /></td>
@@ -234,16 +238,18 @@ function QualifiersTab({ onPick }: { onPick: (code: string) => void }) {
   const fixtures = qualifierFixtures(state);
   const left = fixtures.filter((f) => !f.result);
   const next = left.map((f) => f.date).sort()[0];
+  // Bitince kesin liste, sürerken şu anki sıralamaya göre turnuvaya gidenler
+  const qualified = new Set(state.qualified ?? qualifierRanking(state).slice(0, UEFA_SPOTS));
   return (
     <div className="cup-view">
       <div className="cup-status">
-        {tournamentTitle(state.year, state.kind)} Elemeleri: grupların ilk {QUALIFIER_SPOTS}'si turnuvaya gider
+        {tournamentTitle(state.year, state.kind)} Elemeleri: turnuvaya {qualifierRuleText(state)} gider
         {state.kind === 'wc' ? " (Dünya Kupası'nda UEFA dışından en güçlü ülkeler de katılır)" : ''}.{' '}
         {next ? `Sıradaki eleme maçları ${formatDateShort(next)}.` : 'Elemeler tamamlandı.'}
       </div>
       <div className="euro-groups">
         {state.qualifierGroups.map((_, g) => (
-          <GroupTable key={g} title={`${GROUP_LETTERS[g]} Grubu`} rows={qualifierTable(state, g)} spots={QUALIFIER_SPOTS} onPick={onPick} />
+          <GroupTable key={g} title={`${GROUP_LETTERS[g]} Grubu`} rows={qualifierTable(state, g)} qualified={qualified} onPick={onPick} />
         ))}
       </div>
     </div>
@@ -297,7 +303,7 @@ function TournamentTab({ onPick }: { onPick: (code: string) => void }) {
       <div className="cup-status">{title}: tüm maçlar tarafsız sahada; grupların ilk 2'si eleme turuna çıkar, elemelerde beraberlikte penaltılar.</div>
       <div className="euro-groups">
         {state.tournamentGroups.map((_, g) => (
-          <GroupTable key={g} title={`${GROUP_LETTERS[g]} Grubu`} rows={tournamentTable(state, g)} spots={2} onPick={onPick} />
+          <GroupTable key={g} title={`${GROUP_LETTERS[g]} Grubu`} rows={tournamentTable(state, g)} qualified={new Set(tournamentTable(state, g).slice(0, 2).map((r) => r.clubId))} onPick={onPick} />
         ))}
       </div>
       {[TOURNAMENT_QUARTER, TOURNAMENT_SEMI, TOURNAMENT_FINAL].map((r) => <KnockoutRound key={r} round={r} />)}

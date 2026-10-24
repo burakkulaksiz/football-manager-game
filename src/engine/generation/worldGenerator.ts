@@ -15,6 +15,7 @@ import { AGENT_SEED_SALT, generateAgents } from '../transfer/agents';
 import { DEFAULT_TRAINING } from '../squad/training';
 import { addForeignClubs, FOREIGN_SEED_SALT } from './foreign';
 import { createInternational, emptyInternational } from '../league/international';
+import { MANAGER_BACKGROUNDS, type ManagerBackground } from '../season/manager';
 
 /** Altyapı üretiminin ayrı rng'si için tohum tuzu. */
 export const ACADEMY_SEED_SALT = 0xa11ce5;
@@ -127,6 +128,7 @@ export function createWorld(
   playerClubId: string,
   startDate: GameDate,
   managerName = 'Menajer',
+  background: ManagerBackground = 'player',
 ): GameWorld {
   if (!data.clubs.some((c) => c.id === playerClubId)) {
     throw new Error(`Bilinmeyen kulüp: ${playerClubId}`);
@@ -170,7 +172,11 @@ export function createWorld(
     history: [],
     seasonState: 'running',
     gameOver: null,
-    manager: { name: managerName.trim() || 'Menajer', joined: startDate, won: 0, drawn: 0, lost: 0, titles: 0 },
+    manager: {
+      name: managerName.trim() || 'Menajer', joined: startDate, won: 0, drawn: 0, lost: 0, titles: 0,
+      background, reputation: MANAGER_BACKGROUNDS[background].reputation,
+      reputationHistory: [{ month: startDate.slice(0, 7), value: MANAGER_BACKGROUNDS[background].reputation }], seasons: [],
+    },
     youthWatch: [],
     requests: [],
     nextRequestId: 1,

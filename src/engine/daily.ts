@@ -18,6 +18,7 @@ import { listedOffersDay, listingsOnWindowOpen } from './transfer/listing';
 import { scoutingDay } from './transfer/scouting';
 import { transferWindow } from './transfer/window';
 import { boardMonthly } from './season/board';
+import { recordReputationMonth } from './season/manager';
 import { recordGrowth } from './squad/growth';
 import { contractWarnings, processExpiringContracts, startNewSeason } from './season/rollover';
 import { endSeason } from './season/seasonEnd';
@@ -55,6 +56,7 @@ export function processDay(world: GameWorld, rng: Rng, data: GameData): void {
   if (world.date.endsWith('-01')) {
     startNewMonth(world);
     boardMonthly(world);
+    recordReputationMonth(world);
     recordGrowth(world);
   }
   // Sezon döngüsü

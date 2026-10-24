@@ -4,7 +4,7 @@
  * 4 = aşama 9 (1. Lig, yönetim, sezon arşivi), 5 = menajer kartı, 6 = altyapı (U19) ve gelişim geçmişi,
  * 7 = transfer / kiralık listesi, 8 = oyuncu görüşmeleri, 9 = yardımcı kaptan, 10 = gözlemciler,
  * 11 = yurtdışı kulüpleri, 12 = genişlik talimatı, 13 = oyuncu menajerleri,
- * 14 = milli takımlar.
+ * 14 = milli takımlar, 15 = menajer itibarı ve kariyer geçmişi.
  */
 import type { GameData } from './data';
 import { initFinance, initFinances, payMonthly } from './finance/finance';
@@ -16,12 +16,13 @@ import { emptyScouting } from './transfer/scouting';
 import { addForeignClubs, FOREIGN_SEED_SALT } from './generation/foreign';
 import { AGENT_SEED_SALT, generateAgents } from './transfer/agents';
 import { createInternational } from './league/international';
+import { migrateManager } from './season/manager';
 import { Rng } from './rng';
 import { initialBoard } from './season/expectation';
 import { DEFAULT_TRAINING } from './squad/training';
 import type { GameWorld } from './types';
 
-export const CURRENT_WORLD_VERSION = 14;
+export const CURRENT_WORLD_VERSION = 15;
 
 /** `raw` eski biçimdeki dünya; dönüştürülmüş dünya döner (yerinde değiştirir). */
 export function migrateWorld(raw: unknown, fromVersion: number, data: GameData): GameWorld {
@@ -130,5 +131,6 @@ export function migrateWorld(raw: unknown, fromVersion: number, data: GameData):
     // Milli takımlar: döngü bugünden kurulur (elemelere yetecek milli gün kalan ilk turnuva)
     createInternational(world, data, world.date);
   }
+  if (fromVersion < 15) migrateManager(world);
   return world;
 }

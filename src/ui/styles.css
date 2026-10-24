@@ -4133,3 +4133,177 @@ select {
 .euro-groups + .cup-round {
   margin-top: 12px;
 }
+
+/* ================= Menajer kariyeri ================= */
+.mgr-rep {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.mgr-rep-value {
+  min-width: 72px;
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 54px;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+}
+
+.mgr-rep-label {
+  margin-bottom: 6px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.rep-bar.wide {
+  width: 240px;
+  height: 8px;
+}
+
+.mgr-rep-change {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* İtibar grafiği: tek seri, 2 px çizgi, silik ızgara; üstüne gelince dikey çizgi + değer */
+.rep-chart {
+  position: relative;
+}
+
+.rep-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.rep-grid line {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1;
+}
+
+.rep-grid text,
+.rep-tick {
+  fill: var(--text-muted);
+  font-size: 11px;
+}
+
+.rep-axis {
+  stroke: rgba(255, 255, 255, 0.25);
+  stroke-width: 1;
+}
+
+.rep-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.rep-cross {
+  stroke: rgba(255, 255, 255, 0.35);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.rep-dot {
+  fill: var(--accent);
+  stroke: #0e2810;
+  stroke-width: 2;
+}
+
+.rep-tooltip {
+  position: absolute;
+  top: 0;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.75);
+  font-size: 12px;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.trophy-cabinet {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.trophy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+
+.trophy-icon {
+  font-size: 26px;
+}
+
+.trophy-cl .trophy-icon,
+.trophy-el .trophy-icon {
+  filter: hue-rotate(180deg) saturate(0.6);
+}
+
+.trophy-name {
+  font-weight: 700;
+}
+
+/* Yeni oyun: menajer geçmişi seçimi */
+.background-picker {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.background-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.background-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.background-card.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.background-title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.background-desc {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.background-rep {
+  margin-top: auto;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+}

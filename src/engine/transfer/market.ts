@@ -7,6 +7,7 @@ import { clubPlayers, getClub } from '../generation/worldGenerator';
 import { removePlayer } from '../match/tactics';
 import { addNews } from '../news';
 import { recordMove } from '../squad/career';
+import { managerTransferBonus } from '../season/manager';
 import { ageOn, baseWage, marketValue, primaryPosition, roundNice } from '../player';
 import type { GameWorld, Player, Position, SquadRole } from '../types';
 import { contractFromTerms } from './agents';
@@ -117,7 +118,8 @@ export const LISTED_LOAN_DISCOUNT = 0.6;
 export function willingToJoin(world: GameWorld, player: Player, buyerId: string): boolean {
   if (!player.clubId) return true;
   const current = getClub(world, player.clubId).reputation;
-  const buyer = getClub(world, buyerId).reputation;
+  // Kulübümüze gelirken menajerin itibarı da etkiler (ünlü menajere yıldız gelir)
+  const buyer = getClub(world, buyerId).reputation + (buyerId === world.playerClubId ? managerTransferBonus(world) : 0);
   const age = ageOn(player.birthDate, world.date);
   return buyer >= current - (age >= 30 ? 30 : 20);
 }

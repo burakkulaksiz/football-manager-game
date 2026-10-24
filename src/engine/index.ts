@@ -47,6 +47,7 @@ export * from './league/international';
 export * from './generation/foreign';
 export * from './season/expectation';
 export * from './season/board';
+export * from './season/manager';
 export * from './season/seasonEnd';
 export * from './season/rollover';
 

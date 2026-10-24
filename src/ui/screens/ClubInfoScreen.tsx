@@ -5,6 +5,8 @@ import {
   confidenceLabel,
   formatDateTR,
   HOME_NATION,
+  managerReputation,
+  reputationLabel,
   marketValue,
   MIN_ROUNDS_BEFORE_SACK,
   seasonLabel,
@@ -19,6 +21,7 @@ import { EXPECTATION_LABELS, formatMoney, formatNumber, formatSignedMoney } from
 function ManagerCard() {
   const world = useWorld();
   const renameManager = useGameStore((s) => s.renameManager);
+  const setScreen = useGameStore((s) => s.setScreen);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(world.manager.name);
   const m = world.manager;
@@ -55,6 +58,7 @@ function ManagerCard() {
           <div className="club-header">
             <span className="club-header-name">{m.name}</span>
             <button className="btn btn-small" onClick={() => { setDraft(m.name); setEditing(true); }}>Adı Değiştir</button>
+            <button className="btn btn-small" onClick={() => setScreen('manager')}>Kariyer ›</button>
           </div>
         )}
         <div className="manager-record">
@@ -62,6 +66,10 @@ function ManagerCard() {
           <div><strong>{m.won}</strong><span>Galibiyet</span></div>
           <div><strong>{m.drawn}</strong><span>Beraberlik</span></div>
           <div><strong>{m.lost}</strong><span>Mağlubiyet</span></div>
+        </div>
+        <div className="kv">
+          <span className="kv-label">İtibar</span>
+          <span className="kv-value">{Math.round(managerReputation(world))} / 100 · {reputationLabel(Math.round(managerReputation(world)))}</span>
         </div>
         <div className="kv"><span className="kv-label">Göreve başlama</span><span className="kv-value">{formatDateTR(m.joined)}</span></div>
         <div className="kv"><span className="kv-label">Galibiyet yüzdesi</span><span className="kv-value">{played > 0 ? `%${Math.round((m.won / played) * 100)}` : '—'}</span></div>

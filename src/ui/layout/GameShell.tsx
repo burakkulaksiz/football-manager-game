@@ -6,6 +6,7 @@ import { ClubInfoScreen } from '../screens/ClubInfoScreen';
 import { DynamicsScreen } from '../screens/DynamicsScreen';
 import { FinanceScreen } from '../screens/FinanceScreen';
 import { InternationalScreen } from '../screens/InternationalScreen';
+import { ManagerScreen } from '../screens/ManagerScreen';
 import { FixturesScreen } from '../screens/FixturesScreen';
 import { InboxScreen } from '../screens/InboxScreen';
 import { MatchReportScreen } from '../screens/MatchReportScreen';
@@ -41,6 +42,7 @@ function ScreenContent({ screen }: { screen: ScreenId }) {
     case 'transfers': return <TransferScreen />;
     case 'finance': return <FinanceScreen />;
     case 'international': return <InternationalScreen />;
+    case 'manager': return <ManagerScreen />;
     default: return <PlaceholderScreen screen={screen} />;
   }
 }

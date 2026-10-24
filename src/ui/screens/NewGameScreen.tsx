@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { gameData } from '../../gameData';
+import { BACKGROUND_ORDER, MANAGER_BACKGROUNDS, type ManagerBackground } from '../../engine';
 import { useGameStore } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { EXPECTATION_LABELS, formatMoney, formatNumber } from '../labels';
@@ -10,11 +11,12 @@ export function NewGameScreen() {
   const quitToMenu = useGameStore((s) => s.quitToMenu);
   const [selected, setSelected] = useState<string | null>(null);
   const [managerName, setManagerName] = useState('');
+  const [background, setBackground] = useState<ManagerBackground>('player');
 
   const clubs = [...gameData.clubs].sort((a, b) => b.reputation - a.reputation);
   const selectedClub = clubs.find((c) => c.id === selected);
   const nameOk = managerName.trim().length > 0;
-  const start = (clubId: string) => nameOk && startNewGame(clubId, managerName);
+  const start = (clubId: string) => nameOk && startNewGame(clubId, managerName, background);
 
   return (
     <div className="new-game pitch-bg">
@@ -32,6 +34,22 @@ export function NewGameScreen() {
               onChange={(e) => setManagerName(e.target.value)}
             />
           </label>
+        </div>
+        {/* Menajerin geçmişi: başlangıç itibarı (oyuncuların gelme isteği, yönetimin sabrı) */}
+        <div className="background-picker" role="radiogroup" aria-label="Menajer geçmişi">
+          {BACKGROUND_ORDER.map((b) => (
+            <button
+              key={b}
+              role="radio"
+              aria-checked={background === b}
+              className={`background-card${background === b ? ' active' : ''}`}
+              onClick={() => setBackground(b)}
+            >
+              <span className="background-title">{MANAGER_BACKGROUNDS[b].label}</span>
+              <span className="background-desc">{MANAGER_BACKGROUNDS[b].description}</span>
+              <span className="background-rep">Başlangıç itibarı {MANAGER_BACKGROUNDS[b].reputation}</span>
+            </button>
+          ))}
         </div>
         <section className="panel">
           <h2 className="panel-title">Süper Lig Kulüpleri</h2>

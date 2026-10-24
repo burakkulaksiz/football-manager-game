@@ -15,6 +15,7 @@ import type { Rng } from '../rng';
 import type { GameWorld, SeasonAward, SeasonSummary } from '../types';
 import { recordSeasonCareers } from '../squad/career';
 import { sack } from './board';
+import { managerSeasonEnd, sackThreshold } from './manager';
 import { divisionOf } from './expectation';
 
 export const RELEGATED_COUNT = 3;
@@ -87,7 +88,7 @@ function boardSeasonReview(world: GameWorld, position: number, relegated: boolea
   const diff = board.targetPosition - position;
   const delta = position === 1 ? 30 : diff >= 0 ? 15 : diff >= -3 ? -5 : -20;
   board.confidence = Math.max(0, Math.min(100, board.confidence + delta));
-  if (board.confidence < 15) sack(world, 'Sezon hedeflerinin çok gerisinde kalındı; yönetim kurulu görevine son verdi.');
+  if (board.confidence < sackThreshold(world, 15)) sack(world, 'Sezon hedeflerinin çok gerisinde kalındı; yönetim kurulu görevine son verdi.');
 }
 
 export function endSeason(world: GameWorld, rng: Rng): SeasonSummary {
@@ -152,6 +153,8 @@ export function endSeason(world: GameWorld, rng: Rng): SeasonSummary {
     });
   }
   if (userPosition === 1) world.manager.titles++;
+  // Menajer: itibar (hedefe göre sıra, kupalar) ve kariyer sezonu; görevden alma kararından önce
+  managerSeasonEnd(world, userPosition, relegatedIds.includes(world.playerClubId));
   boardSeasonReview(world, userPosition, relegatedIds.includes(world.playerClubId));
   return summary;
 }

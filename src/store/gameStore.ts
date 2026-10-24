@@ -16,6 +16,7 @@ import {
   type Competition,
   type FormationId,
   type GameWorld,
+  type ManagerBackground,
   type MatchState,
   type Player,
   type Side,
@@ -51,7 +52,8 @@ export type ScreenId =
   | 'player'
   | 'match'
   | 'report'
-  | 'international';
+  | 'international'
+  | 'manager';
 
 /** Gezinme geçmişindeki bir sayfa (FM'deki ◀ ▶ okları için). */
 export interface Route {
@@ -100,7 +102,7 @@ interface GameState {
 
   openNewGame: () => void;
   openLoadGame: () => void;
-  startNewGame: (clubId: string, managerName: string) => void;
+  startNewGame: (clubId: string, managerName: string, background?: ManagerBackground) => void;
   /** Menajer adını değiştirir. */
   renameManager: (name: string) => void;
   /** Elle kayıt: yeni slot ya da `overwriteId` slotunun üzerine. Canlı maç sırasında yapılamaz. */
@@ -228,10 +230,10 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     openLoadGame: () => set({ phase: 'load' }),
 
-    startNewGame: (clubId, managerName) => {
+    startNewGame: (clubId, managerName, background = 'player') => {
       // Seed oyunun başında bir kez belirlenir; motor içinde Math.random kullanılmaz.
       const seed = Date.now() >>> 0;
-      const world = createWorld(gameData, seed, clubId, SEASON_START_DATE, managerName);
+      const world = createWorld(gameData, seed, clubId, SEASON_START_DATE, managerName, background);
       set({ ...enterGame(world), currentSaveId: null, revision: 1 });
     },
 

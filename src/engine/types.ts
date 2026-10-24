@@ -4,6 +4,7 @@ import type { CareerMove, CareerSeason } from './squad/career';
 import type { ScoutingState } from './transfer/scouting';
 import type { Tactics } from './match/tactics';
 import type { InternationalState } from './league/international';
+import type { ManagerBackground, ManagerRecordMatch, ManagerSeason } from './season/manager';
 
 export type Position =
   | 'GK'
@@ -458,6 +459,16 @@ export interface ManagerInfo {
   cups?: number;
   /** Avrupa kupası zaferleri (Şampiyonlar Ligi ya da Avrupa Ligi). */
   europeTitles?: number;
+  /** Yeni oyunda seçilen geçmiş (başlangıç itibarı). */
+  background?: ManagerBackground;
+  /** Menajer itibarı 1–100 (bkz. season/manager.ts). */
+  reputation?: number;
+  /** Aylık itibar geçmişi (en eski önce). */
+  reputationHistory?: { month: string; value: number }[];
+  /** Tamamlanan (ya da görevden alınılan) sezonlar. */
+  seasons?: ManagerSeason[];
+  bestWin?: ManagerRecordMatch;
+  worstDefeat?: ManagerRecordMatch;
 }
 
 export interface BoardState {

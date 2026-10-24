@@ -6,6 +6,7 @@ import { getClub, leagueClubs } from '../generation/worldGenerator';
 import { computeStandings } from '../league/standings';
 import { addNews } from '../news';
 import type { Fixture, GameWorld } from '../types';
+import { lossPenaltyFactor, managerSacked, sackThreshold } from './manager';
 
 /** Bu güvenin altında (ve en az bu kadar hafta oynandıysa) görevden alınır. */
 export const SACK_CONFIDENCE = 10;
@@ -32,7 +33,7 @@ function roundsPlayed(world: GameWorld): number {
   return world.season.fixtures.filter((f) => f.result && f.competition === undefined && (f.homeId === world.playerClubId || f.awayId === world.playerClubId)).length;
 }
 
-/** Kullanıcının maçından sonra: galibiyet +1.5, yenilgi −2.5 (büyük hedefli kulüpte daha sert). */
+/** Kullanıcının maçından sonra: galibiyet +1.5, yenilgi −2.5 (büyük hedefli kulüpte daha sert; menajerin itibarı yumuşatır). */
 export function boardAfterMatch(world: GameWorld, fixture: Fixture): void {
   const user = world.playerClubId;
   if (!fixture.result || (fixture.homeId !== user && fixture.awayId !== user)) return;
@@ -44,7 +45,7 @@ export function boardAfterMatch(world: GameWorld, fixture: Fixture): void {
   else world.manager.lost++;
 
   const bigClub = world.board.targetPosition <= 4;
-  const delta = own > opp ? 1.5 : own === opp ? (bigClub ? -0.5 : 0.3) : bigClub ? -3.5 : -2.5;
+  const delta = own > opp ? 1.5 : own === opp ? (bigClub ? -0.5 : 0.3) : (bigClub ? -3.5 : -2.5) * lossPenaltyFactor(world);
   world.board.confidence = clamp(world.board.confidence + delta);
   checkSacking(world);
 }
@@ -78,15 +79,16 @@ export function boardMonthly(world: GameWorld): void {
   checkSacking(world);
 }
 
-/** Güven dibe vurduysa (ve sezon yeterince ilerlediyse) görevden alma. */
+/** Güven dibe vurduysa (ve sezon yeterince ilerlediyse) görevden alma; itibarlı menajere yönetim daha sabırlı. */
 export function checkSacking(world: GameWorld): void {
-  if (world.gameOver || world.board.confidence >= SACK_CONFIDENCE) return;
+  if (world.gameOver || world.board.confidence >= sackThreshold(world, SACK_CONFIDENCE)) return;
   if (world.seasonState === 'running' && roundsPlayed(world) < MIN_ROUNDS_BEFORE_SACK) return;
   sack(world, 'Yönetim kurulu, kötü sonuçlar nedeniyle görevine son verdi.');
 }
 
 export function sack(world: GameWorld, reason: string): void {
   world.gameOver = { date: world.date, reason };
+  managerSacked(world, userPosition(world));
   addNews(world, {
     category: 'board',
     title: 'Görevine son verildi',

@@ -61,7 +61,7 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
                        gelen tekliflere yanıt, günlük teklif işleme (processOffers).
   transfer/ai.ts       Yapay zekâ alımları ve kullanıcıya teklifler (aiTransferDay).
   transfer/listing.ts  Transfer / kiralık listesi: listPlayer, unlistPlayer, listedOffersDay, refreshAiListings.
-  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 14; migrateWorld GameData de alır).
+  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 15; migrateWorld GameData de alır).
   squad/training.ts    Antrenman odağı/yoğunluğu ve etkileri (INTENSITY_EFFECTS, FOCUS_ATTRS).
   squad/injuries.ts    Sakatlık türleri, maç/antrenman sakatlığı, günlük iyileşme.
   squad/discipline.ts  Kart cezaları (maç sonrası).
@@ -684,6 +684,24 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
   geçen), inXI (kendi oyuncumuz ilk 11'de), fitsXI / rotation / prospect / notNeeded (başka kulübün oyuncusu, scoutVerdict),
   value (en iyiye 6 puan yakın, değeri en iyinin %60'ından az), injured, tired (< %75), unknown (bilgi < 45: gözlemci gönder),
   mixedPositions (farklı mevki grupları; öneri yok). Yetenek / potansiyel gözlemci tahmini (abilityEstimate).
+
+## Menajer itibarı ve kariyer (kullanıcı seçti: geçmiş seçimi; itibar transferi ve yönetimi etkiler)
+- Kayıt sürümü 15: ManagerInfo.background, reputation (1–100), reputationHistory ({ month, value }, ay başı; en çok 360),
+  seasons (ManagerSeason: kulüp, sıra / hedef, G-B-M ve goller tüm maçlardan, kupalar, sezon sonu itibarı, sacked), bestWin /
+  worstDefeat. engine/season/manager.ts. Dönüşüm: itibar = geçmiş (eski futbolcu 35) + şampiyonluk ×8 + kupa ×4 + Avrupa ×10;
+  sezonlar arşivden (maç istatistikleri yok, “—”).
+- Geçmiş (yeni oyunda seçilir): amatör 15, eski futbolcu 35, eski milli futbolcu 50, tecrübeli teknik direktör 65.
+- Değişim: maç (reputationAfterMatch, applyResult'ta) — rakibin itibarı 5+ yüksek / denk / 5+ düşük: galibiyet +0.6 / +0.3 / +0.15,
+  yenilgi −0.1 / −0.3 / −0.6, beraberlik +0.15 / 0 / −0.15 (penaltıyla kazanılan / kaybedilen eleme maçı galibiyet / yenilgi);
+  Avrupa ×1.5, kupa ×0.8. Sezon sonu (managerSeasonEnd, endSeason'da görevden alma kararından önce): (hedef − sıra) × 1.5
+  (±10), şampiyonluk +8, kupa +4, ŞL +12, AL +7, küme düşme −12. Görevden alınma −8 (managerSacked; sezon kariyere sacked).
+  Ölçüm (tek sezon): hedefin 3 sıra gerisi ~−5, hedefin 1 sıra üstü ~+6.
+- Etkiler: willingToJoin — alıcı kulübümüzse kulüp itibarına (itibar − 50) × 0.2 (±10). Yönetim: görevden alma eşiği
+  sackThreshold = taban − (itibar − 50) × 0.1 (maç içi 10, sezon sonu 15 tabanı; itibar 100 → 5), yenilgide güven kaybı ×
+  lossPenaltyFactor (itibar 100 → 0.8, 1 → 1.2).
+- Arayüz: Yeni oyunda geçmiş kartları; sol menüde Kulüp → Menajer Kariyeri (ManagerScreen): itibar ve etiketi (Yerel < 30 ≤
+  Bölgesel < 50 ≤ Ulusal < 70 ≤ Avrupa çapında < 85 ≤ Dünyaca ünlü), son 12 ay değişimi, aylık itibar grafiği (tek seri,
+  üstüne gelince değer), kupa dolabı, rekorlar, sezon sezon kariyer tablosu. Kulüp Bilgisi'ndeki menajer kartında itibar ve “Kariyer ›”.
 
 ## Şut ve ısı haritası
 - Motor kaydı (yalnızca gösterim, rng kullanmaz): MatchState.shots / MatchResult.shots — her şut (dakika sayacı,

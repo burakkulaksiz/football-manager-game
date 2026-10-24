@@ -10,7 +10,7 @@
  */
 import { daysBetween, makeDate } from '../date';
 import { clubPlayers } from '../generation/worldGenerator';
-import { FORMATIONS, slotFit } from '../match/formation';
+import { slotFit, slotsOf } from '../match/formation';
 import { ageOn, isAvailable, primaryPosition } from '../player';
 import type { GameWorld, Player, Position } from '../types';
 import { academyPlayers, isOverAge } from './academy';
@@ -106,7 +106,7 @@ export function assistantAdvice(world: GameWorld): Advice[] {
     advice.push({ ...a, id: `${a.kind}-${a.slot ?? a.group ?? ''}-${a.playerIds.join('.')}` });
 
   /* ---------------- İlk 11 ---------------- */
-  const slots = tactics ? FORMATIONS[tactics.formation] : [];
+  const slots = tactics ? slotsOf(tactics) : [];
   const starters: { p: Player; slot: Position }[] = [];
   if (tactics) {
     tactics.lineup.forEach((id, i) => {

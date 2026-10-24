@@ -21,10 +21,16 @@ function cupPrizes(world: GameWorld, clubId: string): number {
   return cupFixtures(world).filter((f) => fixtureWinner(f) === clubId).reduce((sum, f) => sum + CUP_ROUNDS[f.round - 1]!.prize, 0);
 }
 
-/** Belirtilen tarihe kadar oyunu oynatır (kendi maçımız da otomatik). */
+/**
+ * Belirtilen tarihe kadar oyunu oynatır (kendi maçımız da otomatik). Sezon döngüsü sınanırken menajer görevden
+ * alınmasın diye yönetim güveni eşiğin üstünde tutulur (görevden alma 'yönetim' testinde ayrıca sınanır).
+ */
 function playUntil(world: GameWorld, date: string): void {
   let guard = 0;
-  while (world.date < date && !world.gameOver && guard++ < 3000) advance(world, gameData, { autoPlayUserMatch: true });
+  while (world.date < date && !world.gameOver && guard++ < 3000) {
+    world.board.confidence = Math.max(world.board.confidence, 50);
+    advance(world, gameData, { autoPlayUserMatch: true });
+  }
 }
 
 describe('sezon döngüsü', () => {

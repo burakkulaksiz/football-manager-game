@@ -4,7 +4,16 @@
  *
  * Koordinatlar metre: x 0–105 (ev sahibi sağa hücum eder), y 0–68 (yukarıdan aşağı).
  */
-import { FORMATION_LAYOUT, FORMATIONS, type MatchPlay, type MatchState, type Position, type Side, type TeamInstructions } from '../engine';
+import {
+  layoutOf,
+  slotHolders,
+  type MatchPlay,
+  type MatchState,
+  type PlayerOrders,
+  type Position,
+  type Side,
+  type TeamInstructions,
+} from '../engine';
 
 export const PITCH_LENGTH = 105;
 export const PITCH_WIDTH = 68;
@@ -126,9 +135,11 @@ export function teamSpots(match: MatchState, side: Side, ball: Point, kickoff: b
   const ballPull = defending ? (match[side].instructions.pressing === 'high' ? 0.3 : 0.24) : 0.18;
   const spots = new Map<number, Point>();
 
-  for (const { id, slot, lx, ly } of formationRoles(match, side)) {
+  for (const { id, slot, lx: baseLx, ly: baseLy, orders } of formationRoles(match, side)) {
     let a: number;
-    const defender = ly >= 65;
+    const defender = baseLy >= 65;
+    // Bireysel talimatlar: ileri çıkan / geride kalan, içe katan / kanada açılan oyuncu (başlama vuruşunda dizilişte)
+    const { lx, ly } = kickoff ? { lx: baseLx, ly: baseLy } : ordersShift(baseLx, baseLy, orders, defending);
     if (slot === 'GK') a = 4 + t * 8 + (kickoff ? 0 : Math.max(-1, shape.line * 0.4));
     else a = 6 + ((100 - ly) / 100) * 52 + t * 36;
     if (kickoff) a = Math.min(a, PITCH_LENGTH / 2 - 1.5);
@@ -161,31 +172,45 @@ export function teamSpots(match: MatchState, side: Side, ball: Point, kickoff: b
 export interface FormationRole {
   id: number;
   slot: Position | null;
-  /** Dizilişteki yer (FORMATION_LAYOUT): lx soldan sağa, ly yukarı = hücum (küçük ly = ileri). */
+  /** Dizilişteki yer (FORMATION_LAYOUT ya da özel diziliş): lx soldan sağa, ly yukarı = hücum (küçük ly = ileri). */
   lx: number;
   ly: number;
+  orders?: PlayerOrders;
 }
 
 /** Sahadaki oyuncuların dizilişteki yerleri (saha yerleşimi ve duran top rolleri için). */
 export function formationRoles(match: MatchState, side: Side): FormationRole[] {
   const team = match[side];
   // Dizilişteki mevki sırası ile saha yerleşimi aynı sıradadır
-  const layout = FORMATION_LAYOUT[team.formation];
-  const formationSlots = FORMATIONS[team.formation];
-  const used = new Set<number>();
+  const layout = layoutOf(team);
   const roles: FormationRole[] = [];
-  for (const id of team.onPitch) {
-    const slot = match.players[id]!.slot;
-    // Aynı mevkiden birden çok varsa (iki stoper) sıradaki boş yer
-    let index = formationSlots.findIndex((s, i) => s === slot && !used.has(i));
-    // Mevki dizilişte yoksa (beklenmedik durum) nokta kaybolmasın: boştaki ilk yer
-    if (index === -1) index = formationSlots.findIndex((_, i) => i > 0 && !used.has(i));
-    if (index === -1) continue;
-    used.add(index);
+  slotHolders(team, match.players).forEach((id, index) => {
+    if (id === null || !layout[index]) return;
+    const ps = match.players[id]!;
     const [lx, ly] = layout[index]!;
-    roles.push({ id, slot, lx, ly });
-  }
+    roles.push(ps.orders ? { id, slot: ps.slot, lx, ly, orders: ps.orders } : { id, slot: ps.slot, lx, ly });
+  });
   return roles;
+}
+
+/**
+ * Bireysel talimatın dizilişteki yere etkisi: hücum görevi ileri (top bizdeyken daha çok), savunma görevi geri;
+ * kanada açılan kenara, içe katan ortaya yaklaşır; serbest rol biraz ortaya ve ileri.
+ */
+export function ordersShift(lx: number, ly: number, orders: PlayerOrders | undefined, defending: boolean): { lx: number; ly: number } {
+  if (!orders) return { lx, ly };
+  let x = lx;
+  let y = ly;
+  if (orders.duty === 'attack') y -= defending ? 3 : 8;
+  else if (orders.duty === 'defend') y += defending ? 6 : 5;
+  const wide = Math.abs(lx - 50) > 18;
+  if (orders.channel === 'wide') x = 50 + (lx - 50) * 1.2;
+  else if (orders.channel === 'inside' && wide) x = 50 + (lx - 50) * 0.6;
+  if (orders.freeRole && !defending) {
+    x = 50 + (x - 50) * 0.8;
+    y -= 4;
+  }
+  return { lx: clamp(x, 3, 97), ly: clamp(y, 6, 88) };
 }
 
 /** İki takımın renkleri çok yakınsa deplasman ikinci rengini giyer. */

@@ -18,10 +18,14 @@ import { Rng } from '../rng';
 import type { GoalKind, MatchResult, Player, PlayerMatchRecord, Position, ShotOutcome, ShotRecord, TeamMatchStats } from '../types';
 import { commentary, type CommentaryKey } from './commentary';
 import {
+  AI_FORMATION_IDS,
   assignToFormation,
   DEFAULT_FORMATION_ID,
   FORMATIONS,
+  formationName,
   slotFit,
+  slotsOf,
+  type CustomFormation,
   type FormationId,
   type Lineup,
 } from './formation';
@@ -43,8 +47,13 @@ import {
 import {
   DEFAULT_INSTRUCTIONS,
   instructionEffects,
+  isDefaultOrders,
   NEUTRAL_EFFECTS,
+  orderCreating,
+  orderShooting,
+  orderWeights,
   type InstructionEffects,
+  type PlayerOrders,
   type TeamInstructions,
   type TeamProfile,
 } from './tactics';
@@ -169,21 +178,37 @@ function teamUnits(state: MatchState, team: TeamState, lookup: PlayerLookup): Un
   const passing: number[] = [];
   const defencePace: number[] = [];
   const attackPace: number[] = [];
+  const attackAerial: number[] = [];
+  const creativity: number[] = [];
+  const defencePassing: number[] = [];
+  const defenceAwareness: number[] = [];
+  let tightMarkers = 0;
   for (const id of team.onPitch) {
     const ps = state.players[id]!;
     const p = lookup[id]!;
+    const a = p.attributes;
     const eff = efficiency(ps, p);
     if (ps.slot === 'GK') {
-      gk = keeperScore(p.attributes) * eff;
+      gk = keeperScore(a) * eff;
       continue;
     }
     const w = SLOT_WEIGHTS[ps.slot!];
-    att += w.att * eff * attackScore(p.attributes);
-    mid += w.mid * eff * midfieldScore(p.attributes);
-    def += w.def * eff * defenceScore(p.attributes);
-    passing.push((p.attributes.passing + p.attributes.technique) / 2);
-    if (DEFENSIVE_SLOTS.has(ps.slot!)) defencePace.push(p.attributes.pace);
-    if (ATTACKING_SLOTS.has(ps.slot!)) attackPace.push(p.attributes.pace);
+    const o = orderWeights(ps.orders, a.dribbling);
+    att += w.att * o.att * eff * attackScore(a);
+    mid += w.mid * o.mid * eff * midfieldScore(a);
+    def += w.def * o.def * eff * defenceScore(a);
+    passing.push((a.passing + a.technique) / 2);
+    creativity.push((a.creativity + a.flair) / 2);
+    if (ps.orders?.tightMarking) tightMarkers++;
+    if (DEFENSIVE_SLOTS.has(ps.slot!)) {
+      defencePace.push(a.pace);
+      defencePassing.push((a.passing + a.composure) / 2);
+      defenceAwareness.push((a.concentration + a.anticipation) / 2);
+    }
+    if (ATTACKING_SLOTS.has(ps.slot!)) {
+      attackPace.push(a.pace);
+      attackAerial.push((a.heading + a.jumping) / 2);
+    }
   }
   const fw = team.fullWeights;
   const cap = captainBonus(team, lookup);
@@ -196,12 +221,16 @@ function teamUnits(state: MatchState, team: TeamState, lookup: PlayerLookup): Un
       passing: average(passing, 10),
       defencePace: average(defencePace, 10),
       attackPace: average(attackPace, 10),
+      attackAerial: average(attackAerial, 10),
+      creativity: average(creativity, 10),
+      defencePassing: average(defencePassing, 10),
+      defenceAwareness: average(defenceAwareness, 10),
+      tightMarkers,
     },
   };
 }
 
-/** Birim ağırlık toplamları: eksik oyuncu takımı zayıflatsın diye 11 kişilik dizilişten hesaplanır. */
-function formationWeights(slots: readonly Position[]): TeamState['fullWeights'] {
+function rawWeights(slots: readonly Position[]): TeamState['fullWeights'] {
   const fw = { att: 0, mid: 0, def: 0 };
   for (const slot of slots) {
     const w = SLOT_WEIGHTS[slot];
@@ -210,6 +239,28 @@ function formationWeights(slots: readonly Position[]): TeamState['fullWeights'] 
     fw.def += w.def;
   }
   return { att: Math.max(fw.att, 0.1), mid: Math.max(fw.mid, 0.1), def: Math.max(fw.def, 0.1) };
+}
+
+/** Yapay zekâ dizilişlerinin ortalama birim ağırlıkları (dizilişin şekli buna göre ölçülür). */
+const REFERENCE_WEIGHTS: TeamState['fullWeights'] = (() => {
+  const all = AI_FORMATION_IDS.map((id) => rawWeights(FORMATIONS[id]));
+  const avg = (k: 'att' | 'mid' | 'def') => all.reduce((s, w) => s + w[k], 0) / all.length;
+  return { att: avg('att'), mid: avg('mid'), def: avg('def') };
+})();
+
+/** Dizilişin şeklinin etkisi (üs): çok forvetli diziliş hücumda biraz güçlü, savunmada zayıf olur. */
+const SHAPE_EXPONENT = 0.3;
+
+/**
+ * Birim ağırlık toplamları: eksik oyuncu takımı zayıflatsın diye 11 kişilik dizilişten hesaplanır.
+ * Bölen, dizilişin ağırlığı ile ortalama dizilişin ağırlığı arasında: birimin gücü oyuncuların ortalamasıdır,
+ * dizilişte o birime çok oyuncu varsa biraz artar (SHAPE_EXPONENT).
+ */
+function formationWeights(slots: readonly Position[]): TeamState['fullWeights'] {
+  const fw = rawWeights(slots);
+  const k = SHAPE_EXPONENT;
+  const scale = (key: 'att' | 'mid' | 'def') => fw[key] ** (1 - k) * REFERENCE_WEIGHTS[key] ** k;
+  return { att: scale('att'), mid: scale('mid'), def: scale('def') };
 }
 
 /* ------------------------------------------------------------------ */
@@ -222,12 +273,17 @@ export interface TeamSetup {
   lineup: Lineup;
   userControlled?: boolean;
   formation?: FormationId;
+  /** Kendi dizilişi (varsa formation yerine). */
+  custom?: CustomFormation | null;
+  plan?: number;
   instructions?: TeamInstructions;
   /** Boşsa (otomatik) ilk 11'in en yüksek liderlikli oyuncusu; yardımcı kaptan ikincisi. */
   captainId?: number | null;
   viceCaptainId?: number | null;
   penaltyTakerId?: number | null;
   freeKickTakerId?: number | null;
+  cornerTakerId?: number | null;
+  targetManId?: number | null;
   /** Maç sakatlığı riski çarpanı (kulübün sağlık merkezi); yoksa 1. */
   injuryRisk?: number;
 }
@@ -274,11 +330,13 @@ function newTeam(rng: Rng, setup: TeamSetup, side: Side, lookup: PlayerLookup, p
     .map((s) => s.playerId)
     .sort((a, b) => lookup[b]!.attributes.leadership - lookup[a]!.attributes.leadership);
   const captainId = setup.captainId ?? autoLeaders[0] ?? null;
-  for (const { playerId, slot } of setup.lineup.starters) {
+  for (const { playerId, slot, orders } of setup.lineup.starters) {
     players[playerId] = newPlayerState(rng, lookup[playerId]!, side, slot);
+    if (!isDefaultOrders(orders)) players[playerId]!.orders = { ...orders! };
   }
   for (const id of setup.lineup.bench) players[id] = newPlayerState(rng, lookup[id]!, side, null);
   const formation = setup.formation ?? DEFAULT_FORMATION_ID;
+  const custom = setup.custom ?? null;
   return {
     clubId: setup.clubId,
     name: setup.name,
@@ -287,15 +345,19 @@ function newTeam(rng: Rng, setup: TeamSetup, side: Side, lookup: PlayerLookup, p
     bench: [...setup.lineup.bench],
     subsUsed: 0,
     formation,
-    instructions: { ...(setup.instructions ?? DEFAULT_INSTRUCTIONS) },
+    ...(custom ? { custom } : {}),
+    ...(setup.plan !== undefined ? { plan: setup.plan } : {}),
+    instructions: { ...DEFAULT_INSTRUCTIONS, ...setup.instructions },
     captainId,
     viceCaptainId: setup.viceCaptainId ?? autoLeaders.find((id) => id !== captainId) ?? null,
     penaltyTakerId: setup.penaltyTakerId ?? null,
     freeKickTakerId: setup.freeKickTakerId ?? null,
+    ...(setup.cornerTakerId != null ? { cornerTakerId: setup.cornerTakerId } : {}),
+    ...(setup.targetManId != null ? { targetManId: setup.targetManId } : {}),
     userControlled: setup.userControlled ?? false,
     ...(setup.injuryRisk !== undefined && setup.injuryRisk !== 1 ? { injuryRisk: setup.injuryRisk } : {}),
     counters: { shots: 0, shotsOnTarget: 0, corners: 0, fouls: 0, yellowCards: 0, redCards: 0 },
-    fullWeights: formationWeights(FORMATIONS[formation]),
+    fullWeights: formationWeights(slotsOf({ formation, custom })),
   };
 }
 
@@ -437,13 +499,14 @@ const CREATOR_WEIGHT: Record<Position, number> = {
  * Mevkiye göre şut türü olasılıkları [kafa, uzaktan]; kalanı normal şut.
  * `headerBonus`: uzun top oynayan takımda kafa şutu payı artar.
  */
-function shotKindFor(rng: Rng, slot: Position, headerBonus: number): GoalKind {
-  const [baseHeader, long] =
+function shotKindFor(rng: Rng, slot: Position, headerBonus: number, longBonus = 0): GoalKind {
+  const [baseHeader, baseLong] =
     slot === 'ST' ? [0.22, 0.08]
       : slot === 'AMC' || slot === 'AMR' || slot === 'AML' ? [0.1, 0.3]
         : slot === 'DC' || slot === 'DR' || slot === 'DL' || slot === 'WBR' || slot === 'WBL' ? [0.45, 0.3]
           : [0.12, 0.55];
   const header = baseHeader + headerBonus;
+  const long = baseLong + longBonus;
   const r = rng.next();
   return r < header ? 'header' : r < header + long ? 'long' : 'normal';
 }
@@ -461,7 +524,12 @@ function shotSkill(a: Attributes, kind: GoalKind): number {
 const KIND_ON_TARGET: Record<GoalKind, number> = { normal: 1, header: 0.9, long: 0.75, freekick: 0.85, penalty: 1 };
 const KIND_GOAL: Record<GoalKind, number> = { normal: 1, header: 0.85, long: 0.55, freekick: 0.7, penalty: 1 };
 
-function scoreGoal(ctx: Ctx, side: Side, scorerId: number, kind: GoalKind): number | null {
+const WIDE_SLOTS: ReadonlySet<Position> = new Set(['DR', 'DL', 'WBR', 'WBL', 'MR', 'ML', 'AMR', 'AML']);
+
+/**
+ * Gol. `assistBy`: duran topta ortayı yapan (kornerde kornerci), varsa asisti çoğunlukla o yapar.
+ */
+function scoreGoal(ctx: Ctx, side: Side, scorerId: number, kind: GoalKind, assistBy: number | null = null): number | null {
   const { state, rng } = ctx;
   const team = teamOf(state, side);
   const opp = teamOf(state, other(side));
@@ -469,12 +537,14 @@ function scoreGoal(ctx: Ctx, side: Side, scorerId: number, kind: GoalKind): numb
 
   // Asist: penaltı ve serbest vuruş hariç gollerin çoğunda.
   let assistId: number | null = null;
-  if (kind !== 'penalty' && kind !== 'freekick' && rng.chance(0.72)) {
+  if (assistBy !== null && assistBy !== scorerId && team.onPitch.includes(assistBy)) {
+    if (rng.chance(0.8)) assistId = assistBy;
+  } else if (kind !== 'penalty' && kind !== 'freekick' && rng.chance(0.72)) {
     assistId = pickOnPitch(
       ctx,
       side,
       (ps, p) =>
-        CREATOR_WEIGHT[ps.slot!] *
+        CREATOR_WEIGHT[ps.slot!] * orderCreating(ps.orders, WIDE_SLOTS.has(ps.slot!)) *
         (p.attributes.passing + p.attributes.creativity + p.attributes.crossing * (kind === 'header' ? 1.5 : 0.5)),
       [scorerId],
     );
@@ -507,7 +577,15 @@ function scoreGoal(ctx: Ctx, side: Side, scorerId: number, kind: GoalKind): numb
 /**
  * Bir şutu sonuçlandırır. `threat` atak gücü oranıdır (pozisyonun kalitesi).
  */
-function resolveShot(ctx: Ctx, side: Side, shooterId: number, kind: GoalKind, threat: number, fromCorner = false): void {
+function resolveShot(
+  ctx: Ctx,
+  side: Side,
+  shooterId: number,
+  kind: GoalKind,
+  threat: number,
+  fromCorner = false,
+  setPiece: { quality: number; crosser: number | null } | null = null,
+): void {
   const { state, rng, lookup } = ctx;
   const team = teamOf(state, side);
   const oppSide = other(side);
@@ -549,7 +627,7 @@ function resolveShot(ctx: Ctx, side: Side, shooterId: number, kind: GoalKind, th
   const gk = teamUnits(state, opp, lookup).gk;
 
   // Taktik: kendi şut kalitemiz ve rakibin savunma hattının açtığı/kapattığı alan.
-  const quality = ctx.effects[side].shotQuality;
+  const quality = ctx.effects[side].shotQuality * (setPiece?.quality ?? 1);
   const conceded = ctx.effects[oppSide].oppShotQuality;
   const pOnTarget = kind === 'penalty' ? 0.85
     : Math.max(0.1, Math.min(0.75, TUNING.onTargetBase * (0.5 + skill / 24) * KIND_ON_TARGET[kind] * quality));
@@ -570,7 +648,7 @@ function resolveShot(ctx: Ctx, side: Side, shooterId: number, kind: GoalKind, th
       TUNING.goalBase * (skill / Math.max(gk, 3)) ** TUNING.finishingExponent * KIND_GOAL[kind] * threat ** 0.3 * quality * conceded));
 
   if (rng.chance(pGoal)) {
-    const assistId = scoreGoal(ctx, side, shooterId, kind);
+    const assistId = scoreGoal(ctx, side, shooterId, kind, setPiece?.crosser ?? null);
     recordPlay(ctx, side, 'goal', shooterId, { ...source, keeperId, assistId });
     noteShot('goal');
     return;
@@ -584,17 +662,66 @@ function resolveShot(ctx: Ctx, side: Side, shooterId: number, kind: GoalKind, th
   if (rng.chance(0.3)) awardCorner(ctx, side);
 }
 
+/** Duran toplarda kafa vuruşu için oyuncu: uzun boylular (stoper, forvet) ve hedef adam öne çıkar. */
+function aerialTarget(ctx: Ctx, side: Side, exclude: number[]): number | null {
+  const target = teamOf(ctx.state, side).targetManId ?? null;
+  return pickOnPitch(ctx, side, (ps, p) => {
+    // Hedef adam kafa vuruşlarının üçte birinden fazlasını alır
+    const tall = ps.playerId === target ? 6 : ps.slot === 'DC' || ps.slot === 'ST' ? 2.5 : ps.slot === 'GK' ? 0 : 0.6;
+    return tall * (p.attributes.heading + p.attributes.jumping);
+  }, exclude);
+}
+
+/** Ortacının duran top kalitesine etkisi (orta / korner becerisi 10 → etkisiz). */
+function deliveryQuality(ctx: Ctx, crosser: number | null, skill: (a: Attributes) => number): number {
+  if (crosser === null) return 1;
+  return 1 + Math.max(-0.08, Math.min(0.1, (skill(ctx.lookup[crosser]!.attributes) - 12) * 0.012));
+}
+
+/** Korner tarzının şut olasılığı ve kalitesine etkisi (karışık = etkisiz). */
+const CORNER_STYLE: Record<TeamInstructions['cornerStyle'], { shot: number; quality: number }> = {
+  mixed: { shot: 1, quality: 1 },
+  // Ön direk: daha çok vuruş, ama zor açıdan
+  near: { shot: 1.12, quality: 0.9 },
+  // Arka direk: hava topunda iyi takımlara kaliteli pozisyon
+  far: { shot: 0.92, quality: 1.08 },
+  // Kısa korner: az ama yerden, kaliteli pozisyon
+  short: { shot: 0.8, quality: 1.12 },
+};
+
 function awardCorner(ctx: Ctx, side: Side): void {
   const team = teamOf(ctx.state, side);
   team.counters.corners++;
   recordPlay(ctx, side, 'corner');
   emit(ctx, 'corner', side, 'corner', { team: team.name });
-  if (!ctx.rng.chance(TUNING.cornerShotChance)) return;
-  const shooter = pickOnPitch(ctx, side, (ps, p) => {
-    const tall = ps.slot === 'DC' || ps.slot === 'ST' ? 2.5 : ps.slot === 'GK' ? 0 : 0.6;
-    return tall * (p.attributes.heading + p.attributes.jumping);
-  });
-  if (shooter !== null) resolveShot(ctx, side, shooter, 'header', 1, true);
+  const style = CORNER_STYLE[team.instructions.cornerStyle] ?? CORNER_STYLE.mixed;
+  if (!ctx.rng.chance(TUNING.cornerShotChance * style.shot)) return;
+  // Varsayılan (karışık, kornerci seçilmemiş) korner eskisi gibi: ortacı hesaba girmez
+  const custom = team.instructions.cornerStyle !== 'mixed' || team.cornerTakerId != null;
+  const crosser = custom
+    ? designatedTaker(ctx, side, team.cornerTakerId ?? null, (p) => p.attributes.corners * 2 + p.attributes.crossing)
+    : null;
+  const exclude = crosser !== null ? [crosser] : [];
+  if (team.instructions.cornerStyle === 'short') {
+    // Kısa korner: ceza sahası önünden ayakla şut
+    const shooter = pickOnPitch(ctx, side, (ps, p) =>
+      SHOOTER_WEIGHT[ps.slot!] * (p.attributes.finishing + p.attributes.longShots), exclude);
+    if (shooter !== null) {
+      resolveShot(ctx, side, shooter, 'normal', 1, true, {
+        quality: style.quality * deliveryQuality(ctx, crosser, (a) => a.passing), crosser,
+      });
+    }
+    return;
+  }
+  const shooter = aerialTarget(ctx, side, exclude);
+  if (shooter === null) return;
+  // Arka direk hava topuna güçlü oyuncuyla daha etkili
+  const aerial = style === CORNER_STYLE.far
+    ? 1 + Math.max(-0.08, Math.min(0.08, ((ctx.lookup[shooter]!.attributes.heading + ctx.lookup[shooter]!.attributes.jumping) / 2 - 13) * 0.02))
+    : 1;
+  resolveShot(ctx, side, shooter, 'header', 1, true, custom
+    ? { quality: style.quality * aerial * deliveryQuality(ctx, crosser, (a) => a.corners), crosser }
+    : null);
 }
 
 /* ------------------------------------------------------------------ */
@@ -632,9 +759,11 @@ function resolveAttack(ctx: Ctx, side: Side, units: Record<Side, Units>): void {
   }
 
   const shooterId = pickOnPitch(ctx, side, (ps, p) =>
-    SHOOTER_WEIGHT[ps.slot!] * (p.attributes.finishing + p.attributes.offTheBall + p.attributes.longShots * 0.5));
+    SHOOTER_WEIGHT[ps.slot!] * orderShooting(ps.orders, WIDE_SLOTS.has(ps.slot!)) *
+      (p.attributes.finishing + p.attributes.offTheBall + p.attributes.longShots * 0.5));
   if (shooterId === null) return;
-  const kind = shotKindFor(rng, state.players[shooterId]!.slot!, ctx.effects[side].headerBonus);
+  const shooter = state.players[shooterId]!;
+  const kind = shotKindFor(rng, shooter.slot!, ctx.effects[side].headerBonus, shooter.orders?.longShots ? 0.2 : 0);
   resolveShot(ctx, side, shooterId, kind, threat);
 }
 
@@ -719,7 +848,15 @@ function resolveFoul(ctx: Ctx, attackingSide: Side): void {
       if (taker === null) return;
       recordPlay(ctx, victimSide, 'freekick', taker, { defenderId: foulerId });
       emit(ctx, 'freekick', victimSide, 'freekick', { player: nameOf(ctx, taker) });
-      resolveShot(ctx, victimSide, taker, 'freekick', 1);
+      // Orta: kaleye vurmak yerine ceza sahasına (karışıkta ara sıra)
+      const style = victims.instructions.freeKickStyle;
+      const cross = style === 'cross' || (style === 'mixed' && victims.targetManId != null && rng.chance(0.3));
+      const header = cross ? aerialTarget(ctx, victimSide, [taker]) : null;
+      if (header !== null) {
+        resolveShot(ctx, victimSide, header, 'header', 1, false, {
+          quality: deliveryQuality(ctx, taker, (a) => (a.freeKicks + a.crossing) / 2), crosser: taker,
+        });
+      } else resolveShot(ctx, victimSide, taker, 'freekick', 1);
     }
   }
 }
@@ -773,6 +910,8 @@ function makeSubstitution(ctx: Ctx, side: Side, outId: number, inId: number): bo
 
   const minute = displayMinute(state).minute;
   incoming.slot = out.slot;
+  if (out.orders) incoming.orders = out.orders;
+  else delete incoming.orders;
   incoming.minuteIn = minute;
   out.slot = null;
   out.minuteOut = minute;
@@ -866,8 +1005,8 @@ function simulateMinute(ctx: Ctx): void {
 
   const units = { home: teamUnits(state, state.home, lookup), away: teamUnits(state, state.away, lookup) };
   const effects = {
-    home: instructionEffects(state.home.instructions, units.home.profile, units.away.profile),
-    away: instructionEffects(state.away.instructions, units.away.profile, units.home.profile),
+    home: instructionEffects(state.home.instructions, units.home.profile, units.away.profile, state.away.instructions),
+    away: instructionEffects(state.away.instructions, units.away.profile, units.home.profile, state.home.instructions),
   };
   ctx.effects = effects;
 
@@ -886,7 +1025,7 @@ function simulateMinute(ctx: Ctx): void {
 
   const eventsBefore = state.events.length;
   let attacked = false;
-  if (rng.chance(TUNING.attackChance * effects[side].attackChance)) {
+  if (rng.chance(TUNING.attackChance * effects[side].attackChance * effects[other(side)].oppAttackChance)) {
     attacked = true;
     resolveAttack(ctx, side, units);
   }
@@ -1041,30 +1180,82 @@ export function setMentality(state: MatchState, side: Side, mentality: Mentality
  * Maç içi taktik değişikliği. Diziliş değişirse sahadaki oyuncular yeni mevkilere
  * en iyi uyumla dağıtılır (kaleci kalede kalır). Bitmiş maçta etkisizdir.
  */
-export function changeTactics(
-  state: MatchState,
-  lookup: PlayerLookup,
-  side: Side,
-  change: { formation?: FormationId; instructions?: Partial<TeamInstructions> },
-): void {
+export interface TacticsChange {
+  formation?: FormationId;
+  /** Kendi dizilişi; null hazır dizilişe döner, verilmezse değişmez. */
+  custom?: CustomFormation | null;
+  instructions?: Partial<TeamInstructions>;
+  /** Mevki sırasına göre bireysel talimatlar (dizilişle birlikte verilir). */
+  orders?: (PlayerOrders | null)[];
+  /** Taktik seti (gösterim). */
+  plan?: number;
+}
+
+/**
+ * Sahadaki oyuncuların dizilişteki yerleri (mevki sırası): aynı mevkiden birden çok varsa sahadaki sıraya göre.
+ * Dizilişte olmayan mevkideki oyuncu boştaki ilk yere konur. 2D saha da bu sırayı kullanır.
+ */
+export function slotHolders(team: TeamState, players: MatchState['players']): (number | null)[] {
+  const slots = slotsOf(team);
+  const holders: (number | null)[] = slots.map(() => null);
+  const misplaced: number[] = [];
+  for (const id of team.onPitch) {
+    const slot = players[id]!.slot;
+    const i = slots.findIndex((s, k) => s === slot && holders[k] === null);
+    if (i === -1) misplaced.push(id);
+    else holders[i] = id;
+  }
+  for (const id of misplaced) {
+    const i = holders.findIndex((h, k) => k > 0 && h === null);
+    if (i !== -1) holders[i] = id;
+  }
+  return holders;
+}
+
+/**
+ * Maç içi taktik değişikliği. Diziliş değişirse sahadaki oyuncular yeni mevkilere
+ * en iyi uyumla dağıtılır (kaleci kalede kalır). Bitmiş maçta etkisizdir.
+ */
+export function changeTactics(state: MatchState, lookup: PlayerLookup, side: Side, change: TacticsChange): void {
   if (state.period === 'full') return;
   const team = teamOf(state, side);
   if (change.instructions) team.instructions = { ...team.instructions, ...change.instructions };
-  if (!change.formation || change.formation === team.formation) return;
+  if (change.plan !== undefined) team.plan = change.plan;
+  const formation = change.formation ?? team.formation;
+  const custom = change.custom === undefined ? team.custom ?? null : change.custom;
+  const before = slotsOf(team);
+  const slots = slotsOf({ formation, custom });
+  const reshaped = before.length !== slots.length || before.some((p, i) => p !== slots[i]) ||
+    JSON.stringify(custom?.layout ?? null) !== JSON.stringify(team.custom?.layout ?? null);
 
   const ctx = makeCtx(state, lookup);
-  const slots = FORMATIONS[change.formation];
-  const keeper = team.onPitch.find((id) => state.players[id]!.slot === 'GK');
-  const outfield = team.onPitch.filter((id) => id !== keeper).map((id) => lookup[id]!);
-  // Kaleci mevkisi hariç kalan 10 mevkiye saha oyuncularını dağıt.
-  const assigned = assignToFormation(outfield, slots.slice(1));
-  if (keeper !== undefined) state.players[keeper]!.slot = 'GK';
-  assigned.forEach((id, i) => {
-    if (id !== null) state.players[id]!.slot = slots[i + 1]!;
-  });
-  team.formation = change.formation;
-  team.fullWeights = formationWeights(slots);
-  emit(ctx, 'info', side, 'tactic', { team: team.name, formation: change.formation });
+  let holders = slotHolders(team, state.players);
+  if (reshaped) {
+    const keeper = team.onPitch.find((id) => state.players[id]!.slot === 'GK');
+    const outfield = team.onPitch.filter((id) => id !== keeper).map((id) => lookup[id]!);
+    // Kaleci mevkisi hariç kalan 10 mevkiye saha oyuncularını dağıt.
+    const assigned = assignToFormation(outfield, slots.slice(1));
+    if (keeper !== undefined) state.players[keeper]!.slot = 'GK';
+    assigned.forEach((id, i) => {
+      if (id !== null) state.players[id]!.slot = slots[i + 1]!;
+    });
+    team.formation = formation;
+    if (custom) team.custom = custom;
+    else delete team.custom;
+    team.fullWeights = formationWeights(slots);
+    holders = [keeper ?? null, ...assigned];
+    // Taşınan bireysel talimat yoksa eski talimatlar düşer (mevkiler değişti)
+    if (!change.orders) for (const id of team.onPitch) delete state.players[id]!.orders;
+    emit(ctx, 'info', side, 'tactic', { team: team.name, formation: formationName(team) });
+  }
+  if (change.orders) {
+    holders.forEach((id, i) => {
+      if (id === null) return;
+      const o = change.orders![i];
+      if (isDefaultOrders(o)) delete state.players[id]!.orders;
+      else state.players[id]!.orders = { ...o! };
+    });
+  }
   state.rngState = ctx.rng.getState();
 }
 

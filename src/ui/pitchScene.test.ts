@@ -297,7 +297,7 @@ describe('akış: top sürme, havadan top, bantlar', () => {
   });
 
   it('bantlar: penaltı kararı sonuçtan önce, gol sonuçtan sonra (santrada kalkar)', () => {
-    const goal = scenes.find(({ play }) => play.kind === 'goal')!;
+    const goal = scenes.find(({ play }) => play.kind === 'goal' && !play.fromPenalty)!;
     const reveal = revealIndex(goal.scene);
     expect(bannerKind(goal.play, goal.scene, reveal - 1, false)).toBeNull();
     expect(bannerKind(goal.play, goal.scene, reveal, true)).toBe('goal');

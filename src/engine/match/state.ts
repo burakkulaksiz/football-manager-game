@@ -1,7 +1,7 @@
 /** Canlı maç durumunun tipleri. Hepsi düz veri (serileştirilebilir). */
 import type { CardEvent, GoalEvent, InjuryEvent, Position, ShotRecord } from '../types';
-import type { FormationId } from './formation';
-import type { TeamInstructions } from './tactics';
+import type { CustomFormation, FormationId } from './formation';
+import type { PlayerOrders, TeamInstructions } from './tactics';
 
 export type Side = 'home' | 'away';
 
@@ -114,6 +114,8 @@ export interface PlayerMatchState {
   yellow: boolean;
   red: boolean;
   injured: boolean;
+  /** Bireysel talimatlar (yoksa varsayılan); oyuna giren yedek çıkanınkini devralır. */
+  orders?: PlayerOrders;
 }
 
 export interface TeamCounters {
@@ -135,12 +137,19 @@ export interface TeamState {
   bench: number[];
   subsUsed: number;
   formation: FormationId;
+  /** Kendi dizilişi (varsa formation yerine). */
+  custom?: CustomFormation | null;
+  /** Maçta kullanılan taktik seti (kullanıcı takımı; 0 = A). */
+  plan?: number;
   /** Mentalite dahil takım talimatları (yapay zekâ takımında mentalite skora göre değişir). */
   instructions: TeamInstructions;
   captainId: number | null;
   viceCaptainId: number | null;
   penaltyTakerId: number | null;
   freeKickTakerId: number | null;
+  cornerTakerId?: number | null;
+  /** Duran toplarda kafa için hedef oyuncu. */
+  targetManId?: number | null;
   /** true: değişiklik ve taktiği kullanıcı yönetir (sakatlık değişikliği yine otomatik). */
   userControlled: boolean;
   counters: TeamCounters;

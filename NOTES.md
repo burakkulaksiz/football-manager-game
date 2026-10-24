@@ -38,10 +38,10 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
   league/international.ts Milli takımlar: döngü (createInternational), sanal oyuncular (virtualPool), kadro (selectSquad),
                        milli maçlar ve kamp (internationalDay), elemeler / turnuva tabloları (bkz. "Milli takımlar").
   match/state.ts       Canlı maç durumu tipleri (düz veri, serileştirilebilir), dakika gösterimi.
-  match/formation.ts   6 diziliş + saha yerleşimi (FORMATION_LAYOUT), mevki uyumu (slotFit = yanlış mevki cezası),
+  match/formation.ts   10 diziliş + saha yerleşimi (FORMATION_LAYOUT), özel diziliş (slotsOf, positionAt), mevki uyumu (slotFit = yanlış mevki cezası),
                        otomatik ilk 11 + 9 yedek, chooseFormation (yapay zekâ), assignToFormation.
   match/tactics.ts     Takım talimatları + motora etkileri (instructionEffects), kullanıcı taktiği (Tactics),
-                       kadro düzenleme yardımcıları (placePlayer, removePlayer, changeFormation, resolveLineup).
+                       kadro düzenleme yardımcıları (placePlayer, removePlayer, changeFormation, resolveLineup), bireysel talimat, taktik setleri.
   match/engine.ts      Dakika dakika motor: createMatch, stepMatch, substitute, setMentality, simulateToEnd,
                        buildResult. Denge sabitleri TUNING içinde.
   match/commentary.ts  Türkçe anlatım şablonları (isimden sonra ek gelmeyecek şekilde yazıldı).
@@ -132,7 +132,7 @@ Testler kaynak dosyaların yanında: `src/**/*.test.ts` (node ortamı).
   yorgun/kötü oynayanı değiştirir (en fazla 4). 5 değişiklik hakkı. İç saha: hücum ×1.18, orta saha ×1.05.
   ~4600 maçta ölçülen (5. aşama sonrası): **2.56 gol/maç, %44.6 ev galibiyeti, %25.0 beraberlik**,
   takım başına 13.1 şut / 4.9 isabet / 4.8 korner, maç başına 3.3 sarı / 0.2 kırmızı.
-- **Taktik:** 6 diziliş (4-4-2, 4-3-3, 4-2-3-1, 3-5-2, 5-3-2, 4-5-1) + talimatlar: mentalite (−2…+2),
+- **Taktik:** 10 diziliş (yapay zekâ: 4-4-2, 4-3-3, 4-2-3-1, 3-5-2, 5-3-2, 4-5-1) + özel diziliş + talimatlar: mentalite (−2…+2),
   pas (kısa/karışık/uzun), tempo, pres, savunma hattı, genişlik. Etkiler çarpan olarak (`instructionEffects`):
   hücum → atak/şut ↑ ama rakibe açık; kısa pas → top hakimiyeti (pas kalitesine bağlı) + kaliteli şut;
   uzun → atak ↑, kafa payı ↑, top kaybı; hızlı tempo → atak ↑, yorgunluk ↑; yoğun pres → rakip
@@ -734,6 +734,38 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
   geri yükler (geçmiş sırası + sayfa anahtarına göre).
 - 2D saha baskı çubuğu: maç bitince “Maç sona erdi / Son düdük: skor”, devre arasında “Devre arası”.
 - Taktik sayfası: yardımcı antrenör ve “Taktik” başlık paneli (diziliş, Otomatik Seç, karşılaştırma) sol sütunda talimatların üstünde.
+
+## Taktik özelleştirme (kayıt sürümü 17)
+- Yeni takım talimatları (TeamInstructions): tackling (yumuşak/normal/sert), crossing (alçak/karışık/yüksek), freedom
+  (disiplinli/normal/özgür), counterAttack, offsideTrap, playOutOfDefence, timeWasting, cornerStyle (ön direk/karışık/arka
+  direk/kısa), freeKickStyle (kaleye/karışık/orta). Varsayılanlar motorda etkisiz; göç eski taktiklere varsayılanları ekler, motor
+  da eksik alanları varsayılanla doldurur (newTeam). Etkiler instructionEffects'te (rakibin talimatları da girer: karşı atak hücuma
+  kalkan rakibe, geriden oyun kurma yoğun prese karşı); yeni etki oppAttackChance (zaman geçirme iki tarafın atağını azaltır).
+  TeamProfile'a hücumcuların hava topu, yaratıcılık, defansın pası / dikkati, sıkı markaj sayısı eklendi. 600 maçlık ölçümde
+  tek talimatın gol farkına etkisi ±0,2 içinde, hepsinin bedeli var.
+- Bireysel talimat (PlayerOrders: duty, channel, longShots, dribble, tightMarking, freeRole) mevkiye verilir: Tactics.orders
+  (mevki sırası; varsayılan = null, hepsi varsayılansa []). resolveLineup → Lineup.starters[].orders → PlayerMatchState.orders;
+  oyuna giren yedek çıkanınkini devralır. Motor: orderWeights (hücum/orta/savunma katkısı), orderShooting (şutçu seçimi; uzaktan
+  şut talimatında uzaktan şut payı +0,2), orderCreating (asist). 2D saha: ordersShift (ileri/geri, kenar/orta kayma).
+- Diziliş şekli artık önemli: fullWeights = dizilişin ağırlığı^0,7 × yapay zekâ dizilişlerinin ortalaması^0,3 (SHAPE_EXPONENT);
+  çok forvetli diziliş hücumda biraz güçlü, savunmada zayıf. Yapay zekâ yalnızca eski 6 dizilişten seçer (AI_FORMATION_IDS);
+  kullanıcıya 4-1-4-1, 4-4-1-1, 3-4-3, 4-3-1-2 eklendi.
+- Özel diziliş: CustomFormation {slots, layout} (Tactics.custom, TeamSetup/TeamState.custom). slotsOf / layoutOf / formationName
+  (satırlar yüksekliğe göre) her yerde FORMATIONS[...] yerine; positionAt(x, y) konumdan mevki (FV < 27 ≤ OOS < 42 ≤ OS < 57 ≤
+  ÖL/KB < 67 ≤ DEF; kenar %28–32). Taktik ekranında “Dizilişi Düzenle”: yerler pointer olaylarıyla sürüklenir (kaleci sabit),
+  sahada mevki bölgeleri görünür; moveFormationSpot oyuncuyu ve talimatı yerinde bırakır. Hazır dizilişe geçince özel bırakılır,
+  bireysel talimatlar aynı mevkiye taşınır (carryOrders).
+- Taktik setleri: Tactics.plans (3 set, TacticPlan {formation, custom, instructions, orders}) + activePlan; etkin set üstteki
+  alanlardadır. switchPlan şimdikini kaydeder, seçileni yükler, ilk 11'i yeni mevkilere dağıtır; copyPlan. Maçta
+  store.liveSwitchPlan → changeTactics({formation, custom, instructions, orders, plan}); TeamState.plan gösterim için.
+  changeTactics artık özel diziliş ve bireysel talimat alır; slotHolders (mevki sırasına göre sahadakiler) 2D sahayla ortak.
+- Duran top: Tactics.cornerTakerId, targetManId (TeamSetup / TeamState). Korner tarzı şut olasılığı / kalitesi (CORNER_STYLE),
+  kısa kornerde yerden şut; kornerci varsa gol asistinin %80'i onun; hedef adam kafa vuruşlarının üçte birinden fazlasını alır;
+  serbest vuruşta “orta” kafa vuruşuna çevirir. Varsayılan korner (karışık, kornerci seçilmemiş) eskisi gibi.
+- Arayüz: InstructionsPanel (Hücum / Savunma grupları, aç-kapa talimatlar çip), SetPieceStyles, OrdersEditor, PlanPicker,
+  FormationPicker (özel sekmesi). Taktik ekranı: set seçici + “Seti kopyala”, Oyuncu Talimatları paneli (sahada tıklanan
+  oyuncu; ▲ ▼ • rozetleri), Kaptan ve Duran Toplar'a kornerci / hedef adam / tarzlar. Maç ekranı taktik paneli: set (A/B/C),
+  diziliş, talimatlar, duran top.
 
 ## Şut ve ısı haritası
 - Motor kaydı (yalnızca gösterim, rng kullanmaz): MatchState.shots / MatchResult.shots — her şut (dakika sayacı,

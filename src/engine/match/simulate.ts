@@ -36,11 +36,15 @@ function teamSetup(world: GameWorld, clubId: string): TeamSetup {
       lineup: resolveLineup(tactics, squad),
       userControlled: clubId === world.playerClubId,
       formation: tactics.formation,
+      custom: tactics.custom ?? null,
+      plan: tactics.activePlan ?? 0,
       instructions: tactics.instructions,
       captainId: tactics.captainId,
       viceCaptainId: tactics.viceCaptainId,
       penaltyTakerId: tactics.penaltyTakerId,
       freeKickTakerId: tactics.freeKickTakerId,
+      cornerTakerId: tactics.cornerTakerId ?? null,
+      targetManId: tactics.targetManId ?? null,
     };
   }
   const formation = chooseFormation(squad);

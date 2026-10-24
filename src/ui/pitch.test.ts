@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { clubPlayers, createMatch, createWorld, DEFAULT_INSTRUCTIONS, stepMatch, type MatchState, type TeamInstructions } from '../engine';
+import { clubPlayers, createMatch, createWorld, DEFAULT_INSTRUCTIONS, DEFAULT_ORDERS, stepMatch, type MatchState, type TeamInstructions } from '../engine';
 import { autoSelectLineup } from '../engine/match/formation';
 import { gameData } from '../gameData';
-import { ballSpot, blockLine, cameraTransform, CAMERA_ZOOM, colorsClash, formationRoles, PITCH_LENGTH, PITCH_VIEW, PITCH_WIDTH, screenUnit, shotOrigin, teamShape, teamSpots, toScreen } from './pitch';
+import { ballSpot, blockLine, cameraTransform, CAMERA_ZOOM, colorsClash, formationRoles, ordersShift, PITCH_LENGTH, PITCH_VIEW, PITCH_WIDTH, screenUnit, shotOrigin, teamShape, teamSpots, toScreen } from './pitch';
 
 const world = createWorld(gameData, 3, 'galatasaray', '2026-07-01');
 
@@ -154,5 +154,22 @@ describe('ekran konumu (HTML oyuncu katmanı)', () => {
     expect(screenUnit(cam, width)).toBeCloseTo(10 * CAMERA_ZOOM, 6);
     // Tam sahada sahanın sol üst köşesi (0, 0) kenar payı kadar içeride
     expect(toScreen({ x: 0, y: 0 }, full, width)).toEqual({ x: 30, y: 20 });
+  });
+});
+
+describe('bireysel talimatın saha yerine etkisi', () => {
+  it('ileri çıkan öne, geride kalan geriye; kanada açılan kenara, içe katan ortaya yaklaşır', () => {
+    expect(ordersShift(50, 50, undefined, false)).toEqual({ lx: 50, ly: 50 });
+    expect(ordersShift(50, 50, { ...DEFAULT_ORDERS, duty: 'attack' }, false).ly).toBeLessThan(50);
+    expect(ordersShift(50, 50, { ...DEFAULT_ORDERS, duty: 'defend' }, true).ly).toBeGreaterThan(50);
+    expect(ordersShift(85, 45, { ...DEFAULT_ORDERS, channel: 'wide' }, false).lx).toBeGreaterThan(85);
+    expect(ordersShift(85, 45, { ...DEFAULT_ORDERS, channel: 'inside' }, false).lx).toBeLessThan(75);
+  });
+
+  it('maçta talimatı olan oyuncunun rolü talimatı taşır', () => {
+    const m = match();
+    const id = m.home.onPitch.find((x) => m.players[x]!.slot === 'ST')!;
+    m.players[id]!.orders = { ...DEFAULT_ORDERS, duty: 'attack' };
+    expect(formationRoles(m, 'home').find((r) => r.id === id)?.orders?.duty).toBe('attack');
   });
 });

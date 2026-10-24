@@ -2,13 +2,26 @@ import { useRef, useState } from 'react';
 import { AssistantPanel } from '../components/AssistantPanel';
 import {
   LINEUP_ADVICE,
+  autoPick,
   BENCH_SIZE,
   changeFormation,
   clubPlayers,
-  defaultTactics,
-  FORMATION_LAYOUT,
-  FORMATIONS,
+  copyPlan,
+  CUSTOM_BOUNDS,
+  DEFAULT_ORDERS,
+  formationName,
   getClub,
+  isDefaultOrders,
+  layoutOf,
+  moveFormationSpot,
+  PLAN_LABELS,
+  positionAt,
+  setSlotOrders,
+  slotOrders,
+  slotsOf,
+  switchPlan,
+  type PlayerOrders,
+  type Position,
   lineupFits,
   locate,
   naturalPositions,
@@ -22,8 +35,8 @@ import {
   MAX_COMPARE,
 } from '../../engine';
 import { CompareBar } from '../components/CompareDialog';
-import { useGameStore, useWorld } from '../../store/gameStore';
-import { FormationPicker, InstructionsPanel } from '../components/InstructionsPanel';
+import { useGameStore, useUiState, useWorld } from '../../store/gameStore';
+import { FormationPicker, InstructionsPanel, OrdersEditor, PlanPicker, SetPieceStyles } from '../components/InstructionsPanel';
 import { Shirt } from '../components/Shirt';
 import { StatusTags } from '../components/StatusTags';
 import { fitClass, POSITION_LABELS, POSITION_NAMES, positionGroup, ratingClass } from '../labels';
@@ -43,6 +56,19 @@ function avgForm(p: Player): number | null {
   return p.form.length === 0 ? null : p.form.reduce((a, b) => a + b, 0) / p.form.length;
 }
 
+const WIDE_POSITIONS: ReadonlySet<Position> = new Set(['DR', 'DL', 'WBR', 'WBL', 'MR', 'ML', 'AMR', 'AML']);
+
+/** Sahadaki rozet: görev oku (▲ ileri çık, ▼ geride kal) ya da başka bir bireysel talimat (•). */
+function ordersBadge(o: PlayerOrders | null | undefined): string | null {
+  if (isDefaultOrders(o)) return null;
+  return o!.duty === 'attack' ? '▲' : o!.duty === 'defend' ? '▼' : '•';
+}
+
+const clampSpot = (x: number, y: number): [number, number] => [
+  Math.round(Math.max(CUSTOM_BOUNDS.minX, Math.min(CUSTOM_BOUNDS.maxX, x))),
+  Math.round(Math.max(CUSTOM_BOUNDS.minY, Math.min(CUSTOM_BOUNDS.maxY, y))),
+];
+
 export function TacticsScreen() {
   const world = useWorld();
   const updateTactics = useGameStore((s) => s.updateTactics);
@@ -58,11 +84,23 @@ export function TacticsScreen() {
   // Sürükle-bırak: sürüklenen (listeden oyuncu ya da sahadaki/yedekteki yer) ve üzerinde durulan hedef
   const dragging = useRef<Selection>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
+  // Diziliş düzenleme: sahadaki yerler sürüklenerek taşınır
+  const [editShape, setEditShape] = useState(false);
+  const [shapeDrag, setShapeDrag] = useState<{ index: number; x: number; y: number } | null>(null);
+  const pitchRef = useRef<HTMLDivElement>(null);
+  const [ordersSlotPref, setOrdersSlot] = useUiState('tactics.ordersSlot', 10);
 
   if (!tactics) return <section className="panel"><div className="panel-body">Taktik bulunamadı.</div></section>;
 
   const byId = new Map(squad.map((p) => [p.id, p]));
-  const formation = FORMATIONS[tactics.formation];
+  const formation = slotsOf(tactics);
+  const layout = layoutOf(tactics);
+  const activePlan = tactics.activePlan ?? 0;
+  /** İmlecin sahadaki yeri (yüzde). */
+  const pitchPoint = (e: React.PointerEvent) => {
+    const r = pitchRef.current!.getBoundingClientRect();
+    return { x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 };
+  };
   const fits = lineupFits(tactics, squad);
 
   /** Kaynaktaki oyuncuyu (listeden oyuncu ya da bir yer) hedefe taşır; hedefte oyuncu varsa yer değiştirirler. */
@@ -162,6 +200,10 @@ export function TacticsScreen() {
 
   const selectedPlayerId =
     selection === null ? null : selection.kind === 'player' ? selection.id : occupant(tactics, selection);
+  // Bireysel talimat paneli: sahada seçili yer / oyuncu, yoksa son bakılan mevki
+  const selectedSlot = selection?.kind === 'slot' ? selection.index : selectedPlayerId !== null ? tactics.lineup.indexOf(selectedPlayerId) : -1;
+  const ordersSlot = selectedSlot > 0 ? selectedSlot : Math.min(Math.max(1, ordersSlotPref), formation.length - 1);
+  const ordersPlayer = byId.get(tactics.lineup[ordersSlot] ?? -1);
 
   // Uyarılar
   const warnings: string[] = [];
@@ -184,8 +226,8 @@ export function TacticsScreen() {
     const p = id === null ? undefined : byId.get(id);
     return p ? [p] : [];
   });
-  const roleSelect = (label: string, key: 'captainId' | 'viceCaptainId' | 'penaltyTakerId' | 'freeKickTakerId') => {
-    const chosenId = tactics[key];
+  const roleSelect = (label: string, key: 'captainId' | 'viceCaptainId' | 'penaltyTakerId' | 'freeKickTakerId' | 'cornerTakerId' | 'targetManId') => {
+    const chosenId = tactics[key] ?? null;
     // Seçili oyuncu ilk 11'den çıktıysa listede yine görünsün, durumu yazsın.
     const chosenOutside = chosenId !== null && !tactics.lineup.includes(chosenId) ? byId.get(chosenId) : undefined;
     return (
@@ -280,20 +322,26 @@ export function TacticsScreen() {
         <AssistantPanel filter={(a) => LINEUP_ADVICE.has(a.kind) || a.kind === 'thinPosition'} limit={5} hideWhenEmpty />
         <section className="panel">
           <div className="panel-title panel-title-row">
-            <span>Taktik — {tactics.formation}</span>
+            <span>Taktik {PLAN_LABELS[activePlan]} — {tactics.custom ? `Özel ${formationName(tactics)}` : tactics.formation}</span>
             <span className="toolbar">
-              <FormationPicker value={tactics.formation} onChange={(f) => updateTactics((t, sq) => changeFormation(t, f, sq))} />
+              <PlanPicker value={activePlan} onChange={(i) => updateTactics((t, sq) => switchPlan(t, i, sq))} />
+              <select
+                value=""
+                title="Bu setin dizilişini ve talimatlarını başka bir sete kopyalar"
+                onChange={(e) => {
+                  const to = Number(e.target.value);
+                  if (e.target.value !== '') updateTactics((t) => copyPlan(t, activePlan, to));
+                }}
+              >
+                <option value="">Seti kopyala…</option>
+                {PLAN_LABELS.map((label, i) => (i === activePlan ? null : <option key={label} value={i}>{PLAN_LABELS[activePlan]} → {label}</option>))}
+              </select>
               <button
                 className="btn"
-                title="Bu diziliş için en iyi 11'i ve yedekleri seçer; talimatlar korunur"
+                title="Bu diziliş için en iyi 11'i ve yedekleri seçer; talimatlar ve kaptanlar korunur"
                 onClick={() => {
                   // Talimatlar ve kaptanlar korunur (kaptanlığı otomatik seçim yüzünden değiştirmek oyuncuları kırar)
-                  updateTactics((t, sq) => ({
-                    ...defaultTactics(sq, t.formation),
-                    instructions: t.instructions,
-                    captainId: t.captainId,
-                    viceCaptainId: t.viceCaptainId,
-                  }));
+                  updateTactics((t, sq) => autoPick(t, sq));
                   setSelection(null);
                 }}
               >
@@ -301,9 +349,18 @@ export function TacticsScreen() {
               </button>
             </span>
           </div>
+          <div className="panel-body">
+            <FormationPicker
+              value={tactics.formation}
+              custom={tactics.custom}
+              onChange={(f) => updateTactics((t, sq) => changeFormation(t, f, sq))}
+            />
+          </div>
           <div className="panel-note">
             Oyuncuyu sürükleyip sahaya ya da yedeğe bırak (ya da seçip gideceği yere tıkla); yerdeki oyuncuyla yer değiştirir.
             Sahadan listeye bırakılan oyuncu kadro dışı kalır. Çift tık oyuncu profilini açar; ⇆ ile en çok {MAX_COMPARE} oyuncuyu karşılaştırabilirsin.
+            Üç taktik seti (A/B/C) kendi dizilişini ve talimatlarını hatırlar; maç sırasında setler arasında geçebilirsin.
+            Kendi dizilişin için sahadaki <b>Dizilişi Düzenle</b> ile yerleri sürükle.
           </div>
           <CompareBar hint="en az bir oyuncu daha seç" />
         </section>
@@ -319,15 +376,60 @@ export function TacticsScreen() {
           </section>
           <div>
             <section className="panel">
+              <div className="panel-title panel-title-row">
+                <span>Oyuncu Talimatları</span>
+                <select
+                  value={ordersSlot}
+                  onChange={(e) => {
+                    setSelection(null);
+                    setOrdersSlot(Number(e.target.value));
+                  }}
+                >
+                  {formation.map((pos, i) => {
+                    if (i === 0) return null;
+                    const p = byId.get(tactics.lineup[i] ?? -1);
+                    return <option key={i} value={i}>{POSITION_LABELS[pos]} — {p ? p.lastName : 'boş'}</option>;
+                  })}
+                </select>
+              </div>
+              <div className="panel-body">
+                <div className="orders-who">
+                  <span className={`pos-box pos-${positionGroup(formation[ordersSlot]!)}`}>{POSITION_LABELS[formation[ordersSlot]!]}</span>
+                  <strong>{ordersPlayer ? `${ordersPlayer.firstName} ${ordersPlayer.lastName}` : 'Boş mevki'}</strong>
+                  {!isDefaultOrders(slotOrders(tactics, ordersSlot)) && (
+                    <button className="btn btn-small" onClick={() => updateTactics((t) => setSlotOrders(t, ordersSlot, DEFAULT_ORDERS))}>
+                      Varsayılana Dön
+                    </button>
+                  )}
+                </div>
+                <OrdersEditor
+                  orders={slotOrders(tactics, ordersSlot)}
+                  wide={WIDE_POSITIONS.has(formation[ordersSlot]!)}
+                  onChange={(change) => updateTactics((t) => setSlotOrders(t, ordersSlot, change))}
+                />
+                <div className="panel-note">
+                  Talimat mevkiye verilir: o mevkide kim oynarsa uygular (maçta oyuna giren yedek de). Sahada bir oyuncuya tıklayınca
+                  onun talimatları açılır; ▲ ileri çıkan, ▼ geride kalan, • başka talimatı olan oyuncu.
+                </div>
+              </div>
+            </section>
+            <section className="panel">
               <h2 className="panel-title">Kaptan ve Duran Toplar</h2>
               <div className="panel-body">
                 {roleSelect('Kaptan', 'captainId')}
                 {roleSelect('Yardımcı Kaptan', 'viceCaptainId')}
                 {roleSelect('Penaltıcı', 'penaltyTakerId')}
                 {roleSelect('Serbest Vuruşçu', 'freeKickTakerId')}
+                {roleSelect('Kornerci', 'cornerTakerId')}
+                {roleSelect('Hedef Adam', 'targetManId')}
+                <SetPieceStyles
+                  instructions={tactics.instructions}
+                  onChange={(change) => updateTactics((t) => ({ ...t, instructions: { ...t.instructions, ...change } }))}
+                />
                 <div className="panel-note">
-                  Seçilen oyuncu sahada değilse en iyi vurucu kullanır. Kaptanın (sahada değilse yardımcı kaptanın) liderliği takımı
-                  biraz etkiler. Kaptan değişikliği oyuncuların moralini etkiler; hiyerarşiyi Takım Dinamikleri ekranında görebilirsin.
+                  Seçilen oyuncu sahada değilse en iyi vurucu kullanır. Hedef adam kornerlerde ve ortalanan serbest vuruşlarda
+                  kafa vuruşlarının çoğunu alır. Kaptanın (sahada değilse yardımcı kaptanın) liderliği takımı biraz etkiler.
+                  Kaptan değişikliği oyuncuların moralini etkiler; hiyerarşiyi Takım Dinamikleri ekranında görebilirsin.
                 </div>
               </div>
             </section>
@@ -354,7 +456,24 @@ export function TacticsScreen() {
         <section className="panel tactics-pitch">
           <div className="panel-title panel-title-row">
             <span>İlk 11</span>
-            {selectedPlayerId !== null && locate(tactics, selectedPlayerId) !== null && (
+            <span className="toolbar pitch-actions">
+              {editShape && tactics.custom && (
+                <button className="btn btn-small" onClick={() => updateTactics((t, sq) => changeFormation(t, t.formation, sq))}>
+                  Hazır Dizilişe Dön ({tactics.formation})
+                </button>
+              )}
+              <button
+                className={`btn btn-small${editShape ? ' active' : ''}`}
+                title="Sahadaki yerleri sürükleyerek kendi dizilişini oluştur"
+                onClick={() => {
+                  setEditShape(!editShape);
+                  setSelection(null);
+                }}
+              >
+                {editShape ? 'Düzenlemeyi Bitir' : 'Dizilişi Düzenle'}
+              </button>
+            </span>
+            {!editShape && selectedPlayerId !== null && locate(tactics, selectedPlayerId) !== null && (
               <span className="toolbar pitch-actions">
                 <span className="muted">Seçili: {byId.get(selectedPlayerId)?.lastName}</span>
                 <button className="btn btn-small" onClick={() => toggleCompare(selectedPlayerId)}>
@@ -374,28 +493,64 @@ export function TacticsScreen() {
           </div>
           <div className="pitch-area">
             <div className="pitch-wrap">
-              <div className="pitch">
+              {editShape && (
+                <div className="shape-note">Yerleri sürükle: mevki, sahadaki konuma göre belirlenir. Kaleci yerinde kalır.</div>
+              )}
+              <div className={`pitch${editShape ? ' editing' : ''}`} ref={pitchRef}>
+                {editShape && (
+                  <div className="shape-zones" aria-hidden>
+                    <span style={{ top: '10%', height: '17%' }}>Forvet</span>
+                    <span style={{ top: '27%', height: '15%' }}>Ofansif orta saha</span>
+                    <span style={{ top: '42%', height: '15%' }}>Orta saha</span>
+                    <span style={{ top: '57%', height: '10%' }}>Ön libero · kanat bek</span>
+                    <span style={{ top: '67%', height: '15%' }}>Defans</span>
+                  </div>
+                )}
                 <div className="pitch-line halfway" />
                 <div className="pitch-line center-circle" />
                 <div className="pitch-line box top" />
                 <div className="pitch-line box bottom" />
                 <div className="pitch-line six top" />
                 <div className="pitch-line six bottom" />
-                {formation.map((pos, i) => {
-                  const [x, y] = FORMATION_LAYOUT[tactics.formation][i]!;
+                {formation.map((basePos, i) => {
+                  const moving = shapeDrag?.index === i;
+                  const [x, y] = moving ? clampSpot(shapeDrag.x, shapeDrag.y) : layout[i]!;
+                  const pos = moving ? positionAt(x, y) : basePos;
                   const id = tactics.lineup[i] ?? null;
                   const p = id === null ? undefined : byId.get(id);
-                  const fit = fits[i];
+                  const fit = moving && p ? null : fits[i];
                   const target: SquadTarget = { kind: 'slot', index: i };
+                  const badge = ordersBadge(tactics.orders?.[i]);
+                  // Düzenleme kipinde yer sürüklenir (kaleci hariç); normalde oyuncu sürükle-bırak
+                  const handlers = editShape
+                    ? i === 0 ? {} : {
+                      onPointerDown: (e: React.PointerEvent) => {
+                        e.currentTarget.setPointerCapture(e.pointerId);
+                        setShapeDrag({ index: i, ...pitchPoint(e) });
+                      },
+                      onPointerMove: (e: React.PointerEvent) => {
+                        if (shapeDrag?.index === i) setShapeDrag({ index: i, ...pitchPoint(e) });
+                      },
+                      onPointerUp: () => {
+                        if (shapeDrag?.index !== i) return;
+                        const [nx, ny] = clampSpot(shapeDrag.x, shapeDrag.y);
+                        updateTactics((t) => moveFormationSpot(t, i, nx, ny));
+                        setShapeDrag(null);
+                      },
+                      onPointerCancel: () => setShapeDrag(null),
+                    }
+                    : {
+                      onClick: () => clickTarget(target),
+                      ...(p ? dragFrom(target) : {}),
+                      ...dropOn(target),
+                    };
                   return (
                     <button
                       key={i}
-                      className={`pitch-slot${sameTarget(selection, target) || (p && selectedPlayerId === p.id) ? ' selected' : ''}${dragOver === targetKey(target) ? ' drop' : ''}`}
+                      className={`pitch-slot${!editShape && (sameTarget(selection, target) || (p && selectedPlayerId === p.id)) ? ' selected' : ''}${dragOver === targetKey(target) ? ' drop' : ''}${editShape && i > 0 ? ' movable' : ''}${moving ? ' moving' : ''}`}
                       style={{ left: `${x}%`, top: `${y}%` }}
-                      onClick={() => clickTarget(target)}
                       onDoubleClick={() => p && openPlayer(p.id)}
-                      {...(p ? dragFrom(target) : {})}
-                      {...dropOn(target)}
+                      {...handlers}
                       title={p ? `${p.firstName} ${p.lastName} — ${POSITION_NAMES[pos]}` : POSITION_NAMES[pos]}
                     >
                       {p ? (
@@ -404,6 +559,7 @@ export function TacticsScreen() {
                             <Shirt primary={club.colors.primary} secondary={club.colors.secondary} number={p.squadNumber} size={40} />
                             {fit !== null && fit !== undefined && <i className={`fit-dot ${fitClass(fit)}`} />}
                             {tactics.captainId === p.id && <b className="armband">K</b>}
+                            {badge && <b className="orders-badge" title="Bireysel talimat">{badge}</b>}
                           </span>
                           <span className="slot-name">{p.lastName}</span>
                         </>

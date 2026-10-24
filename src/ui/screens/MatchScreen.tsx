@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import {
   displayMinute,
   formatMinute,
+  formationName,
   getClub,
   LINEUP_ADVICE,
   MAX_SUBS,
+  PLAN_LABELS,
   primaryPosition,
   type GameWorld,
   type MatchState,
@@ -13,7 +15,7 @@ import {
 import { useGameStore, userSide, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { readableText } from '../colors';
-import { FormationPicker, InstructionsPanel } from '../components/InstructionsPanel';
+import { FormationPicker, InstructionsPanel, PlanPicker, SetPieceStyles } from '../components/InstructionsPanel';
 import { MatchStatRows } from '../components/MatchStatRows';
 import { AssistantPanel } from '../components/AssistantPanel';
 import { MatchMaps } from '../components/MatchMaps';
@@ -508,7 +510,7 @@ function Controls({ match, running, setRunning, showTactics, setShowTactics, ext
         onClick={() => setShowTactics(!showTactics)}
         title="Diziliş ve takım talimatları"
       >
-        Taktik: {myTeam.formation} · {MENTALITY_LABELS[myTeam.instructions.mentality]} {showTactics ? '▴' : '▾'}
+        Taktik {PLAN_LABELS[myTeam.plan ?? 0]}: {formationName(myTeam)} · {MENTALITY_LABELS[myTeam.instructions.mentality]} {showTactics ? '▴' : '▾'}
       </button>
 
       <button
@@ -527,20 +529,28 @@ function Controls({ match, running, setRunning, showTactics, setShowTactics, ext
   );
 }
 
-/** Maç içi taktik paneli: diziliş ve talimatlar anında uygulanır. */
+/** Maç içi taktik paneli: taktik seti, diziliş ve talimatlar anında uygulanır. */
 function LiveTactics({ match }: { match: MatchState }) {
   const world = useWorld();
   const change = useGameStore((s) => s.liveChangeTactics);
+  const switchPlan = useGameStore((s) => s.liveSwitchPlan);
   const team = match[userSide(match, world)];
   return (
     <section className="panel">
       <div className="panel-title panel-title-row">
         <span>Taktik Değişikliği</span>
-        <FormationPicker value={team.formation} onChange={(formation) => change({ formation })} />
+        <span className="toolbar">
+          <span className="muted">Set</span>
+          <PlanPicker value={team.plan ?? 0} onChange={switchPlan} />
+        </span>
       </div>
-      <div className="panel-body">
+      <div className="panel-body live-tactics-body">
+        <FormationPicker value={team.formation} custom={team.custom} onChange={(formation) => change({ formation, custom: null })} />
         <InstructionsPanel instructions={team.instructions} onChange={(instructions) => change({ instructions })} />
+        <div className="sub-head">Duran Toplar</div>
+        <SetPieceStyles instructions={team.instructions} onChange={(instructions) => change({ instructions })} />
         <div className="panel-note">
+          Taktik setine geçince o setin dizilişi, talimatları ve bireysel talimatları uygulanır (Taktik ekranında hazırlanır).
           Diziliş değişince sahadaki oyuncular yeni mevkilere en uygun şekilde dağıtılır. Değişiklikler hemen etkili olur.
         </div>
       </div>

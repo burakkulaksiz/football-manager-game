@@ -235,6 +235,59 @@ export const INSTRUCTION_OPTIONS = {
     { value: 'normal', label: 'Normal', hint: 'Dengeli genişlik.' },
     { value: 'wide', label: 'Geniş', hint: 'Kanatları kullanır: daha çok orta, kafa ve korner; ortada boşluk kalır.' },
   ],
+  tackling: [
+    { value: 'easy', label: 'Yumuşak', hint: 'Az faul ve kart; rakip topu daha rahat tutar.' },
+    { value: 'normal', label: 'Normal', hint: 'Dengeli müdahale.' },
+    { value: 'hard', label: 'Sert', hint: 'Topu daha çok kazanır; faul, kart ve penaltı riski artar.' },
+  ],
+  crossing: [
+    { value: 'low', label: 'Alçak', hint: 'Yerden ortalar: daha az kafa, yerden bitirişe dönük.' },
+    { value: 'mixed', label: 'Karışık', hint: 'Dengeli ortalar.' },
+    { value: 'high', label: 'Yüksek', hint: 'Havadan ortalar: kafası iyi forvetlerle etkili, değilse boşa gider.' },
+  ],
+  freedom: [
+    { value: 'disciplined', label: 'Disiplinli', hint: 'Takım şeklini korur: rakibe az alan, ama daha sıradan pozisyonlar.' },
+    { value: 'normal', label: 'Normal', hint: 'Dengeli.' },
+    { value: 'expressive', label: 'Özgür', hint: 'Yaratıcı oyuncular fark yaratır; şekil bozulur, arkada boşluk kalır.' },
+  ],
+  cornerStyle: [
+    { value: 'near', label: 'Ön direk', hint: 'Daha çok vuruş çıkar ama zor açıdan.' },
+    { value: 'mixed', label: 'Karışık', hint: 'Dengeli kornerler.' },
+    { value: 'far', label: 'Arka direk', hint: 'Daha az ama kaliteli kafa; hava topu iyi oyuncuyla etkili.' },
+    { value: 'short', label: 'Kısa', hint: 'Kısa oynanır, ceza sahası önünden yerden şut aranır.' },
+  ],
+  freeKickStyle: [
+    { value: 'shoot', label: 'Kaleye', hint: 'Serbest vuruşçu doğrudan kaleye vurur.' },
+    { value: 'mixed', label: 'Karışık', hint: 'Çoğunlukla kaleye; hedef adam seçiliyse ara sıra orta.' },
+    { value: 'cross', label: 'Orta', hint: 'Ceza sahasına ortalanır, uzun boylular / hedef adam kafa vurur.' },
+  ],
+} as const;
+
+/** Açık / kapalı takım talimatları. */
+export const INSTRUCTION_TOGGLES = {
+  counterAttack: { label: 'Karşı Atak', hint: 'Topu rakibe bırakır, kazanınca hızlı çıkar; hızlı forvetlerle ve hücuma kalkan rakibe karşı etkili.' },
+  offsideTrap: { label: 'Ofsayt Taktiği', hint: 'Rakibi pozisyondan düşürür; dikkatsiz defans hızlı forvete karşı arkaya adam kaçırır.' },
+  playOutOfDefence: { label: 'Geriden Oyun Kur', hint: 'Defans topu kısa pasla çıkarır; iyi pasör stoperlerle top hakimiyeti, yoğun prese karşı riskli.' },
+  timeWasting: { label: 'Zaman Geçir', hint: 'Oyunu yavaşlatır: iki taraf da daha az atak kurar. Önde iken skoru korumak için.' },
+} as const;
+
+export const DUTY_OPTIONS = [
+  { value: 'defend', label: 'Geride kal', hint: 'Savunmaya daha çok katkı, hücuma daha az; az şut.' },
+  { value: 'support', label: 'Destek', hint: 'Dengeli görev.' },
+  { value: 'attack', label: 'İleri çık', hint: 'Hücuma katılır, daha çok şut çeker; arkada boşluk bırakır.' },
+] as const;
+
+export const CHANNEL_OPTIONS = [
+  { value: 'inside', label: 'İçe kat', hint: 'Kanattan içeri girip şut arar (kanat oyuncuları için).' },
+  { value: 'normal', label: 'Normal', hint: 'Mevkisinde oynar.' },
+  { value: 'wide', label: 'Kanada aç', hint: 'Çizgiye yakın oynar, daha çok orta ve asist arar.' },
+] as const;
+
+export const ORDER_FLAGS = {
+  longShots: { label: 'Uzaktan şut', hint: 'Ceza sahası dışından daha çok şut dener.' },
+  dribble: { label: 'Top sür', hint: 'Topla ilerler: iyi top sürenle fark yaratır, kötüsü top kaybeder.' },
+  tightMarking: { label: 'Sıkı markaj', hint: 'Adamını yakından takip eder: savunmaya katkı, daha çok faul.' },
+  freeRole: { label: 'Serbest rol', hint: 'Pozisyonunu bırakıp oyunun içinde dolaşır; yaratıcı, ama savunmaya az katkı.' },
 } as const;
 
 export const MENTALITY_HINTS: Record<-2 | -1 | 0 | 1 | 2, string> = {

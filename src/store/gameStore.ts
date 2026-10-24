@@ -5,6 +5,9 @@ import {
   applyCaptainChange,
   changeTactics,
   clubPlayers,
+  DEFAULT_INSTRUCTIONS,
+  tacticPlan,
+  type TacticsChange,
   createWorld,
   finishUserMatch,
   pendingDecisions,
@@ -17,14 +20,12 @@ import {
   teamHierarchy,
   substitute,
   type Competition,
-  type FormationId,
   type GameWorld,
   type ManagerBackground,
   type MatchState,
   type Player,
   type Side,
   type Tactics,
-  type TeamInstructions,
 } from '../engine';
 import { DEFAULT_SQUAD_FILTERS, type SquadFilters, type SquadView } from '../ui/squadFilters';
 import { gameData } from '../gameData';
@@ -156,7 +157,9 @@ interface GameState {
   updateTactics: (fn: (tactics: Tactics, squad: Player[]) => Tactics) => void;
   /** Canlı maç başlamadan taktik değiştiyse maçı aynı tohumla yeniden kurar. */
   refreshPreMatch: () => void;
-  liveChangeTactics: (change: { formation?: FormationId; instructions?: Partial<TeamInstructions> }) => void;
+  liveChangeTactics: (change: TacticsChange) => void;
+  /** Canlı maç: kayıtlı taktik setine (A/B/C) geç. */
+  liveSwitchPlan: (index: number) => void;
   /** Canlı maç: bir adım (dakika) ilerlet. */
   stepLiveMatch: () => void;
   liveSubstitute: (outId: number, inId: number) => boolean;
@@ -432,6 +435,21 @@ export const useGameStore = create<GameState>()((set, get) => {
       const { world, liveMatch } = get();
       if (!world || !liveMatch) return;
       changeTactics(liveMatch, world.players, userSide(liveMatch, world), change);
+      set({ liveMatch: { ...liveMatch } });
+    },
+
+    liveSwitchPlan: (index) => {
+      const { world, liveMatch } = get();
+      const tactics = world?.tactics[world.playerClubId];
+      if (!world || !liveMatch || !tactics) return;
+      const plan = tacticPlan(tactics, index);
+      changeTactics(liveMatch, world.players, userSide(liveMatch, world), {
+        formation: plan.formation,
+        custom: plan.custom ?? null,
+        instructions: { ...DEFAULT_INSTRUCTIONS, ...plan.instructions },
+        orders: plan.orders ?? [],
+        plan: index,
+      });
       set({ liveMatch: { ...liveMatch } });
     },
 

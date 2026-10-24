@@ -27,8 +27,11 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
 - [ ] Ses (kodla üretilen + gerçek kayıtlar; düdük, gol, uğultu, açma/kapama)
 - [ ] Maç ortasında kayıt
 - [ ] Devre arası konuşması (moral etkisi)
-- [ ] Duran top talimatları (korner ve serbest vuruşta kim nereye)
-- [ ] Oyuncuya bireysel talimat ("sadece pas ver", "yükleniş yap")
+- [x] Duran top talimatları (kornerci, hedef adam; korner ön/arka direk/kısa, serbest vuruş kaleye/orta)
+- [x] Oyuncuya bireysel talimat (görev: geride kal / destek / ileri çık; içe kat / kanada aç, uzaktan şut, top sür, sıkı markaj, serbest rol)
+- [x] Yeni takım talimatları (karşı atak, ofsayt taktiği, geriden oyun kurma, zaman geçirme, müdahale sertliği, orta tercihi, yaratıcılık)
+- [x] Kendi dizilişini oluşturma (sahada yerleri sürükleyerek) + 4 yeni hazır diziliş
+- [x] Taktik setleri (A/B/C; maç içinde setler arası geçiş)
 
 ## Kadro ve oyuncu
 - [x] Oyuncuyu transfer listesine / kiralık listesine koyma (yapay zekâ kulüpleri de fazlalıklarını listeler)

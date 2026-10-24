@@ -54,7 +54,7 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
 ## Kulüp ve menajer
 - [ ] Başka kulüplerden iş teklifi, istifa, işsiz kalıp yeni iş arama
 - [x] Menajer itibarı ve kariyer geçmişi ekranı (geçmiş seçimi, transfer ve yönetime etkisi)
-- [ ] Tesis yatırımı (stadyum, antrenman tesisi, altyapı)
+- [x] Tesis yatırımı (stadyum, antrenman tesisi, altyapı, sağlık merkezi; yönetimden talep, inşaat süresi, bakım)
 - [ ] Taraftar memnuniyeti
 - [ ] Basın toplantısı ve medya
 

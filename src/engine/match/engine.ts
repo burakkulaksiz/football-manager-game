@@ -228,6 +228,8 @@ export interface TeamSetup {
   viceCaptainId?: number | null;
   penaltyTakerId?: number | null;
   freeKickTakerId?: number | null;
+  /** Maç sakatlığı riski çarpanı (kulübün sağlık merkezi); yoksa 1. */
+  injuryRisk?: number;
 }
 
 export interface MatchSetup {
@@ -291,6 +293,7 @@ function newTeam(rng: Rng, setup: TeamSetup, side: Side, lookup: PlayerLookup, p
     penaltyTakerId: setup.penaltyTakerId ?? null,
     freeKickTakerId: setup.freeKickTakerId ?? null,
     userControlled: setup.userControlled ?? false,
+    ...(setup.injuryRisk !== undefined && setup.injuryRisk !== 1 ? { injuryRisk: setup.injuryRisk } : {}),
     counters: { shots: 0, shotsOnTarget: 0, corners: 0, fouls: 0, yellowCards: 0, redCards: 0 },
     fullWeights: formationWeights(FORMATIONS[formation]),
   };
@@ -748,7 +751,7 @@ function checkInjury(ctx: Ctx, side: Side): void {
   const healthy = team.onPitch.filter((id) => !state.players[id]!.injured);
   if (healthy.length === 0) return;
   const proneness = healthy.reduce((s, id) => s + lookup[id]!.hidden.injuryProneness, 0) / healthy.length;
-  if (!rng.chance(TUNING.injuryChance * (proneness / 10))) return;
+  if (!rng.chance(TUNING.injuryChance * (proneness / 10) * (team.injuryRisk ?? 1))) return;
   const id = healthy[rng.weightedIndex(healthy.map((h) => lookup[h]!.hidden.injuryProneness + 2))]!;
   state.players[id]!.injured = true;
   state.injuries.push({ ...displayMinute(state), clubId: team.clubId, playerId: id });

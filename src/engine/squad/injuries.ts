@@ -6,6 +6,7 @@ import { addNews } from '../news';
 import type { Rng } from '../rng';
 import type { GameWorld, Injury, Player } from '../types';
 import { INTENSITY_EFFECTS, trainingOf } from './training';
+import { facilityLevel, injuryDurationFactor, trainingInjuryFactor } from '../finance/facilities';
 
 interface InjuryType {
   name: string;
@@ -49,6 +50,8 @@ const fullName = (p: Player) => `${p.firstName} ${p.lastName}`;
 export function injurePlayer(world: GameWorld, player: Player, rng: Rng, cause: 'match' | 'training' | 'international'): void {
   if (player.injury) return;
   player.injury = createInjury(rng);
+  // Sağlık merkezi iyileşmeyi kısaltır / uzatır
+  player.injury.daysOut = Math.max(1, Math.round(player.injury.daysOut * injuryDurationFactor(facilityLevel(world, player.clubId, 'medical'))));
   player.condition = Math.min(player.condition, 60);
   if (player.clubId === world.playerClubId) {
     addNews(world, {
@@ -88,7 +91,8 @@ export function healInjuries(world: GameWorld): void {
 export function trainingInjuries(world: GameWorld, rng: Rng): void {
   for (const p of Object.values(world.players)) {
     if (p.injury || !p.clubId) continue;
-    const risk = TRAINING_INJURY_CHANCE * (p.hidden.injuryProneness / 10) * INTENSITY_EFFECTS[trainingOf(world, p.clubId).intensity].injury;
+    const facilities = trainingInjuryFactor(facilityLevel(world, p.clubId, 'training'), facilityLevel(world, p.clubId, 'medical'));
+    const risk = TRAINING_INJURY_CHANCE * (p.hidden.injuryProneness / 10) * INTENSITY_EFFECTS[trainingOf(world, p.clubId).intensity].injury * facilities;
     if (rng.chance(risk)) injurePlayer(world, p, rng, 'training');
   }
 }

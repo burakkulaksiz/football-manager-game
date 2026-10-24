@@ -17,6 +17,7 @@ import type { Rng } from '../rng';
 import type { GameWorld, Player } from '../types';
 import { cancelOffersFor, contractExpiry, freeSquadNumber } from '../transfer/market';
 import { recordMove } from './career';
+import { facilityLevel, youthFacilityBonus } from '../finance/facilities';
 
 /** Bu yaşa giren oyuncu U19'da kalamaz (yaş sınırı). */
 export const ACADEMY_AGE_LIMIT = 19;
@@ -125,7 +126,7 @@ export function academyIntake(world: GameWorld, rng: Rng, data: GameData): void 
     const count = rng.int(INTAKE_SIZE[0], INTAKE_SIZE[1]);
     const intake: Player[] = [];
     for (let i = 0; i < count; i++) {
-      const youth = generateYouthPlayer(rng, data, club, world.date, world.nextPlayerId++, [15, 16]);
+      const youth = generateYouthPlayer(rng, data, club, world.date, world.nextPlayerId++, [15, 16], youthFacilityBonus(facilityLevel(world, club.id, 'youth')));
       youth.academy = true;
       youth.squadNumber = null;
       youth.joined = world.date;

@@ -7,6 +7,7 @@ import { DynamicsScreen } from '../screens/DynamicsScreen';
 import { FinanceScreen } from '../screens/FinanceScreen';
 import { InternationalScreen } from '../screens/InternationalScreen';
 import { ManagerScreen } from '../screens/ManagerScreen';
+import { FacilitiesScreen } from '../screens/FacilitiesScreen';
 import { FixturesScreen } from '../screens/FixturesScreen';
 import { InboxScreen } from '../screens/InboxScreen';
 import { MatchReportScreen } from '../screens/MatchReportScreen';
@@ -43,6 +44,7 @@ function ScreenContent({ screen }: { screen: ScreenId }) {
     case 'finance': return <FinanceScreen />;
     case 'international': return <InternationalScreen />;
     case 'manager': return <ManagerScreen />;
+    case 'facilities': return <FacilitiesScreen />;
     default: return <PlaceholderScreen screen={screen} />;
   }
 }

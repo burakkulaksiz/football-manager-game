@@ -297,6 +297,7 @@ export const EXPENSE_LABELS: Record<import('../engine').ExpenseCategory, string>
   signingBonuses: 'İmza Bonusu',
   agentFees: 'Menajer Ücretleri',
   scouting: 'Gözlemcilik',
+  facilities: 'Tesisler',
 };
 
 const MONTH_NAMES = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];

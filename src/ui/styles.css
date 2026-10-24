@@ -4307,3 +4307,111 @@ select {
   font-size: 12px;
   font-weight: 600;
 }
+
+/* ================= Tesisler ================= */
+.fac-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 40px;
+}
+
+.fac-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fac-summary strong {
+  font-family: var(--font-display);
+  font-size: 24px;
+}
+
+.fac-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 14px;
+}
+
+.fac-grid > .panel {
+  margin-bottom: 0;
+}
+
+.fac-desc {
+  padding: 0 0 8px;
+}
+
+.fac-big {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.fac-big .muted {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* 10 dilimli seviye çubuğu */
+.fac-level {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.fac-level i {
+  width: 16px;
+  height: 12px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.fac-level i.on {
+  background: var(--accent);
+}
+
+.fac-effects {
+  margin: 8px 0;
+  padding-left: 18px;
+  line-height: 1.5;
+}
+
+.fac-effect {
+  margin: 6px 0;
+  font-weight: 600;
+}
+
+.fac-next {
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
+.fac-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.fac-project {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.fac-project-bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.fac-project-bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}

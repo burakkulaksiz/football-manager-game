@@ -4,7 +4,7 @@
  * 4 = aşama 9 (1. Lig, yönetim, sezon arşivi), 5 = menajer kartı, 6 = altyapı (U19) ve gelişim geçmişi,
  * 7 = transfer / kiralık listesi, 8 = oyuncu görüşmeleri, 9 = yardımcı kaptan, 10 = gözlemciler,
  * 11 = yurtdışı kulüpleri, 12 = genişlik talimatı, 13 = oyuncu menajerleri,
- * 14 = milli takımlar, 15 = menajer itibarı ve kariyer geçmişi.
+ * 14 = milli takımlar, 15 = menajer itibarı ve kariyer geçmişi, 16 = tesisler.
  */
 import type { GameData } from './data';
 import { initFinance, initFinances, payMonthly } from './finance/finance';
@@ -17,12 +17,13 @@ import { addForeignClubs, FOREIGN_SEED_SALT } from './generation/foreign';
 import { AGENT_SEED_SALT, generateAgents } from './transfer/agents';
 import { createInternational } from './league/international';
 import { migrateManager } from './season/manager';
+import { initFacilities } from './finance/facilities';
 import { Rng } from './rng';
 import { initialBoard } from './season/expectation';
 import { DEFAULT_TRAINING } from './squad/training';
 import type { GameWorld } from './types';
 
-export const CURRENT_WORLD_VERSION = 15;
+export const CURRENT_WORLD_VERSION = 16;
 
 /** `raw` eski biçimdeki dünya; dönüştürülmüş dünya döner (yerinde değiştirir). */
 export function migrateWorld(raw: unknown, fromVersion: number, data: GameData): GameWorld {
@@ -132,5 +133,11 @@ export function migrateWorld(raw: unknown, fromVersion: number, data: GameData):
     createInternational(world, data, world.date);
   }
   if (fromVersion < 15) migrateManager(world);
+  if (fromVersion < 16) {
+    world.facilities ??= initFacilities(world);
+    for (const fin of Object.values(world.finances)) {
+      for (const r of [fin.current, ...fin.history]) r.expense.facilities ??= 0;
+    }
+  }
   return world;
 }

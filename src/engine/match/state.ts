@@ -146,6 +146,8 @@ export interface TeamState {
   counters: TeamCounters;
   /** Başlangıçtaki 11'in birim ağırlık toplamları; eksik oyuncu takımı zayıflatsın diye sabit. */
   fullWeights: { att: number; mid: number; def: number };
+  /** Maç sakatlığı riski çarpanı (sağlık merkezi); yoksa 1. */
+  injuryRisk?: number;
 }
 
 export interface MatchState {

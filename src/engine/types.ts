@@ -5,6 +5,7 @@ import type { ScoutingState } from './transfer/scouting';
 import type { Tactics } from './match/tactics';
 import type { InternationalState } from './league/international';
 import type { ManagerBackground, ManagerRecordMatch, ManagerSeason } from './season/manager';
+import type { FacilitiesState } from './finance/facilities';
 
 export type Position =
   | 'GK'
@@ -266,7 +267,7 @@ export interface MatchResult {
 /* ------------------------------------------------------------------ */
 
 export type IncomeCategory = 'tickets' | 'tv' | 'sponsor' | 'transfersIn' | 'prize';
-export type ExpenseCategory = 'wages' | 'bonuses' | 'transfersOut' | 'signingBonuses' | 'agentFees' | 'scouting';
+export type ExpenseCategory = 'wages' | 'bonuses' | 'transfersOut' | 'signingBonuses' | 'agentFees' | 'scouting' | 'facilities';
 
 /** Bir ayın gelir/gider dökümü (giderler pozitif sayı). */
 export interface MonthReport {
@@ -439,6 +440,8 @@ export interface GameWorld {
   agents: Agent[];
   /** Milli takımlar: eleme / turnuva döngüsü, kadrolar, milli maçlar. */
   international: InternationalState;
+  /** Tesis seviyeleri (Türkiye kulüpleri) ve kullanıcının inşaatları. */
+  facilities: FacilitiesState;
 }
 
 /* ------------------------------------------------------------------ */

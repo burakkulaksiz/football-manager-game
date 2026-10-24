@@ -21,6 +21,7 @@ import { POSITION_WEIGHTS } from '../positions';
 import type { Rng } from '../rng';
 import type { GameWorld, Player } from '../types';
 import { DEFAULT_TRAINING, FOCUS_ATTRS, INTENSITY_EFFECTS, trainingOf } from './training';
+import { facilityLevel, trainingDevelopmentFactor } from '../finance/facilities';
 
 /** Yaşa göre haftalık gelişim puanı (özellik puanı cinsinden). */
 export function ageRate(age: number): number {
@@ -81,7 +82,9 @@ export function developPlayer(world: GameWorld, p: Player, rng: Rng): number {
   let gain: number;
   if (base > 0) {
     const room = Math.max(0, Math.min(1, (p.potentialAbility - p.currentAbility) / 25));
-    gain = base * room * (0.6 + professionalism * 0.8) * INTENSITY_EFFECTS[training.intensity].development;
+    // Tesis: A takımda antrenman tesisi, U19'da altyapı tesisi
+    const facility = facilityLevel(world, p.clubId, p.academy ? 'youth' : 'training');
+    gain = base * room * (0.6 + professionalism * 0.8) * INTENSITY_EFFECTS[training.intensity].development * trainingDevelopmentFactor(facility);
   } else {
     // Profesyonel ve doğal kondisyonu iyi oyuncu daha yavaş geriler
     gain = base * (1.2 - professionalism * 0.4) * (1.15 - (p.attributes.naturalFitness / 20) * 0.3);

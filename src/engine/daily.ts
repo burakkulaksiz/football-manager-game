@@ -6,6 +6,7 @@
 import type { GameData } from './data';
 import { addDays, formatDateTR, weekday } from './date';
 import { startNewMonth } from './finance/finance';
+import { facilitiesDay, payFacilityMaintenance } from './finance/facilities';
 import { cupDay } from './league/cup';
 import { europeDay } from './league/europe';
 import { internationalDay } from './league/international';
@@ -55,6 +56,7 @@ function windowNews(world: GameWorld): void {
 export function processDay(world: GameWorld, rng: Rng, data: GameData): void {
   if (world.date.endsWith('-01')) {
     startNewMonth(world);
+    payFacilityMaintenance(world);
     boardMonthly(world);
     recordReputationMonth(world);
     recordGrowth(world);
@@ -69,6 +71,7 @@ export function processDay(world: GameWorld, rng: Rng, data: GameData): void {
   // Milli takımlar: kadrolar, milli maçlar (kulüp maçı olmayan günlerde), turnuva
   internationalDay(world, rng, data);
 
+  facilitiesDay(world);
   windowNews(world);
   listingsOnWindowOpen(world);
   returnLoans(world);

@@ -16,6 +16,7 @@ import { DEFAULT_TRAINING } from '../squad/training';
 import { addForeignClubs, FOREIGN_SEED_SALT } from './foreign';
 import { createInternational, emptyInternational } from '../league/international';
 import { MANAGER_BACKGROUNDS, type ManagerBackground } from '../season/manager';
+import { initFacilities } from '../finance/facilities';
 
 /** Altyapı üretiminin ayrı rng'si için tohum tuzu. */
 export const ACADEMY_SEED_SALT = 0xa11ce5;
@@ -184,12 +185,14 @@ export function createWorld(
     scouting: emptyScouting(),
     agents: generateAgents(new Rng((seed ^ AGENT_SEED_SALT) >>> 0), data),
     international: emptyInternational(),
+    facilities: { levels: {}, projects: [], rejected: {} },
   };
   fillAcademies(world, data, new Rng((seed ^ ACADEMY_SEED_SALT) >>> 0));
   addForeignClubs(world, data, new Rng((seed ^ FOREIGN_SEED_SALT) >>> 0));
   recordGrowth(world);
   refreshAiListings(world);
   createInternational(world, data, startDate);
+  world.facilities = initFacilities(world);
   addNews(world, {
     category: 'board',
     title: `${userClub.name} yönetiminden hoş geldin mesajı`,
@@ -347,18 +350,20 @@ export function generateYouthPlayer(
   date: GameDate,
   id: number,
   ages: readonly [number, number] = [16, 17],
+  /** Altyapı tesisinin payı (bkz. youthFacilityBonus); yoksa etkisiz. */
+  bonus: { level: number; potential: number; wonderkid: number } = { level: 0, potential: 0, wonderkid: 1 },
 ): Player {
   const positions: Position[] = ['GK', 'DC', 'DR', 'DL', 'DM', 'MC', 'AMR', 'AML', 'AMC', 'ST'];
   const position = positions[rng.weightedIndex([1, 2, 1, 1, 1, 2, 1, 1, 1, 2])]!;
   const player = generatePlayer(rng, data, id, date, {
     position,
-    level: clubBaseLevel(club.reputation) - 4.5 + rng.normal(0, 1),
+    level: clubBaseLevel(club.reputation) - 4.5 + bonus.level + rng.normal(0, 1),
     age: rng.int(ages[0], ages[1]),
     nationality: pickNationality(rng, data, 'youth', club.reputation, club.country),
     clubId: club.id,
     wageFactor: 0.6 + club.reputation / 100,
     // Gençlerin çoğu sıradan; arada bir gerçek cevher çıkar (yaşa bağlı büyüme payı zaten generatePotential'da)
-    extraPotential: rng.chance(WONDERKID_CHANCE) ? rng.int(20, 45) : rng.int(-5, 18),
+    extraPotential: (rng.chance(WONDERKID_CHANCE * bonus.wonderkid) ? rng.int(20, 45) : rng.int(-5, 18)) + bonus.potential,
   });
   player.contract.wage = roundNice(Math.max(12_000, player.contract.wage * 0.4));
   return player;

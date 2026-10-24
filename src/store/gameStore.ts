@@ -53,7 +53,8 @@ export type ScreenId =
   | 'match'
   | 'report'
   | 'international'
-  | 'manager';
+  | 'manager'
+  | 'facilities';
 
 /** Gezinme geçmişindeki bir sayfa (FM'deki ◀ ▶ okları için). */
 export interface Route {

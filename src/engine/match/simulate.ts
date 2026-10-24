@@ -9,6 +9,7 @@ import { trackPromises } from '../squad/talks';
 import { cupAfterMatch, FINAL_ROUND, isCupFixture } from '../league/cup';
 import { europeAfterMatch, europeMatchOptions, isEuropeFixture } from '../league/europe';
 import { payContractBonuses } from '../transfer/agents';
+import { facilityLevel, matchInjuryFactor } from '../finance/facilities';
 import { learnFromMatch } from '../transfer/scouting';
 import { clubPlayers, getClub } from '../generation/worldGenerator';
 import type { Rng } from '../rng';
@@ -26,10 +27,12 @@ function teamSetup(world: GameWorld, clubId: string): TeamSetup {
   const squad = clubPlayers(world, clubId);
   const name = getClub(world, clubId).name;
   const tactics = world.tactics[clubId];
+  const injuryRisk = matchInjuryFactor(facilityLevel(world, clubId, 'medical'));
   if (tactics) {
     return {
       clubId,
       name,
+      injuryRisk,
       lineup: resolveLineup(tactics, squad),
       userControlled: clubId === world.playerClubId,
       formation: tactics.formation,
@@ -41,7 +44,7 @@ function teamSetup(world: GameWorld, clubId: string): TeamSetup {
     };
   }
   const formation = chooseFormation(squad);
-  return { clubId, name, lineup: autoSelectLineup(squad, FORMATIONS[formation]), formation };
+  return { clubId, name, lineup: autoSelectLineup(squad, FORMATIONS[formation]), formation, injuryRisk };
 }
 
 /** Fikstür için maç kurulumu. */

@@ -61,7 +61,7 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
                        gelen tekliflere yanıt, günlük teklif işleme (processOffers).
   transfer/ai.ts       Yapay zekâ alımları ve kullanıcıya teklifler (aiTransferDay).
   transfer/listing.ts  Transfer / kiralık listesi: listPlayer, unlistPlayer, listedOffersDay, refreshAiListings.
-  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 15; migrateWorld GameData de alır).
+  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 16; migrateWorld GameData de alır).
   squad/training.ts    Antrenman odağı/yoğunluğu ve etkileri (INTENSITY_EFFECTS, FOCUS_ATTRS).
   squad/injuries.ts    Sakatlık türleri, maç/antrenman sakatlığı, günlük iyileşme.
   squad/discipline.ts  Kart cezaları (maç sonrası).
@@ -702,6 +702,23 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
 - Arayüz: Yeni oyunda geçmiş kartları; sol menüde Kulüp → Menajer Kariyeri (ManagerScreen): itibar ve etiketi (Yerel < 30 ≤
   Bölgesel < 50 ≤ Ulusal < 70 ≤ Avrupa çapında < 85 ≤ Dünyaca ünlü), son 12 ay değişimi, aylık itibar grafiği (tek seri,
   üstüne gelince değer), kupa dolabı, rekorlar, sezon sezon kariyer tablosu. Kulüp Bilgisi'ndeki menajer kartında itibar ve “Kariyer ›”.
+
+## Tesisler (kullanıcı seçti: dört tesis, yönetimden talep, seviye + inşaat süresi + bakım)
+- Kayıt sürümü 16: world.facilities (FacilitiesState: Türkiye kulüplerinin seviyeleri training / youth / medical 1–10, kullanıcının
+  inşaatları, reddedilen taleplerin günü); ExpenseCategory facilities ("Tesisler"). engine/finance/facilities.ts.
+- Başlangıç: levelForReputation = 1 + itibar/100 × 8 (± kulübe bağlı sabit 1 sapma); yurtdışı kulübünde saklanmaz, itibardan (devler 10).
+  Stadyum seviye değil kapasite: genişletme +5.000 koltuk (en çok 80.000), €1.200 / koltuk, en erken 5 ay sonraki 1 Temmuz'da biter.
+- Tesis bedeli 200 bin × seviye^1.6 (5→6 ~€2,6 Mn, 9→10 ~€6,7 Mn), inşaat 3 + seviye/3 ay. Bakım (ay başı, tüm Türkiye kulüpleri):
+  seviye başına €40 bin / yıl + 1000 koltuk başına €6 bin / yıl.
+- Talep (requestFacility): kasa ≥ bedel × 1,3 + maaş bütçesi / 8 ve yönetim güveni ≥ 50 − (menajer itibarı − 50) × 0,3; onayda bedel
+  kasadan, reddedilirse 60 gün bekleme; tür başına tek inşaat. Haber (board). facilitiesDay tamamlanınca seviye / kapasite + önemli haber.
+- Etkiler: antrenman tesisi gelişim × (0,85 + 0,035 × seviye) (U19'da altyapı tesisi), antrenman sakatlığı × (1,15 − 0,03 × antrenman)
+  × (1,15 − 0,03 × sağlık); sağlık merkezi sakatlık süresi × (1,2 − 0,04 × seviye), maç sakatlığı × (1,12 − 0,025 × seviye)
+  (TeamSetup / TeamState.injuryRisk, checkInjury); altyapı tesisi U19 alımında seviye + (L−5)×0,25, ek potansiyel + (L−5)×2, cevher
+  olasılığı × (0,6 + 0,08 L) (generateYouthPlayer bonus). Yapay zekâ kulüplerinin tesisleri sabit (yatırım yapmazlar).
+- Arayüz: Kulüp → Tesisler (FacilitiesScreen): kasa, gereken güven, yıllık bakım; kart başına seviye çubuğu, ligdeki sıra, şu anki
+  etki (oyundaki çarpanlardan), bir üst seviyenin bedeli / süresi / etkisi, "Yönetimden İste" ve süren inşaatın ilerlemesi;
+  stadyumda ortalama seyirci ve doluluk.
 
 ## Şut ve ısı haritası
 - Motor kaydı (yalnızca gösterim, rng kullanmaz): MatchState.shots / MatchResult.shots — her şut (dakika sayacı,

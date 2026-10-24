@@ -20,6 +20,7 @@ export * from './match/report';
 export * from './gameFlow';
 export * from './news';
 export * from './finance/finance';
+export * from './finance/facilities';
 export * from './transfer/window';
 export * from './transfer/market';
 export * from './transfer/offers';

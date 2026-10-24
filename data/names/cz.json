@@ -1,0 +1,10 @@
+{
+  "firstNames": [
+    "Jan", "Jakub", "Tomáš", "Lukáš", "Martin", "Ondřej", "Petr", "David", "Adam", "Matěj",
+    "Vojtěch", "Filip", "Michal", "Pavel", "Josef", "Václav", "Antonín", "Ladislav", "Patrik", "Vladimír"
+  ],
+  "lastNames": [
+    "Novák", "Svoboda", "Novotný", "Dvořák", "Černý", "Procházka", "Kučera", "Veselý", "Horák", "Němec",
+    "Pokorný", "Marek", "Pospíšil", "Hájek", "Král", "Jelínek", "Růžička", "Beneš", "Fiala", "Sedláček"
+  ]
+}

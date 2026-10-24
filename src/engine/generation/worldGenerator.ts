@@ -14,6 +14,7 @@ import { emptyScouting } from '../transfer/scouting';
 import { AGENT_SEED_SALT, generateAgents } from '../transfer/agents';
 import { DEFAULT_TRAINING } from '../squad/training';
 import { addForeignClubs, FOREIGN_SEED_SALT } from './foreign';
+import { createInternational, emptyInternational } from '../league/international';
 
 /** Altyapı üretiminin ayrı rng'si için tohum tuzu. */
 export const ACADEMY_SEED_SALT = 0xa11ce5;
@@ -174,11 +175,13 @@ export function createWorld(
     promises: [],
     scouting: emptyScouting(),
     agents: generateAgents(new Rng((seed ^ AGENT_SEED_SALT) >>> 0), data),
+    international: emptyInternational(),
   };
   fillAcademies(world, data, new Rng((seed ^ ACADEMY_SEED_SALT) >>> 0));
   addForeignClubs(world, data, new Rng((seed ^ FOREIGN_SEED_SALT) >>> 0));
   recordGrowth(world);
   refreshAiListings(world);
+  createInternational(world, data, startDate);
   addNews(world, {
     category: 'board',
     title: `${userClub.name} yönetiminden hoş geldin mesajı`,

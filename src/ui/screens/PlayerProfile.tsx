@@ -27,6 +27,7 @@ import {
   CLUB_SCAN_KNOWLEDGE,
   FULL_KNOWLEDGE,
   knowledgeOf,
+  isOnNationalDuty,
 } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { CareerPanel, MovesPanel } from '../components/CareerPanel';
@@ -244,6 +245,11 @@ export function PlayerProfile() {
               </div>
             </div>
             <Row label="Kulüp">{club ? `${club.name}${player.academy ? ' · U19' : ''}${club.country ? ` (${nationName(club.country)})` : ''}` : 'Serbest'}</Row>
+            {(player.intl || isOnNationalDuty(world, player.id)) && (
+              <Row label="Milli Takım">
+                {player.intl?.caps ?? 0} maç, {player.intl?.goals ?? 0} gol{isOnNationalDuty(world, player.id) ? ' · şu an milli takımda' : ''}
+              </Row>
+            )}
             <Row label="Tercih Ettiği Ayak">{FOOT_LABELS[player.foot]}</Row>
             <Row label="Piyasa Değeri">{formatMoney(marketValue(player, world.date))}</Row>
             <Row label="Maaş">{formatMoney(player.contract.wage)} / yıl</Row>

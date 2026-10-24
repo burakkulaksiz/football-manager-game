@@ -1,10 +1,12 @@
-import { competitionName, fixtureLabel, getClub, nextFixtureFor, primaryPosition, seasonLabel, type GameWorld } from '../../engine';
+import { competitionName, fixtureLabel, getClub, nextFixtureFor, primaryPosition, seasonLabel, tournamentTitle, type GameWorld } from '../../engine';
 import type { ScreenId } from '../../store/gameStore';
 import { nationName, POSITION_NAMES } from '../labels';
 import { screenInfo } from '../screens';
 
 /** Lig ekranlarının başlık hapı rengi (Süper Lig kırmızısı). */
 const LEAGUE_COLORS = { primary: '#B3122E', secondary: '#FFFFFF' };
+/** Milli takımlar ekranı: ay yıldız kırmızısı. */
+const NATIONAL_COLORS = { primary: '#E30A17', secondary: '#FFFFFF' };
 
 export interface PageHeading {
   title: string;
@@ -70,6 +72,14 @@ export function pageHeading(
   }
 
   const info = screen === 'player' ? { label: 'Oyuncu' } : screenInfo(screen);
+  if (screen === 'international') {
+    return {
+      title: info.label,
+      subtitle: `${tournamentTitle(world.international.year, world.international.kind)} döngüsü`,
+      colors: NATIONAL_COLORS,
+      breadcrumb: ['Uluslararası', info.label],
+    };
+  }
   if (screen === 'fixtures' || screen === 'table' || screen === 'stats') {
     return {
       title: info.label,

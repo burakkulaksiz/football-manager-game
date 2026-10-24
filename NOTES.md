@@ -35,6 +35,8 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
   league/europe.ts     Avrupa kupaları (ŞL / AL): katılım (turkishQualifiers), kuralar (europeDay), grup tablosu
                        (groupTable → standings.tableFrom), iki maçlı eşleşme (aggregateScore, tieWinner), ödüller.
   league/competitions.ts Organizasyon etiketleri: competitionName, stageLabel, fixtureLabel, shortFixtureLabel.
+  league/international.ts Milli takımlar: döngü (createInternational), sanal oyuncular (virtualPool), kadro (selectSquad),
+                       milli maçlar ve kamp (internationalDay), elemeler / turnuva tabloları (bkz. "Milli takımlar").
   match/state.ts       Canlı maç durumu tipleri (düz veri, serileştirilebilir), dakika gösterimi.
   match/formation.ts   6 diziliş + saha yerleşimi (FORMATION_LAYOUT), mevki uyumu (slotFit = yanlış mevki cezası),
                        otomatik ilk 11 + 9 yedek, chooseFormation (yapay zekâ), assignToFormation.
@@ -59,7 +61,7 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
                        gelen tekliflere yanıt, günlük teklif işleme (processOffers).
   transfer/ai.ts       Yapay zekâ alımları ve kullanıcıya teklifler (aiTransferDay).
   transfer/listing.ts  Transfer / kiralık listesi: listPlayer, unlistPlayer, listedOffersDay, refreshAiListings.
-  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 13; migrateWorld GameData de alır).
+  migrate.ts           Eski kayıt dönüşümü (CURRENT_WORLD_VERSION = 14; migrateWorld GameData de alır).
   squad/training.ts    Antrenman odağı/yoğunluğu ve etkileri (INTENSITY_EFFECTS, FOCUS_ATTRS).
   squad/injuries.ts    Sakatlık türleri, maç/antrenman sakatlığı, günlük iyileşme.
   squad/discipline.ts  Kart cezaları (maç sonrası).
@@ -443,6 +445,8 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
         seçimi; grup tabloları, eleme turları ilk maç + rövanş + toplam), Kulübüm listesinde ŞL/AL etiketi, tabelada
         ve raporda "Toplam X-Y", puan durumu bölgeleri 1–2 ŞL, 3–4 AL (Konferans Ligi kalktı), geçmişte şampiyonlar,
         menajer kartında Avrupa kupası. Ölçüm (5 sezon): Türk kulüpleri ŞL'de çoğunlukla 3.–4., AL'de ara sıra gruptan çıkar.
+  - [x] Milli takımlar (kullanıcı seçti: yalnızca kulüp tarafı, eleme + yaz turnuvası, dünyadaki oyuncular + sanal
+        tamamlama). Ayrıntı "Milli takımlar" bölümünde.
   - [ ] Sıradaki: FIKIRLER.md'den seçilecek.
 
 ## Açık konular / ileride
@@ -576,6 +580,46 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
 - Arayüz: kulüp seçicileri ülke ülke gruplu (ClubOptions); transfer araması ve gözlemci aramasında Bölge filtresi
   (Tümü / Türkiye / Yurtdışı / ülke); kulüp adının yanında ülke kodu; Altyapı → ligdeki gençler yalnızca Türkiye.
 - Gol kralı uç değer testi: 15 sezonda en fazla iki 38+ (30 sezon ölçüm: yurtdışıyla ort. 26.9, yurtdışısız 25.3).
+
+## Milli takımlar (kullanıcı seçti: yalnızca kulüp tarafı, eleme + yaz turnuvası, sanal oyuncularla tamamlama)
+- Kayıt sürümü 14: world.international (InternationalState) + Player.intl { caps, goals }. Milli maçlar sezon fikstüründen
+  AYRI (NationalFixture, ülke kodlarıyla); kulüp fonksiyonları (getClub, finans, yönetim) onları görmez.
+- nations.json'a confederation, strength (1–100), colors; yeni ülkeler İsviçre, İskoçya, Çekya (ağırlık 0; names/cz.json).
+  Ağırlığı 0 olan ülkeler de yurtdışı kulüplerinde ağırlık 3 sayılır, bu yüzden yeni ülkelerin dünyada oyuncusu olur.
+  DİKKAT: yeni isim havuzu eklenince testler eski glob sonucunu önbellekten okuyabilir → node_modules/.vitest-cache silinir.
+- Takvim: milli ara cumartesileri (breakSaturdays = isBreakWeekend: Eylül 1., Ekim/Kasım 2., Mart son hafta); maç günleri
+  cuma (C−1) ve salı (C+3) — test 2026–2034 için kulüp maçı (lig, kupa turu, Avrupa aşaması) olmadığını denetler.
+- Döngü: turnuva çift yıllarda (4'e bölünen Avrupa Şampiyonası, diğerleri Dünya Kupası), haziranda; turnuvadan sonraki
+  1 Temmuz'da createInternational (internationalDay içinde) yenisini kurar, history taşınır. Turnuva yılı: elemelere yetecek
+  milli gün kalan ilk çift yıl (yeni oyun 2028; Nisan 2027'de dönüştürülen kayıt 2030). Eleme kurası hemen: UEFA ülkeleri
+  (20) güce göre torbalarla 4 gruba (5'er), çember yöntemi + bay, çift devre = 10 maç günü = turnuva kurasından (1 Aralık,
+  turnuvadan önceki yıl) önceki son 10 milli gün (yeni oyunda Kasım 2026 – Kasım 2027). Diğer milli günler ve elemede bay
+  geçenler / UEFA dışı için hazırlık maçı (ayrı tohumlu rng ile eşleşme; Türkiye her milli günde oynar). Tüm fikstür
+  döngü başında üretilir, yalnızca turnuva eleme turları sonradan.
+- Turnuva: Avrupa 8 (grupların ilk 2'si; 2 grup → yarı final → final), Dünya Kupası 16 (UEFA 8 + UEFA dışından güç + gürültü
+  ile en iyi 8; 4 grup → çeyrek → yarı → final). Kura 1 Aralık; maçlar 10/14/18 Haziran (grup), 22 (çeyrek), 25 (yarı),
+  29 (final), hepsi tarafsız; eleme turunda beraberlikte penaltılar (motorun knockout'u). Çeyrek: A1–B2, B1–A2, C1–D2, D1–C2.
+- Güç (torbalar, Dünya Kupası seçimi): nationRating = kadronun en iyi 11'inin ortalama yeteneği (yurtdışı kulüplerindeki
+  yıldızlar yüzünden ülkeler 156–183 arasında; Türkiye ~163–167).
+- Sanal oyuncular: virtualPool — kulüp şablonu (25), seviye clubBaseLevel(strength × 1.25), döngü yılına göre tohumdan
+  (kayda yazılmaz, önbellekte), id = −(kod karması × 100 + sıra + 1), clubId null. nationalPlayer pozitif/negatif id çözer.
+- Kadro (selectSquad): ülkenin kulübü olan, sakat olmayan oyuncuları + sanal oyuncular; puan = yetenek + son 3 maç formu
+  (±6); kota 3 KL / 8 defans / 8 orta saha / 4 hücum, eksik kalırsa kaleci dışı en iyiler. Türkiye kadrosunun çoğu dünyadaki
+  oyunculardan (strength 64 bu yüzden düşük). Kulüp cezası milli maçı etkilemez (maçta kopya, suspension 0).
+- Kamp: ilk maçtan 4 gün önce (pazartesi) kadrolar açıklanır (campAnnounced; çağrılana moral +3; oyuncumuz çağrıldıysa önemli
+  haber, yoksa Türkiye kadrosu haberi). Oyuncu ülkesinin maç gününde onDuty'ye girer; ülkesinin 8 gün içinde maçı kalmayınca
+  döner (turnuvada elenen erken döner); kamp bitince "Milli takımdan dönen oyuncularımız" haberi. Maç günü sakatlanan
+  kadrodan çıkar (yerine sıradaki). onDuty yalnızca gösterim (MİLLİ etiketi): o günlerde kulüp maçı yok.
+- Maç: motorla (arka planda, günün rng'si), ev sahibi avantajı elemede/hazırlıkta var, turnuvada yok. Etkiler: kondisyon,
+  caps/goals, 7.5+ puana moral +2, sakatlık (injurePlayer 'international' → "milli maçta sakatlandı", önemli). Kart / form /
+  ceza yok. Sonuçta goller ad ile (sanal oyuncu kayıtta yok) ve yalnızca kulübümüzün oyuncularının kaydı saklanır (kayıt boyutu).
+  Bir milli gün ~14 maç, ~110 ms; sezon başına ~120 milli maç (+~1 sn simülasyon).
+- Haberler ('international', clubId kullanıcı → gelen kutusunda): eleme kurası, kadro çağrısı, Türkiye maç sonuçları (Devam'ı
+  durdurmaz), dönüş özeti, eleme sonucu (önemli), turnuva kurası, şampiyon (Türkiye finaldeyse önemli).
+- Arayüz: sol menüde "Uluslararası → Milli Takımlar" (InternationalScreen): Takım (ülke seçimi, son kadro — sanal oyuncular
+  soluk, kulüpsüz; maçlar, golcüler satırın üstünde), Elemeler (4 grup tablosu), Turnuva (gruplar + eleme turları), Oyuncularımız,
+  Geçmiş. Profilde "Milli Takım: X maç, Y gol · şu an milli takımda", kadro/taktik durum etiketinde MİLLİ, gelen kutusunda
+  "Milli Takımlar ›" bağlantısı. NationFlag: ülke renklerinde iki şeritli küçük bayrak.
 
 ## Şut ve ısı haritası
 - Motor kaydı (yalnızca gösterim, rng kullanmaz): MatchState.shots / MatchResult.shots — her şut (dakika sayacı,

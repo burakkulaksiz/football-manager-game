@@ -3732,3 +3732,31 @@ select {
   opacity: 0.8;
   white-space: nowrap;
 }
+
+/* Milli takımlar */
+.st-intl { background: #c8102e; }
+
+.nation-flag {
+  flex: none;
+  vertical-align: -1px;
+}
+
+.intl-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 8px 12px 10px;
+}
+
+.intl-columns {
+  padding: 0 12px 10px;
+}
+
+.data-table tr.virtual-row td {
+  opacity: 0.6;
+}
+
+.euro-groups + .cup-round {
+  margin-top: 12px;
+}

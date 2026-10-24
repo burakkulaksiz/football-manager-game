@@ -49,7 +49,8 @@ export type ScreenId =
   | 'stats'
   | 'player'
   | 'match'
-  | 'report';
+  | 'report'
+  | 'international';
 
 /** Gezinme geçmişindeki bir sayfa (FM'deki ◀ ▶ okları için). */
 export interface Route {

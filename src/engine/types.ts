@@ -3,6 +3,7 @@ import type { GameDate } from './date';
 import type { CareerMove, CareerSeason } from './squad/career';
 import type { ScoutingState } from './transfer/scouting';
 import type { Tactics } from './match/tactics';
+import type { InternationalState } from './league/international';
 
 export type Position =
   | 'GK'
@@ -130,6 +131,8 @@ export interface Player {
   /** Kariyer: geçmiş sezonlar (kulüp başına) ve kulüp hareketleri (oyun başından itibaren). */
   career?: CareerSeason[];
   moves?: CareerMove[];
+  /** Milli takımda oynadığı maç ve attığı gol (oyun başından itibaren). */
+  intl?: { caps: number; goals: number };
 }
 
 export type RequestTopic = 'playingTime' | 'contract' | 'transfer';
@@ -341,7 +344,8 @@ export type NewsCategory =
   | 'academy'
   | 'scouting'
   | 'cup'
-  | 'europe';
+  | 'europe'
+  | 'international';
 
 /* ------------------------------------------------------------------ */
 /* Antrenman                                                           */
@@ -432,6 +436,8 @@ export interface GameWorld {
   scouting: ScoutingState;
   /** Oyuncu menajerleri. */
   agents: Agent[];
+  /** Milli takımlar: eleme / turnuva döngüsü, kadrolar, milli maçlar. */
+  international: InternationalState;
 }
 
 /* ------------------------------------------------------------------ */

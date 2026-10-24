@@ -35,6 +35,10 @@ export const MENU: MenuGroup[] = [
       { id: 'stats', label: 'Lig İstatistikleri', stage: 3 },
     ],
   },
+  {
+    title: 'Uluslararası',
+    items: [{ id: 'international', label: 'Milli Takımlar', stage: 10 }],
+  },
 ];
 
 export function screenInfo(id: ScreenId): ScreenInfo {

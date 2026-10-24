@@ -6,6 +6,9 @@
  */
 import type { Fixture } from '../types';
 
+/** Tabloya giren maç: lig / kupa fikstürü ya da milli maç (yalnızca skor gerekir). */
+export type TableFixture = Pick<Fixture, 'id' | 'date' | 'homeId' | 'awayId'> & { result: { homeGoals: number; awayGoals: number } | null };
+
 export type Outcome = 'W' | 'D' | 'L';
 
 export interface StandingRow {
@@ -40,7 +43,7 @@ function applyResult(row: StandingRow, scored: number, conceded: number): void {
   row.form.push(outcome);
 }
 
-function tally(clubIds: readonly string[], fixtures: readonly Fixture[]): Map<string, StandingRow> {
+function tally(clubIds: readonly string[], fixtures: readonly TableFixture[]): Map<string, StandingRow> {
   const rows = new Map(clubIds.map((id) => [id, emptyRow(id)]));
   const played = fixtures
     .filter((f) => f.result !== null)
@@ -56,7 +59,7 @@ function tally(clubIds: readonly string[], fixtures: readonly Fixture[]): Map<st
 }
 
 /** Eşit puanlı grup içinde sıralama. */
-function sortTiedGroup(group: StandingRow[], fixtures: readonly Fixture[]): StandingRow[] {
+function sortTiedGroup(group: StandingRow[], fixtures: readonly TableFixture[]): StandingRow[] {
   const ids = new Set(group.map((r) => r.clubId));
   const mutual = fixtures.filter((f) => ids.has(f.homeId) && ids.has(f.awayId));
   const mutualComplete = mutual.length > 0 && mutual.every((f) => f.result !== null);
@@ -81,7 +84,7 @@ export function computeStandings(clubIds: readonly string[], fixtures: readonly 
 }
 
 /** Verilen maçlardan puan tablosu (Avrupa grupları gibi mini ligler için). */
-export function tableFrom(clubIds: readonly string[], fixtures: readonly Fixture[]): StandingRow[] {
+export function tableFrom(clubIds: readonly string[], fixtures: readonly TableFixture[]): StandingRow[] {
   const rows = [...tally(clubIds, fixtures).values()].sort((a, b) => b.points - a.points);
   for (const row of rows) row.form = row.form.slice(-5);
 

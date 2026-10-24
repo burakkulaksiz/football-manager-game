@@ -13,7 +13,18 @@ export interface Nation {
   namePool: string;
   /** Yabancı oyuncu üretirken seçilme ağırlığı (0 = hiç seçilmez). */
   weight: number;
+  /** Konfederasyon: eleme grupları UEFA ülkeleriyle oynanır; diğerleri Dünya Kupası'na doğrudan seçilir. */
+  confederation: Confederation;
+  /**
+   * 1–100: ülkenin oyun dünyasında olmayan oyuncularının (kayda yazılmayan "sanal" kadro) seviyesi.
+   * Milli takım, dünyadaki oyuncularla bu kadronun en iyilerinden kurulur.
+   */
+  strength: number;
+  colors: { primary: string; secondary: string };
 }
+
+export type Confederation = 'UEFA' | 'CONMEBOL' | 'CAF' | 'AFC' | 'CONCACAF' | 'OFC';
+export const CONFEDERATIONS: readonly Confederation[] = ['UEFA', 'CONMEBOL', 'CAF', 'AFC', 'CONCACAF', 'OFC'];
 
 export interface NamePool {
   firstNames: string[];
@@ -131,6 +142,13 @@ export function validateGameData(raw: {
       }
       for (const k of ['code', 'name', 'namePool']) str(n, k, where);
       num(n, 'weight', where, 0, 1000);
+      num(n, 'strength', where, 1, 100);
+      if (!CONFEDERATIONS.includes(n.confederation as Confederation)) {
+        errors.push(`${where}: 'confederation' şunlardan biri olmalı: ${CONFEDERATIONS.join(', ')}`);
+      }
+      if (!isObj(n.colors) || typeof n.colors.primary !== 'string' || typeof n.colors.secondary !== 'string') {
+        errors.push(`${where}: 'colors' { primary, secondary } olmalı`);
+      }
       if (typeof n.namePool === 'string' && !(n.namePool in raw.namePools)) {
         errors.push(`${where}: isim havuzu bulunamadı: names/${n.namePool}.json`);
       }

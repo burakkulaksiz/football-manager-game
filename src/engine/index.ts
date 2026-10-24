@@ -42,6 +42,7 @@ export * from './transfer/agents';
 export * from './league/cup';
 export * from './league/europe';
 export * from './league/competitions';
+export * from './league/international';
 export * from './generation/foreign';
 export * from './season/expectation';
 export * from './season/board';

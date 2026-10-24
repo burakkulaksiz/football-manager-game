@@ -8,6 +8,7 @@ import { addDays, formatDateTR, weekday } from './date';
 import { startNewMonth } from './finance/finance';
 import { cupDay } from './league/cup';
 import { europeDay } from './league/europe';
+import { internationalDay } from './league/international';
 import { addNews } from './news';
 import type { Rng } from './rng';
 import { aiTransferDay } from './transfer/ai';
@@ -63,6 +64,8 @@ export function processDay(world: GameWorld, rng: Rng, data: GameData): void {
   europeDay(world);
   if (world.date.endsWith('-05-01')) contractWarnings(world);
   if (world.seasonState === 'ended' && world.date.endsWith('-07-01')) startNewSeason(world, rng, data);
+  // Milli takımlar: kadrolar, milli maçlar (kulüp maçı olmayan günlerde), turnuva
+  internationalDay(world, rng, data);
 
   windowNews(world);
   listingsOnWindowOpen(world);

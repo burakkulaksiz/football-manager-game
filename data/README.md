@@ -9,7 +9,10 @@ hatalı bir alan varsa Türkçe hata mesajıyla neyin yanlış olduğu söylenir
 - `lower_league.json` — kurgusal 1. Lig kulüpleri (aynı biçim); küme düşenlerin yerine çıkanlar.
 - `foreign_clubs.json` — yurtdışı kulüpleri (aynı biçim + `country`: nations.json'daki ülke kodu). Maç
   oynamazlar; kadroları transfer pazarında yer alır. İtibar 130'a kadar çıkabilir (devler ~120).
-- `nations.json` — ülkeler; `weight` yabancı oyuncu üretiminde o ülkenin seçilme ağırlığıdır.
+- `nations.json` — ülkeler; `weight` yabancı oyuncu üretiminde o ülkenin seçilme ağırlığıdır. Milli takımlar için:
+  `confederation` (`UEFA`, `CONMEBOL`, `CAF`, `AFC`, `CONCACAF`, `OFC`; eleme grupları UEFA ülkeleriyle, en az 8),
+  `strength` (1–100: ülkenin oyun dünyasında olmayan oyuncularının seviyesi; milli kadro dünyadaki oyuncularla bu
+  "sanal" oyuncuların en iyilerinden kurulur) ve `colors` (`primary`, `secondary`; bayrak).
 - `names/*.json` — isim havuzları (`firstNames`, `lastNames`). Yeni bir dosya ekleyip
   `nations.json`'da `namePool` ile ona işaret etmen yeterli.
 

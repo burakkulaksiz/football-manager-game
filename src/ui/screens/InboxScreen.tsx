@@ -27,6 +27,7 @@ const CATEGORY_SCREEN: Partial<Record<NewsCategory, { screen: ScreenId; label: s
   season: { screen: 'stats', label: 'Lig İstatistikleri' },
   academy: { screen: 'academy', label: 'Altyapı' },
   finance: { screen: 'finance', label: 'Finans' },
+  international: { screen: 'international', label: 'Milli Takımlar' },
 };
 
 export function InboxScreen() {

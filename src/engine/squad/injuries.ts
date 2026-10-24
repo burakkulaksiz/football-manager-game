@@ -46,7 +46,7 @@ export function durationText(days: number): string {
 
 const fullName = (p: Player) => `${p.firstName} ${p.lastName}`;
 
-export function injurePlayer(world: GameWorld, player: Player, rng: Rng, cause: 'match' | 'training'): void {
+export function injurePlayer(world: GameWorld, player: Player, rng: Rng, cause: 'match' | 'training' | 'international'): void {
   if (player.injury) return;
   player.injury = createInjury(rng);
   player.condition = Math.min(player.condition, 60);
@@ -54,7 +54,7 @@ export function injurePlayer(world: GameWorld, player: Player, rng: Rng, cause: 
     addNews(world, {
       category: 'injury',
       title: `${fullName(player)} sakatlandı`,
-      body: `${fullName(player)} ${cause === 'match' ? 'maçta' : 'antrenmanda'} sakatlandı: ${player.injury.name}. Tahmini dönüş: ${durationText(player.injury.daysOut)}.`,
+      body: `${fullName(player)} ${cause === 'match' ? 'maçta' : cause === 'international' ? 'milli maçta' : 'antrenmanda'} sakatlandı: ${player.injury.name}. Tahmini dönüş: ${durationText(player.injury.daysOut)}.`,
       important: true,
       playerId: player.id,
       clubId: player.clubId,

@@ -1,9 +1,12 @@
 import { YELLOW_LIMIT, type Player } from '../../engine';
+import { useGameStore } from '../../store/gameStore';
 
-/** Oyuncunun durum etiketleri: sakatlık, ceza, kart sınırı. */
+/** Oyuncunun durum etiketleri: sakatlık, ceza, kart sınırı, milli takım. */
 export function StatusTags({ player }: { player: Player }) {
+  const onDuty = useGameStore((s) => s.world?.international.onDuty.includes(player.id) ?? false);
   return (
     <span className="status-tags">
+      {onDuty && <span className="st st-intl" title="Milli takımda">MİLLİ</span>}
       {player.injury && (
         <span className="st st-injury" title={`${player.injury.name} — ${player.injury.daysOut} gün`}>✚ {player.injury.daysOut}g</span>
       )}

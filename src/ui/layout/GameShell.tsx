@@ -1,6 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { hasUnsavedProgress, useGameStore, type ScreenId } from '../../store/gameStore';
+import { DecisionsDialog } from '../components/DecisionsDialog';
 import { GameOverOverlay } from '../components/GameOverOverlay';
+import { NewsAlert } from '../components/NewsAlert';
 import { AcademyScreen } from '../screens/AcademyScreen';
 import { ClubInfoScreen } from '../screens/ClubInfoScreen';
 import { DynamicsScreen } from '../screens/DynamicsScreen';
@@ -55,6 +57,16 @@ export function GameShell() {
   const playerId = useGameStore((s) => s.selectedPlayerId);
   const fixtureId = useGameStore((s) => s.selectedFixtureId);
   const unsaved = useGameStore(hasUnsavedProgress);
+  const historyIndex = useGameStore((s) => s.historyIndex);
+  const pageKey = `${screen}-${playerId ?? ''}-${fixtureId ?? ''}`;
+  // Geri / ileri dönüşte sayfanın kaydırma konumu geri gelir (geçmişteki yer + sayfa başına)
+  const mainRef = useRef<HTMLElement>(null);
+  const scrolls = useRef(new Map<string, number>());
+  const scrollKey = `${historyIndex}:${pageKey}`;
+  useLayoutEffect(() => {
+    const main = mainRef.current;
+    if (main) main.scrollTop = scrolls.current.get(scrollKey) ?? 0;
+  }, [scrollKey]);
 
   // Kaydedilmemiş ilerleme varken sekme kapatılır/yenilenirse tarayıcı uyarsın.
   useEffect(() => {
@@ -70,13 +82,20 @@ export function GameShell() {
       <NavBar />
       <div className="shell-body">
         <Sidebar />
-        {/* key: sayfa değişince içerik yeniden kurulur, kaydırma en üste döner */}
-        <main className="content pitch-bg" key={`${screen}-${playerId ?? ''}-${fixtureId ?? ''}`}>
+        {/* key: sayfa değişince içerik yeniden kurulur; kaydırma yeni sayfada en üstte, geri dönüşte eski yerinde */}
+        <main
+          className="content pitch-bg"
+          key={pageKey}
+          ref={mainRef}
+          onScroll={(e) => scrolls.current.set(scrollKey, e.currentTarget.scrollTop)}
+        >
           <ScreenContent screen={screen} />
         </main>
       </div>
       <StatusBar />
       <GameOverOverlay />
+      <NewsAlert />
+      <DecisionsDialog />
     </div>
   );
 }

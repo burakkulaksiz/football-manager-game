@@ -34,8 +34,7 @@ import {
   type GameWorld,
   type Outcome,
 } from '../../engine';
-import { useState } from 'react';
-import { tabFor, useGameStore, useWorld } from '../../store/gameStore';
+import { tabFor, useGameStore, useUiState, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { OutcomeBox } from '../components/OutcomeBox';
 import { formatDateShort, formatDayMonth } from '../labels';
@@ -326,7 +325,7 @@ function KnockoutStage({ comp, title, first, second }: { comp: EuropeCompetition
 /** Avrupa kupaları: grup tabloları ve eleme turları; varsayılan kendi kupamız. */
 function EuropeFixtures() {
   const world = useWorld();
-  const [comp, setComp] = useState<EuropeCompetition>(europeCompetitionOf(world, world.playerClubId) ?? 'cl');
+  const [comp, setComp] = useUiState<EuropeCompetition>('fixtures.europe', europeCompetitionOf(world, world.playerClubId) ?? 'cl');
   const info = EUROPE[comp];
   const drawn = europeFixtures(world, comp).length > 0;
   return (

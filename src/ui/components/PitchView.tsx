@@ -178,12 +178,17 @@ function DominanceBar({ match, colors, names }: { match: MatchState; colors: Rec
   const home = 50 + d * 42;
   const play = match.lastPlay;
   const other = (s: Side): Side => (s === 'home' ? 'away' : 'home');
-  const now = !play
-    ? ''
-    : play.kind === 'attack' ? `${names[play.side]} atakta`
-      : play.kind === 'foul' ? `${names[other(play.side)]} faul yaptı`
-        : `${names[play.side]} oyunu kuruyor`;
-  const caption = Math.abs(d) < 0.15 ? 'Oyun dengede' : `${names[d > 0 ? 'home' : 'away']} baskılı`;
+  const score = `${names.home} ${match.score.home}-${match.score.away} ${names.away}`;
+  // Maç bittiyse / devre arasıysa o anın değil, sonucun yazısı
+  const now = match.period === 'full' ? `Son düdük: ${score}`
+    : match.period === 'half' ? `İlk yarı sona erdi: ${score}`
+      : !play ? ''
+        : play.kind === 'attack' ? `${names[play.side]} atakta`
+          : play.kind === 'foul' ? `${names[other(play.side)]} faul yaptı`
+            : `${names[play.side]} oyunu kuruyor`;
+  const caption = match.period === 'full' ? 'Maç sona erdi'
+    : match.period === 'half' ? 'Devre arası'
+      : Math.abs(d) < 0.15 ? 'Oyun dengede' : `${names[d > 0 ? 'home' : 'away']} baskılı`;
   return (
     <div className="pitch-quiet">
       <div className="dom-names">

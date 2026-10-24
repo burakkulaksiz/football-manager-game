@@ -442,6 +442,8 @@ export interface GameWorld {
   international: InternationalState;
   /** Tesis seviyeleri (Türkiye kulüpleri) ve kullanıcının inşaatları. */
   facilities: FacilitiesState;
+  /** Kapatılan kararlar (ör. sözleşmesinin bitmesine izin verilen oyuncu; bkz. decisions.ts). */
+  dismissedDecisions?: string[];
 }
 
 /* ------------------------------------------------------------------ */

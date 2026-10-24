@@ -214,36 +214,6 @@ export function TacticsScreen() {
 
   return (
     <div className="screen">
-      <AssistantPanel filter={(a) => LINEUP_ADVICE.has(a.kind) || a.kind === 'thinPosition'} limit={5} hideWhenEmpty />
-      <section className="panel">
-        <div className="panel-title panel-title-row">
-          <span>Taktik — {tactics.formation}</span>
-          <span className="toolbar">
-            <FormationPicker value={tactics.formation} onChange={(f) => updateTactics((t, sq) => changeFormation(t, f, sq))} />
-            <button
-              className="btn"
-              title="Bu diziliş için en iyi 11'i ve yedekleri seçer; talimatlar korunur"
-              onClick={() => {
-                // Talimatlar ve kaptanlar korunur (kaptanlığı otomatik seçim yüzünden değiştirmek oyuncuları kırar)
-                updateTactics((t, sq) => ({
-                  ...defaultTactics(sq, t.formation),
-                  instructions: t.instructions,
-                  captainId: t.captainId,
-                  viceCaptainId: t.viceCaptainId,
-                }));
-                setSelection(null);
-              }}
-            >
-              Otomatik Seç
-            </button>
-          </span>
-        </div>
-        <div className="panel-note">
-          Oyuncuyu sürükleyip sahaya ya da yedeğe bırak (ya da seçip gideceği yere tıkla); yerdeki oyuncuyla yer değiştirir.
-          Sahadan listeye bırakılan oyuncu kadro dışı kalır. Çift tık oyuncu profilini açar; ⇆ ile en çok {MAX_COMPARE} oyuncuyu karşılaştırabilirsin.
-        </div>
-        <CompareBar hint="en az bir oyuncu daha seç" />
-      </section>
 
       <div className="tactics-grid">
         {/* Kadro listesi */}
@@ -307,6 +277,36 @@ export function TacticsScreen() {
           </table>
         </section>
 
+        <AssistantPanel filter={(a) => LINEUP_ADVICE.has(a.kind) || a.kind === 'thinPosition'} limit={5} hideWhenEmpty />
+        <section className="panel">
+          <div className="panel-title panel-title-row">
+            <span>Taktik — {tactics.formation}</span>
+            <span className="toolbar">
+              <FormationPicker value={tactics.formation} onChange={(f) => updateTactics((t, sq) => changeFormation(t, f, sq))} />
+              <button
+                className="btn"
+                title="Bu diziliş için en iyi 11'i ve yedekleri seçer; talimatlar korunur"
+                onClick={() => {
+                  // Talimatlar ve kaptanlar korunur (kaptanlığı otomatik seçim yüzünden değiştirmek oyuncuları kırar)
+                  updateTactics((t, sq) => ({
+                    ...defaultTactics(sq, t.formation),
+                    instructions: t.instructions,
+                    captainId: t.captainId,
+                    viceCaptainId: t.viceCaptainId,
+                  }));
+                  setSelection(null);
+                }}
+              >
+                Otomatik Seç
+              </button>
+            </span>
+          </div>
+          <div className="panel-note">
+            Oyuncuyu sürükleyip sahaya ya da yedeğe bırak (ya da seçip gideceği yere tıkla); yerdeki oyuncuyla yer değiştirir.
+            Sahadan listeye bırakılan oyuncu kadro dışı kalır. Çift tık oyuncu profilini açar; ⇆ ile en çok {MAX_COMPARE} oyuncuyu karşılaştırabilirsin.
+          </div>
+          <CompareBar hint="en az bir oyuncu daha seç" />
+        </section>
         <div className="two-columns">
           <section className="panel">
             <h2 className="panel-title">Takım Talimatları</h2>

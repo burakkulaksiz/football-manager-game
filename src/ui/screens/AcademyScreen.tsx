@@ -20,7 +20,7 @@ import {
   type Player,
   abilityEstimate,
 } from '../../engine';
-import { useGameStore, useWorld } from '../../store/gameStore';
+import { useGameStore, useUiState, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { GrowthChart } from '../components/GrowthChart';
 import { AbilityStars, PotentialStars } from '../components/ScoutViews';
@@ -214,11 +214,11 @@ function LeagueTab() {
   const world = useWorld();
   const openPlayer = useGameStore((s) => s.openPlayer);
   const worldAction = useGameStore((s) => s.worldAction);
-  const [group, setGroup] = useState<PositionGroup | ''>('');
-  const [maxAge, setMaxAge] = useState(YOUTH_MAX_AGE);
-  const [clubId, setClubId] = useState('');
-  const [watchOnly, setWatchOnly] = useState(false);
-  const [limit, setLimit] = useState(LEAGUE_PAGE);
+  const [group, setGroup] = useUiState<PositionGroup | ''>('academy.group', '');
+  const [maxAge, setMaxAge] = useUiState('academy.maxAge', YOUTH_MAX_AGE);
+  const [clubId, setClubId] = useUiState('academy.clubId', '');
+  const [watchOnly, setWatchOnly] = useUiState('academy.watchOnly', false);
+  const [limit, setLimit] = useUiState('academy.limit', LEAGUE_PAGE);
   const clubs = leagueClubs(world).filter((c) => c.id !== world.playerClubId).sort((a, b) => a.name.localeCompare(b.name, 'tr'));
   const watch = new Set(world.youthWatch);
 
@@ -341,7 +341,7 @@ const TABS: { id: Tab; label: string }[] = [
 
 export function AcademyScreen() {
   const world = useWorld();
-  const [tab, setTab] = useState<Tab>('u19');
+  const [tab, setTab] = useUiState<Tab>('academy.tab', 'u19');
   const count = academyPlayers(world, world.playerClubId).length;
   return (
     <section className="panel">

@@ -18,6 +18,7 @@ export * from './match/engine';
 export * from './match/simulate';
 export * from './match/report';
 export * from './gameFlow';
+export * from './decisions';
 export * from './news';
 export * from './finance/finance';
 export * from './finance/facilities';

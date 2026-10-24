@@ -720,6 +720,21 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
   etki (oyundaki çarpanlardan), bir üst seviyenin bedeli / süresi / etkisi, "Yönetimden İste" ve süren inşaatın ilerlemesi;
   stadyumda ortalama seyirci ve doluluk.
 
+## Kararlar, bildirimler, gezinme durumu (kullanıcı istekleri)
+- Karar bekleyen konular (engine/decisions.ts pendingDecisions): oyuncumuza gelen teklif (pending), verdiğimiz teklife karşı
+  teklif (countered), kabul edilen teklifte sözleşme görüşmesi (accepted), oyuncu görüşme talebi, yazın (Temmuz–Ağustos) U19 yaş
+  sınırını geçen genç, sezonun son 14 gününde sözleşmesi 30 Haziran'da bitecek kadronun ilk 18'i (letContractExpire:
+  world.dismissedDecisions, “gitmesine izin ver”). Store.advance: karar varken (ve bugün maçımız yokken) tarih ilerlemez,
+  DecisionsDialog açılır (ilgili yere git; U19 ve sözleşme için kararı orada da ver). Motorun advance'ı engellemez (testler, otomatik oynatma).
+- Devam'ı durduran haberler: store.newsAlert (haber id'leri) → NewsAlert (üstte ortada, vurgu çerçeveli; haber satırına tıklayınca
+  gelen kutusunda o haber açılır, teklif haberinde Transfer Merkezi teklifler sekmesi; sonraki Devam'da kapanır). Toast üst ortada, büyük.
+- Gezinme durumu: store.ui (anahtar "<ekran>.<ad>") + useUiState(key, initial). setScreen(screen, preset?) bölüm değiştirirse ui
+  sıfırlanır (area); openPlayer / openReport / geri-ileri sıfırlamaz. Transfer Merkezi (sekme, arama filtreleri), Gelen Kutusu (filtre,
+  seçili haber), Altyapı, Milli Takımlar, Kadro sıralaması, Avrupa sekmesi bununla. GameShell geri / ileri dönüşte kaydırma konumunu
+  geri yükler (geçmiş sırası + sayfa anahtarına göre).
+- 2D saha baskı çubuğu: maç bitince “Maç sona erdi / Son düdük: skor”, devre arasında “Devre arası”.
+- Taktik sayfası: yardımcı antrenör ve “Taktik” başlık paneli (diziliş, Otomatik Seç, karşılaştırma) sol sütunda talimatların üstünde.
+
 ## Şut ve ısı haritası
 - Motor kaydı (yalnızca gösterim, rng kullanmaz): MatchState.shots / MatchResult.shots — her şut (dakika sayacı,
   ikinci yarı işareti, taraf, oyuncu, sonuç gol / kurtarıldı / aut / engellendi, tür kafa / uzaktan / serbest vuruş /

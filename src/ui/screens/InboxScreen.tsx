@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import { formatDateTR, inboxItems, type NewsCategory, type NewsItem } from '../../engine';
 import type { ScreenId } from '../../store/gameStore';
-import { useGameStore, useWorld } from '../../store/gameStore';
+import { useGameStore, useUiState, useWorld } from '../../store/gameStore';
 import { formatDateShort, NEWS_CATEGORY_LABELS } from '../labels';
 import { AssistantPanel } from '../components/AssistantPanel';
 
@@ -35,13 +34,13 @@ export function InboxScreen() {
   const worldAction = useGameStore((s) => s.worldAction);
   const openPlayer = useGameStore((s) => s.openPlayer);
   const setScreen = useGameStore((s) => s.setScreen);
-  const [filter, setFilter] = useState<Filter>('all');
+  const [filter, setFilter] = useUiState<Filter>('inbox.filter', 'all');
   const all = inboxItems(world);
   const active = FILTERS.find((f) => f.id === filter)!;
   const items = all.filter((n) =>
     filter === 'unread' ? !n.read : active.categories ? active.categories.includes(n.category) : true,
   );
-  const [selectedId, setSelectedId] = useState<number | null>(all[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useUiState<number | null>('inbox.selected', all[0]?.id ?? null);
   const selected = all.find((n) => n.id === selectedId) ?? items[0];
   const unread = all.filter((n) => !n.read).length;
 

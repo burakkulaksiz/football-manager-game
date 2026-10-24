@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { create } from 'zustand';
 import {
   advance,
@@ -6,6 +7,8 @@ import {
   clubPlayers,
   createWorld,
   finishUserMatch,
+  pendingDecisions,
+  todaysUserFixture,
   MAX_COMPARE,
   SEASON_START_DATE,
   simulateToEnd,
@@ -100,6 +103,17 @@ interface GameState {
   fixturesRound: number;
   /** Oynanmakta olan kendi maçımız (yoksa null). */
   liveMatch: MatchState | null;
+  /**
+   * Ekranların gezinmede korunan durumu (filtreler, sekmeler, seçimler): anahtar "<ekran>.<ad>". Oyuncu profiline gidip
+   * geri dönünce korunur; menüden başka bir bölüme geçilince (setScreen) sıfırlanır.
+   */
+  ui: Record<string, unknown>;
+  /** Menüden en son girilen bölüm (ui durumu bu bölüme aittir). */
+  area: ScreenId;
+  /** Karar bekleyen konular penceresi (Devam bu yüzden ilerlemedi). */
+  decisionsOpen: boolean;
+  /** Devam'ı durduran yeni haberler (belirgin uyarı; tıklanınca ilgili yere gidilir). */
+  newsAlert: number[] | null;
 
   openNewGame: () => void;
   openLoadGame: () => void;
@@ -113,7 +127,11 @@ interface GameState {
   clearNotice: () => void;
   quitToMenu: () => void;
   navigate: (route: Route) => void;
-  setScreen: (screen: ScreenId) => void;
+  /** Bölüme git (menü, "… ›" bağlantıları): bölüm değişirse ekran durumu sıfırlanır; `preset` yeni bölümün durumuna yazılır. */
+  setScreen: (screen: ScreenId, preset?: Record<string, unknown>) => void;
+  setUi: (key: string, value: unknown) => void;
+  setDecisionsOpen: (open: boolean) => void;
+  dismissNewsAlert: () => void;
   openPlayer: (playerId: number) => void;
   openReport: (fixtureId: number) => void;
   back: () => void;
@@ -174,6 +192,10 @@ function enterGame(world: GameWorld) {
     liveMatch: null,
     revision: 0,
     savedRevision: 0,
+    ui: {},
+    area: START_ROUTE.screen,
+    decisionsOpen: false,
+    newsAlert: null,
   };
 }
 
@@ -226,6 +248,10 @@ export const useGameStore = create<GameState>()((set, get) => {
     fixturesTab: 'club',
     fixturesRound: 1,
     liveMatch: null,
+    ui: {},
+    area: START_ROUTE.screen,
+    decisionsOpen: false,
+    newsAlert: null,
 
     openNewGame: () => set({ phase: 'newGame' }),
 
@@ -290,7 +316,18 @@ export const useGameStore = create<GameState>()((set, get) => {
       set({ history: next, historyIndex: next.length - 1, ...routeState(route) });
     },
 
-    setScreen: (screen) => get().navigate({ screen }),
+    setScreen: (screen, preset) => {
+      // Başka bir bölüme geçildi: önceki bölümün filtreleri / sekmeleri bırakılır
+      if (screen !== get().area) set({ ui: { ...preset }, area: screen });
+      else if (preset) set((s) => ({ ui: { ...s.ui, ...preset } }));
+      get().navigate({ screen });
+    },
+
+    setUi: (key, value) => set((s) => ({ ui: { ...s.ui, [key]: value } })),
+
+    setDecisionsOpen: (open) => set({ decisionsOpen: open }),
+
+    dismissNewsAlert: () => set({ newsAlert: null }),
 
     openPlayer: (playerId) => get().navigate({ screen: 'player', playerId }),
 
@@ -334,6 +371,12 @@ export const useGameStore = create<GameState>()((set, get) => {
         get().navigate({ screen: 'match' });
         return;
       }
+      set({ newsAlert: null });
+      // Karar bekleyen konu varken tarih ilerlemez (bugün maçımız varsa maça çıkılabilir)
+      if (!world.gameOver && !todaysUserFixture(world) && pendingDecisions(world).length > 0) {
+        set({ decisionsOpen: true });
+        return;
+      }
       // Motor dünyayı yerinde değiştirir; yeni referans React'in yeniden çizmesi için.
       const result = advance(world, gameData);
       if (result.kind === 'userMatch') {
@@ -350,9 +393,8 @@ export const useGameStore = create<GameState>()((set, get) => {
         get().navigate({ screen: 'fixtures' });
         runAutosave();
       } else if (result.news.length > 0) {
-        // Devam bir haber yüzünden durdu: kullanıcıya göster.
-        const [first, ...rest] = result.news;
-        get().showNotice(rest.length > 0 ? `${first!.title} (+${rest.length} haber)` : first!.title);
+        // Devam bir haber yüzünden durdu: belirgin uyarı (tıklanınca habere / teklife gidilir)
+        set({ newsAlert: result.news.map((n) => n.id) });
       }
     },
 
@@ -430,6 +472,26 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
   };
 });
+
+/**
+ * Gezinmede korunan ekran durumu (useState gibi): oyuncu profiline gidip geri dönünce kaybolmaz, menüden başka bir bölüme
+ * geçilince sıfırlanır. Anahtar "<ekran>.<ad>" biçiminde.
+ */
+export function useUiState<T>(key: string, initial: T): [T, (value: T | ((prev: T) => T)) => void] {
+  const stored = useGameStore((s) => s.ui[key]) as T | undefined;
+  const setUi = useGameStore((s) => s.setUi);
+  const value = stored === undefined ? initial : stored;
+  const update = useCallback(
+    (next: T | ((prev: T) => T)) => {
+      const current = useGameStore.getState().ui[key] as T | undefined;
+      const prev = current === undefined ? initial : current;
+      setUi(key, typeof next === 'function' ? (next as (p: T) => T)(prev) : next);
+    },
+    // initial yalnızca ilk değer; değişmesi güncellemeyi etkilemesin
+    [key, setUi],
+  );
+  return [value, update];
+}
 
 /** Kariyer açıkken dünyayı döndürür (GameShell içindeki bileşenler için). */
 export function useWorld(): GameWorld {

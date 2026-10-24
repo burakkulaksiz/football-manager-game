@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   ageOn,
   formatMinute,
@@ -38,7 +37,7 @@ import {
   type TurkeyStage,
 } from '../../engine';
 import { gameData } from '../../gameData';
-import { useGameStore, useWorld } from '../../store/gameStore';
+import { useGameStore, useUiState, useWorld } from '../../store/gameStore';
 import { NationFlag } from '../components/NationFlag';
 import { OutcomeBox } from '../components/OutcomeBox';
 import { formatDateShort, formatDayMonth, nationName, POSITION_LABELS } from '../labels';
@@ -384,8 +383,8 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export function InternationalScreen() {
-  const [tab, setTab] = useState<Tab>('team');
-  const [code, setCode] = useState(HOME_NATION);
+  const [tab, setTab] = useUiState<Tab>('international.tab', 'team');
+  const [code, setCode] = useUiState('international.nation', HOME_NATION);
   const pick = (c: string) => {
     setCode(c);
     setTab('team');

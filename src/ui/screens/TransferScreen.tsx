@@ -25,7 +25,7 @@ import {
   type Position,
   type TransferOffer,
 } from '../../engine';
-import { useGameStore, useWorld } from '../../store/gameStore';
+import { useGameStore, useUiState, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { ClubCountry } from '../components/ClubCountry';
 import { ClubOptions, RegionOptions } from '../components/ClubOptions';
@@ -95,19 +95,19 @@ const RESULTS_PAGE = 50;
 function SearchTab() {
   const world = useWorld();
   const openPlayer = useGameStore((s) => s.openPlayer);
-  const [position, setPosition] = useState<Position | ''>('');
-  const [minAge, setMinAge] = useState(16);
-  const [maxAge, setMaxAge] = useState(40);
-  const [maxValue, setMaxValue] = useState(0);
-  const [attr, setAttr] = useState<AttributeKey | ''>('');
-  const [attrMin, setAttrMin] = useState(12);
-  const [clubId, setClubId] = useState('');
-  const [affordable, setAffordable] = useState(false);
-  const [listed, setListed] = useState<ListingKind | ''>('');
-  const [region, setRegion] = useState('');
+  const [position, setPosition] = useUiState<Position | ''>('transfers.position', '');
+  const [minAge, setMinAge] = useUiState('transfers.minAge', 16);
+  const [maxAge, setMaxAge] = useUiState('transfers.maxAge', 40);
+  const [maxValue, setMaxValue] = useUiState('transfers.maxValue', 0);
+  const [attr, setAttr] = useUiState<AttributeKey | ''>('transfers.attr', '');
+  const [attrMin, setAttrMin] = useUiState('transfers.attrMin', 12);
+  const [clubId, setClubId] = useUiState('transfers.clubId', '');
+  const [affordable, setAffordable] = useUiState('transfers.affordable', false);
+  const [listed, setListed] = useUiState<ListingKind | ''>('transfers.listed', '');
+  const [region, setRegion] = useUiState('transfers.region', '');
   const budget = world.finances[world.playerClubId]!.transferBudget;
   // Uzun liste parça parça çizilir (yüzlerce satır ekranı yavaşlatır).
-  const [limit, setLimit] = useState(RESULTS_PAGE);
+  const [limit, setLimit] = useUiState('transfers.limit', RESULTS_PAGE);
 
   const results = useMemo(() => {
     const ranks = squadRanks(world);
@@ -463,7 +463,7 @@ function NewsTab() {
 
 export function TransferScreen() {
   const world = useWorld();
-  const [tab, setTab] = useState<Tab>('search');
+  const [tab, setTab] = useUiState<Tab>('transfers.tab', 'search');
   const actionable = actionableOffers(world.offers, world.playerClubId);
   const active = world.offers.filter((o) => isActive(o) && (o.buyerId === world.playerClubId || o.sellerId === world.playerClubId)).length;
   const listedCount = Object.values(world.players).filter((p) => p.clubId === world.playerClubId && p.listing).length;

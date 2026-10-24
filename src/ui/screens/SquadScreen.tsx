@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import {
   abilityEstimate,
   ageOn,
@@ -15,7 +15,7 @@ import {
   type Player,
   type PlayerSeasonStats,
 } from '../../engine';
-import { useGameStore, useWorld } from '../../store/gameStore';
+import { useGameStore, useUiState, useWorld } from '../../store/gameStore';
 import { ClubOptions } from '../components/ClubOptions';
 import { CompareBar } from '../components/CompareDialog';
 import { AbilityStars, PotentialStars } from '../components/ScoutViews';
@@ -207,7 +207,7 @@ export function SquadScreen() {
   const setFilters = useGameStore((s) => s.setSquadFilters);
   const compareIds = useGameStore((s) => s.compareIds);
   const toggleCompare = useGameStore((s) => s.toggleCompare);
-  const [sort, setSort] = useState<{ id: string; asc: boolean }>({ id: 'position', asc: true });
+  const [sort, setSort] = useUiState<{ id: string; asc: boolean }>('squad.sort', { id: 'position', asc: true });
 
   const own = viewedClubId === world.playerClubId;
   const squad = clubPlayers(world, viewedClubId);

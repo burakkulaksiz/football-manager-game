@@ -32,3 +32,15 @@ export function playSeason(world: GameWorld): void {
     advance(world, gameData, { autoPlayUserMatch: true });
   }
 }
+
+/**
+ * Belirtilen tarihe kadar oyunu oynatır (kendi maçımız da otomatik). Sezon döngüsü sınanırken menajer görevden
+ * alınmasın diye yönetim güveni eşiğin üstünde tutulur (görevden alma 'yönetim' testinde ayrıca sınanır).
+ */
+export function playUntil(world: GameWorld, date: string): void {
+  let guard = 0;
+  while (world.date < date && !world.gameOver && guard++ < 3000) {
+    world.board.confidence = Math.max(world.board.confidence, 50);
+    advance(world, gameData, { autoPlayUserMatch: true });
+  }
+}

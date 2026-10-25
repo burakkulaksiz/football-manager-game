@@ -56,16 +56,17 @@ Son gözden geçirme: 2026-10-25 (kod ve git geçmişi okunarak; tarayıcıda el
   (sıradaki maç kartı altta yer kaplıyor). Mobil / dar ekran uyumu maddesiyle (IDEAS.md) birlikte ele alınabilir.
 
 ## Testler
-- [ ] **Tam sezon simülasyonu testleri yavaş (kısmen düzeltildi).** Yük altında 30 sn'lik varsayılan zaman aşımına takılıyorlardı; iki teste geçici olarak 120 sn verildi.
-  - Ölçüm (2026-10-25, JSON raporlayıcı): süreyi tam sezon oynatan dosyalar yiyor: season.test 63 sn, gameFlow.test 41, manager.test 31, saves.test 29, career.test 14 (toplam ~280 sn, 398 test).
-    Yani asıl darboğaz motorun sezon simülasyonu hızı.
-  - CPU profili (tek sezon): maç simülasyonu %42 (`teamUnits` %17), milli maçlar %25, yapay zekâ kadro / diziliş seçimi %19, `primaryPosition` tek başına %9,4 kendi süresi.
-  - Düzeltme (sonucu değiştirmeyen saf performans): `primaryPosition` yalnızca oyuncunun yatkın olduğu mevkileri tarıyor (önbellek değil: bir test mevki nesnesini yerinde değiştiriyor);
-    şutta rakip kalecinin gücü için takımın tüm birimleri yerine `keeperUnit`; `teamUnits` profil ortalamaları dizi yerine toplam + sayıyla (aynı toplama sırası).
-  - Doğrulama: bir sezonun parmak izi (tüm skorlar, oyuncu CA ve kulüpleri, RNG durumu; SHA-256) değişiklikten önce ve sonra **birebir aynı**. Tek sezon 8,9 → 5,4 sn;
-    season.test + gameFlow.test sırayla 50–65 → 41 sn.
-  - Kalan: milli maçlar (sezonun ~%25'i, onlarca tam maç), `clubPlayers` her çağrıda tüm oyuncuları tarıyor (fikstür kurulumu ve moral %4'ten fazla; kulüp → oyuncu dizini gerekir,
-    ama kadro değişikliklerinde bayatlama riski var), `teamUnits` dakika başına iki kez (zorunlu iş). 120 sn'lik zaman aşımları şimdilik kalsın.
+- [x] **Tam test koşusu yavaştı (~3 dk): düzeltildi, 84 sn.** Yük altında tam sezon testleri 30 sn'lik zaman aşımına takılıyordu.
+  - Motor (sonucu değiştirmeyen performans): `primaryPosition` hızlı yol, şutta `keeperUnit`, `teamUnits` ortalamaları toplam + sayıyla. Bir sezonun parmak izi (skorlar, oyuncu CA / kulüp,
+    RNG durumu) önce / sonra birebir aynı; tek sezon 8,9 → 5,4 sn.
+  - Gizli darboğaz: `match/engine.test.ts` istatistik doğrulaması için 15 tam sezonu `describe` gövdesinde (dosya toplanırken) oynatıyordu; tek başına 110 sn, ama süresi test raporunda
+    görünmüyordu ve Vitest en uzun dosyayı en sona bırakabiliyordu. Simülasyon `beforeAll`'a taşındı, sezon sayısı 15 → 10 (3060 maç). Önce sezon sayısının etkisi ölçüldü:
+    gol ortalaması 15 sezonda 2,732, 10 sezonda 2,739, 6 sezonda 2,755 (eşik 2,75 → 6 sezon testi kırardı); 10 sezonda bütün ölçüler eşiklerin içinde. Daha büyük örnek: `npm run balance`.
+  - Tekrarlanan simülasyon kaldırıldı: gameFlow.test ("aynı seed ile aynı sezon sonuçları", iki tam sezon) ve season.test ("sezon geçişinde tekrarlanabilirlik", iki sezon + hafta) tek testte
+    birleşti (`season/seasonDeterminism.test.ts`): önce sezon sonunda tüm fikstür ve milli maçlar, sonra yeni sezonun ilk haftaları karşılaştırılır (kapsam aynı, iki tam sezonluk iş eksik).
+    Menajer kayıt dönüşümü testi ayrı dosyada (`managerMigration.test.ts`). `playUntil` artık `engine/testing.ts`'te.
+  - Sonuç: tam koşu duvar saati 164–201 sn → 84 sn (iki ölçüm), 397 test. Dosya bölmek tek başına yardımcı olmadı (makine zaten dolu; toplam CPU işini azaltmak gerekti).
+  - Kalan: `engine.test.ts` (~80 sn) artık duvar saatini belirliyor; milli maçlar sezon simülasyonunun ~%25'i. İki teste verilen 120 sn zaman aşımları güvenlik payı olarak kaldı.
 
 ## Denge (otomatik rapor)
 Kaynak: `npm run balance`, 6 kariyer × 4 sezon = 24 sezon (7344 lig maçı), tohum 9000, 2026-10-25. Aynı ayarla tekrar koşunca sonuçlar birebir aynı çıktı

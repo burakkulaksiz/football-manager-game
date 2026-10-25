@@ -8,7 +8,7 @@ import { europeCompetitionOf } from '../league/europe';
 import { computeStandings } from '../league/standings';
 import { negotiateFreeAgent } from '../transfer/offers';
 import { contractDemand } from '../transfer/agents';
-import { makeResult } from '../testing';
+import { makeResult, playUntil } from '../testing';
 import type { Fixture, GameWorld } from '../types';
 import { boardAfterMatch, MIN_ROUNDS_BEFORE_SACK } from './board';
 import { divisionOf } from './expectation';
@@ -19,18 +19,6 @@ const START = '2026-07-01';
 /** Kulübün kupada geçtiği turların ödülleri. */
 function cupPrizes(world: GameWorld, clubId: string): number {
   return cupFixtures(world).filter((f) => fixtureWinner(f) === clubId).reduce((sum, f) => sum + CUP_ROUNDS[f.round - 1]!.prize, 0);
-}
-
-/**
- * Belirtilen tarihe kadar oyunu oynatır (kendi maçımız da otomatik). Sezon döngüsü sınanırken menajer görevden
- * alınmasın diye yönetim güveni eşiğin üstünde tutulur (görevden alma 'yönetim' testinde ayrıca sınanır).
- */
-function playUntil(world: GameWorld, date: string): void {
-  let guard = 0;
-  while (world.date < date && !world.gameOver && guard++ < 3000) {
-    world.board.confidence = Math.max(world.board.confidence, 50);
-    advance(world, gameData, { autoPlayUserMatch: true });
-  }
 }
 
 describe('sezon döngüsü', () => {
@@ -150,15 +138,4 @@ describe('yönetim', () => {
     expect(advance(world, gameData).kind).toBe('moved');
     expect(world.date).toBe(date);
   });
-});
-
-describe('sezon geçişinde tekrarlanabilirlik', () => {
-  it('aynı seed ile yeni sezonun ilk haftaları da aynı', () => {
-    const a = createWorld(gameData, 55, 'trabzonspor', START);
-    const b = createWorld(gameData, 55, 'trabzonspor', START);
-    playUntil(a, '2027-08-20');
-    playUntil(b, '2027-08-20');
-    expect(a.season.fixtures).toEqual(b.season.fixtures);
-    expect(a.history).toEqual(b.history);
-  }, 90_000); // iki sezon (milli maçlar, kalabalık gerçek kadrolar); paralel koşuda 30 sn yetmiyor
 });

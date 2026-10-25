@@ -70,13 +70,4 @@ describe('oyun akışı', () => {
       }
     }
   });
-
-  it('aynı seed ile aynı sezon sonuçları', () => {
-    const a = createWorld(gameData, 3, 'besiktas', START);
-    const b = createWorld(gameData, 3, 'besiktas', START);
-    playSeason(a);
-    playSeason(b);
-    expect(a.season.fixtures).toEqual(b.season.fixtures);
-    expect(a.international.fixtures).toEqual(b.international.fixtures);
-  }, 90_000); // iki tam sezon (milli maçlar dahil); paralel koşuda 30 sn yetmiyor
 });

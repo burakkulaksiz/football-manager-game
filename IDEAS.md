@@ -154,7 +154,7 @@ Bunlar oyunun içine AI koymak değil, projeyi geliştirirken AI'ı daha verimli
 - [ ] **Bulgular → test akışı**
   - Ne: FINDINGS.md'deki her madde için "kanıt" satırı zaten var; maddeyi çözerken önce başarısız bir test (ya da ekran görüntüsü) yazıp sonra düzeltmek.
     Çözülen madde `[x]` olur ve kanıt satırı testi gösterir.
-- [ ] **Yavaş testleri düzeltmek** (kısmen: motor ~%40 hızlandı, sonuç birebir aynı; kalanlar FINDINGS > Testler)
+- [x] **Yavaş testleri düzeltmek** (tam koşu ~3 dk → 84 sn; motor ~%40 hızlandı, sonuç birebir aynı; ayrıntı FINDINGS > Testler)
   - FINDINGS > Testler'e bak. Tam sezon testleri 30 sn sınırını aşıyor; AI ile geliştirme döngüsü hızlı test ister. Ortak sezon simülasyonunu paylaşmak,
     küçük lig ile aynı kuralı sınamak ya da Worker'da paralel koşmak.
 - [ ] **Kısa proje belleği (CLAUDE.md) + konuya göre bölünmüş notlar**

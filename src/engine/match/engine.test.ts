@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { leagueFixtures } from '../league/cup';
 import { gameData } from '../../gameData';
 import { playSeason } from '../testing';
@@ -85,70 +85,73 @@ describe('tek maç', () => {
 });
 
 describe('istatistik doğrulama (binlerce maç)', () => {
-  // 15 sezon × 306 lig maçı ≈ 4600 maç (kupa ve Avrupa maçları hariç: Süper Lig dengesi)
-  const seasons = Array.from({ length: 15 }, (_, i) => {
-    const w = createWorld(gameData, 500 + i, 'galatasaray', START);
-    playSeason(w);
-    return leagueFixtures(w.season.fixtures).map((f) => f.result!);
-  });
-  const results = seasons.flat();
-  // Her sezonun gol kralının gol sayısı
-  const kings = seasons.map((season) => {
-    const goals = new Map<number, number>();
-    for (const r of season) for (const g of r.goals) goals.set(g.playerId, (goals.get(g.playerId) ?? 0) + 1);
-    return Math.max(...goals.values());
-  });
-  const kingAvg = kings.reduce((s, k) => s + k, 0) / kings.length;
-  const n = results.length;
-  const avg = (fn: (r: MatchResult) => number) => results.reduce((s, r) => s + fn(r), 0) / n;
+  // 10 sezon × 306 lig maçı ≈ 3060 maç (kupa ve Avrupa maçları hariç: Süper Lig dengesi). Daha büyük örnekli ölçüm: npm run balance.
+  // Simülasyon beforeAll'da: describe gövdesinde çalışınca süresi raporda görünmüyor, Vitest bu en uzun dosyayı en sona bırakıyordu.
+  const SEASONS = 10;
+  const s = { goals: 0, homeWin: 0, draw: 0, shots: 0, onTarget: 0, corners: 0, yellows: 0, reds: 0, kingAvg: 0, kings: [] as number[] };
 
-  const goals = avg((r) => r.homeGoals + r.awayGoals);
-  const homeWin = avg((r) => (r.homeGoals > r.awayGoals ? 1 : 0));
-  const draw = avg((r) => (r.homeGoals === r.awayGoals ? 1 : 0));
-  const shots = avg((r) => r.stats.home.shots + r.stats.away.shots) / 2;
-  const onTarget = avg((r) => r.stats.home.shotsOnTarget + r.stats.away.shotsOnTarget) / 2;
-  const corners = avg((r) => r.stats.home.corners + r.stats.away.corners) / 2;
-  const yellows = avg((r) => r.cards.filter((c) => c.type === 'yellow').length);
-  const reds = avg((r) => r.cards.filter((c) => c.type === 'red').length);
+  beforeAll(() => {
+    const seasons = Array.from({ length: SEASONS }, (_, i) => {
+      const w = createWorld(gameData, 500 + i, 'galatasaray', START);
+      playSeason(w);
+      return leagueFixtures(w.season.fixtures).map((f) => f.result!);
+    });
+    const results = seasons.flat();
+    // Her sezonun gol kralının gol sayısı
+    s.kings = seasons.map((season) => {
+      const goals = new Map<number, number>();
+      for (const r of season) for (const g of r.goals) goals.set(g.playerId, (goals.get(g.playerId) ?? 0) + 1);
+      return Math.max(...goals.values());
+    });
+    s.kingAvg = s.kings.reduce((sum, k) => sum + k, 0) / s.kings.length;
+    const avg = (fn: (r: MatchResult) => number) => results.reduce((sum, r) => sum + fn(r), 0) / results.length;
+    s.goals = avg((r) => r.homeGoals + r.awayGoals);
+    s.homeWin = avg((r) => (r.homeGoals > r.awayGoals ? 1 : 0));
+    s.draw = avg((r) => (r.homeGoals === r.awayGoals ? 1 : 0));
+    s.shots = avg((r) => r.stats.home.shots + r.stats.away.shots) / 2;
+    s.onTarget = avg((r) => r.stats.home.shotsOnTarget + r.stats.away.shotsOnTarget) / 2;
+    s.corners = avg((r) => r.stats.home.corners + r.stats.away.corners) / 2;
+    s.yellows = avg((r) => r.cards.filter((c) => c.type === 'yellow').length);
+    s.reds = avg((r) => r.cards.filter((c) => c.type === 'red').length);
+  }, 600_000);
 
-  it(`maç başına ~2.6 gol (ölçülen ${goals.toFixed(2)})`, () => {
-    expect(goals).toBeGreaterThan(2.45);
-    expect(goals).toBeLessThan(2.75);
-  });
-
-  it(`ev sahibi galibiyeti ~%45 (ölçülen %${(homeWin * 100).toFixed(1)})`, () => {
-    expect(homeWin).toBeGreaterThan(0.41);
-    expect(homeWin).toBeLessThan(0.49);
-  });
-
-  it(`beraberlik ~%27 (ölçülen %${(draw * 100).toFixed(1)})`, () => {
-    expect(draw).toBeGreaterThan(0.24);
-    expect(draw).toBeLessThan(0.3);
+  it('maç başına ~2.6 gol', () => {
+    expect(s.goals, `ölçülen ${s.goals.toFixed(3)}`).toBeGreaterThan(2.45);
+    expect(s.goals, `ölçülen ${s.goals.toFixed(3)}`).toBeLessThan(2.75);
   });
 
-  it(`takım başına şut ${shots.toFixed(1)}, isabetli ${onTarget.toFixed(1)}, korner ${corners.toFixed(1)}`, () => {
-    expect(shots).toBeGreaterThan(9);
-    expect(shots).toBeLessThan(16);
-    expect(onTarget).toBeGreaterThan(3);
-    expect(onTarget).toBeLessThan(6.5);
-    expect(corners).toBeGreaterThan(3.5);
-    expect(corners).toBeLessThan(7);
+  it('ev sahibi galibiyeti ~%45', () => {
+    expect(s.homeWin, `ölçülen %${(s.homeWin * 100).toFixed(1)}`).toBeGreaterThan(0.41);
+    expect(s.homeWin, `ölçülen %${(s.homeWin * 100).toFixed(1)}`).toBeLessThan(0.49);
   });
 
-  it(`maç başına sarı kart ${yellows.toFixed(1)}, kırmızı ${reds.toFixed(2)}`, () => {
-    expect(yellows).toBeGreaterThan(2.5);
-    expect(yellows).toBeLessThan(6);
-    expect(reds).toBeLessThan(0.3);
+  it('beraberlik ~%27', () => {
+    expect(s.draw, `ölçülen %${(s.draw * 100).toFixed(1)}`).toBeGreaterThan(0.24);
+    expect(s.draw, `ölçülen %${(s.draw * 100).toFixed(1)}`).toBeLessThan(0.3);
   });
 
-  it(`gol kralı ~24 gol (ölçülen ort. ${kingAvg.toFixed(1)}, en çok ${Math.max(...kings)})`, () => {
+  it('takım başına şut, isabetli şut ve korner makul aralıkta', () => {
+    expect(s.shots, `şut ${s.shots.toFixed(1)}`).toBeGreaterThan(9);
+    expect(s.shots, `şut ${s.shots.toFixed(1)}`).toBeLessThan(16);
+    expect(s.onTarget, `isabetli ${s.onTarget.toFixed(1)}`).toBeGreaterThan(3);
+    expect(s.onTarget, `isabetli ${s.onTarget.toFixed(1)}`).toBeLessThan(6.5);
+    expect(s.corners, `korner ${s.corners.toFixed(1)}`).toBeGreaterThan(3.5);
+    expect(s.corners, `korner ${s.corners.toFixed(1)}`).toBeLessThan(7);
+  });
+
+  it('maç başına sarı ve kırmızı kart makul', () => {
+    expect(s.yellows, `sarı ${s.yellows.toFixed(2)}`).toBeGreaterThan(2.5);
+    expect(s.yellows, `sarı ${s.yellows.toFixed(2)}`).toBeLessThan(6);
+    expect(s.reds, `kırmızı ${s.reds.toFixed(3)}`).toBeLessThan(0.3);
+  });
+
+  it('gol kralı ~24 gol', () => {
     // Süper Lig'de son yıllarda gol kralı 22–30 gol (38 hafta); bizde 34 hafta.
-    expect(kingAvg).toBeGreaterThan(19);
-    expect(kingAvg).toBeLessThan(29);
-    // Süper Lig rekoru 39 (Tanju Çolak). Tek bir uç sezon olabilir (rastgelelik); dağılım kaymasın:
-    // 15 sezonun en fazla ikisinde 38+ (yurtdışı kulüpleriyle 30 sezonluk ölçüm: ort. 26.9, 2 sezon 38+, en çok 42;
-    // yurtdışısız 25.3, 1 sezon; fark rastgelelik düzeyinde, gol krallarının hiçbiri yurtdışından gelmedi)
-    expect(kings.filter((k) => k >= 38).length).toBeLessThanOrEqual(2);
+    expect(s.kingAvg, `ölçülen ort. ${s.kingAvg.toFixed(1)}, en çok ${Math.max(...s.kings)}`).toBeGreaterThan(19);
+    expect(s.kingAvg, `ölçülen ort. ${s.kingAvg.toFixed(1)}`).toBeLessThan(29);
+    // Süper Lig rekoru 39 (Tanju Çolak). Tek bir uç sezon olabilir (rastgelelik); dağılım kaymasın: 10 sezonun en fazla birinde 38+
+    // (15 sezonda en fazla 2 idi; yurtdışı kulüpleriyle 30 sezonluk ölçüm: ort. 26.9, 2 sezon 38+, en çok 42)
+    expect(s.kings.filter((k) => k >= 38).length).toBeLessThanOrEqual(1);
   });
 
   it('güçlü takım zayıf takımı çoğunlukla yener', () => {

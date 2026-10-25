@@ -24,7 +24,7 @@ npm run dev        # http://localhost:5173
 | `npm run test:watch` | Testleri izleme modunda çalıştırır |
 | `npm run balance` | Otomatik denge raporu (bkz. [Denge raporu](#denge-raporu)) |
 
-Tam test koşusu birkaç dakika sürer: tam sezon simülasyonu yapan testler var. Hızlı geri bildirim için ilgili klasörü verin:
+Tam test koşusu ~1,5 dakika sürer (en uzunu maç motoru istatistik testi: 10 tam sezon). Hızlı geri bildirim için ilgili klasörü verin:
 `npx vitest run src/ui src/store src/persistence src/tools` (saniyeler), motor testleri için `npx vitest run src/engine`.
 
 ## Yığın

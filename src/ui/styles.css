@@ -5063,3 +5063,60 @@ kbd {
   padding: 0 0 10px;
   color: var(--accent);
 }
+
+/* Kısa ekranlar: sol menünün tüm maddeleri kaydırmadan görünsün (820 px'te "Milli Takımlar" ve "Ayarlar" dışarıda kalıyordu).
+   Menü satırları sıkılaşır, sıradaki maç kartında rozetler gizlenir (isimler yazıyor; sıradaki maç üst çubukta da var). */
+@media (max-height: 900px) {
+  .menu-item {
+    padding: 4px 10px;
+  }
+
+  .menu-group-title {
+    padding: 6px 10px 2px;
+  }
+
+  .menu-group + .menu-group {
+    margin-top: 2px;
+  }
+
+  .next-card-teams {
+    display: none;
+  }
+
+  .sidebar-actions {
+    padding: 8px 10px;
+  }
+
+  .action-row {
+    margin-top: 6px;
+  }
+}
+
+/* Çok kısa ekran: sıradaki maç kartı tamamen gizlenir (Kaydet / Ana Menü kalır) */
+@media (max-height: 720px) {
+  .next-card {
+    display: none;
+  }
+
+  .action-row {
+    margin-top: 0;
+  }
+
+  .sidebar {
+    gap: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .sidebar-menu {
+    padding: 4px 8px;
+  }
+
+  .menu-item {
+    padding: 3px 10px;
+  }
+
+  .menu-group-title {
+    padding: 4px 10px 1px;
+  }
+}

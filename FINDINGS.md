@@ -52,8 +52,10 @@ Son gözden geçirme: 2026-10-25 (kod ve git geçmişi okunarak; tarayıcıda el
   - Düzeltme: `layout/StatusBar.tsx` silindi; konum yolu (yalnızca alt çubukta kullanılıyordu, `pageHeading.breadcrumb`) ve kayan sonuç / transfer bandı da kalktı.
     Sayfa başlığı üstteki haptan, sıradaki maç gezinme çubuğundan, sonuçlar Fikstür ekranından okunur. Sayfa düzeni esnek sütun: içerik alanı kendiliğinden alta uzar.
   - Doğrulama: oyun kabuğu sunucu tarafında çizilip 1400×820 ekran görüntüsünde alt boşluk yok.
-- [ ] Sol menü küçük ekranda sığmıyor (yeni): 820 px yükseklikte "Milli Takımlar" ve "Ayarlar" görünür alanın dışında, menü kaydırılarak ulaşılıyor
-  (sıradaki maç kartı altta yer kaplıyor). Mobil / dar ekran uyumu maddesiyle (IDEAS.md) birlikte ele alınabilir.
+- [x] Sol menü küçük ekranda sığmıyordu: 820 px yükseklikte "Milli Takımlar" ve "Ayarlar" görünür alanın dışındaydı.
+  - Düzeltme (styles.css, ekran yüksekliği kuralları): ≤ 900 px'te menü satırları sıkılaşır, sıradaki maç kartında rozetler gizlenir (isimler yazıyor);
+    ≤ 720 px'te kart tamamen gizlenir (sıradaki maç üst çubukta da yazıyor), menü biraz daha sıkılaşır. Kaydet / Ana Menü her zaman görünür.
+  - Doğrulama: oyun kabuğunun sunucu tarafı çizimi 1400 × 820 / 700 / 660 px ekran görüntülerinde bütün menü maddeleri kaydırmadan görünüyor.
 
 ## Testler
 - [x] **Tam test koşusu yavaştı (~3 dk): düzeltildi, 84 sn.** Yük altında tam sezon testleri 30 sn'lik zaman aşımına takılıyordu.
@@ -127,3 +129,9 @@ Maç düzeyindeki ölçülerin tamamı hedef aralıkta: gol 2,74, ev galibiyeti 
     oynatılabilir (motorda böyle bir mod yok) ya da ölçülerden dışlanabilir.
   - Hedeflerin çoğu "referans" ya da "sınır"; kesin değil (bkz. `src/tools/balance/metrics.ts`).
   - Koşu sıralı (6 × 4 sezon ≈ 2 dk). Çok büyük örnek için kariyerleri paralel çalıştırmak gerekecek.
+
+Elle eklediklerim
+ pozisyon gol olmadan gol olduğu ekranda yazıyor.
+ top kornere çıkmadan korner kararı çıkıyor.
+ penaltılar çok hızlı kullanılıyor penaltı kararı ve kullanılması anlık oluyor.
+ maça git tıkladığımda fikstüre mi gidiyor ne oluyor sonra devam yazıyor sonra bir daha maça git yazıyor bu maça git eventinde bir sorun var gibi. 

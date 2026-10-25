@@ -447,17 +447,33 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
         menajer kartında Avrupa kupası. Ölçüm (5 sezon): Türk kulüpleri ŞL'de çoğunlukla 3.–4., AL'de ara sıra gruptan çıkar.
   - [x] Milli takımlar (kullanıcı seçti: yalnızca kulüp tarafı, eleme + yaz turnuvası, dünyadaki oyuncular + sanal
         tamamlama). Ayrıntı "Milli takımlar" bölümünde.
-  - [ ] Sıradaki: FIKIRLER.md'den seçilecek.
+  - [ ] Sıradaki: IDEAS.md'den seçilecek.
+
+## Arayüz ve konfor (10. aşama devam)
+- Ayarlar (src/store/settings.ts, ui/appearance.ts, components/SettingsPanel.tsx): tarayıcıda saklanır (`fm.settings`), kayıt dosyasına girmez.
+  Otomatik kayıt sıklığı, Devam'ı durduran haber türleri, maç hızı / kamera / anlatım, zemin ve vurgu rengi (`--accent`, `--accent-rgb`;
+  stil dosyasındaki sarılar bu değişkene bağlı), yazı boyutu (CSS zoom), onaylar, bildirim süresi, kısayollar. Ana menüden de açılır.
+- Klavye kısayolları (ui/hotkeys.ts): Boşluk = Devam (maçta başlat/duraklat), Alt+←/→, Ctrl+S, ekranlar için tek harf (SCREEN_KEYS), ? / F1 yardım,
+  maçta +/-. Metin kutusunda ve pencere açıkken çalışmaz; Ayarlar'dan kapatılır.
+- Grafikler (Puan Durumu > Grafikler): sıralama haftalara göre (rakip karşılaştırma) ve form eğrisi. Veri ui/chartData.ts, çizim components/LineChart.tsx.
+- Maç ortasında kayıt: kayda canlı maç (MatchState) da yazılır (SaveData.liveMatch, SaveSlot.liveMatch etiketi); yüklenince maç ekranından kaldığı
+  dakikadan sürer. Kayıttan sonra maç ilerlerse "kaydedilmemiş" sayılır (matchSignature). Kayıt biçimi sürümü değişmedi (alan isteğe bağlı).
+- Denge raporu (`npm run balance`, src/tools/balance/): çok kariyer × çok sezon oynatıp maç, sezon, ekonomi, oyuncu yeteneği (uzun vade eğilim),
+  Avrupa ve yönetim ölçülerini hedef aralıklarla karşılaştırır. Çıktı reports/balance/latest.md (+ latest.json, tarihli kopya; git'e girmez);
+  bir sonraki koşu önceki latest.json ile kıyaslanır (fark sütunu, "gürültü" işareti). Hedefler metrics.ts'te: engine.test.ts / NOTES hedefleri,
+  "referans" (gerçek lig, yaklaşık) ve "sınır" (kendi koruma sınırlarımız) olarak işaretli. Ayarlar: BALANCE_CAREERS (6), BALANCE_SEASONS (4),
+  BALANCE_SEED (9000), BALANCE_CLUBS, BALANCE_OUT. 1 sezon ≈ 5–6 sn. Kullanıcı kulübü varsayılan taktikle otomatik oynar; kovulma kaydedilip kariyer
+  yapay sürdürülür. Az gözlemde (n < 5) "hedef dışı" yerine "belirsiz" denir. Motor değişince: koşu → rapor → hedef dışı ölçülerin "bak:" ipucu.
+- Bilinen: tam sezon testleri yavaş (FINDINGS.md > Testler).
 
 ## Açık konular / ileride
 - Duran top özellikleri (penaltı, korner) mevkiyle ilgisizse düşük çıkabiliyor — 10. aşamada denge.
 - Beraberlik %25.4 (hedef %27; Süper Lig gerçeği ~%25). Daha fazlası gol ortalamasını düşürüyor.
-- Belki ileride (kullanıcı "sonra ekleriz belki" dedi): maç ortasında kayıt (liveMatch'i de yazmak).
 
 - Oyuncu "transfer listesine koyma" yok; yapay zekâ ilgisi kendiliğinden geliyor.
 
 ## Sıradaki adım
-10. aşama devam: kullanıcı FIKIRLER.md listesinden sıradaki maddeyi seçer (yapılanlar orada [x] işaretlenir).
+10. aşama devam: kullanıcı IDEAS.md listesinden sıradaki maddeyi seçer (yapılanlar orada [x] işaretlenir).
 
 ## Altyapı kuralları (aşama 10, kullanıcı seçti: ayrı U19 takımı)
 - Player.academy = U19 oyuncusu. clubPlayers() A takımı döndürür (U19 hariç): maç kadrosu, kadro ekranı, taktik,

@@ -10,9 +10,11 @@ Son gözden geçirme: 2026-10-25 (kod ve git geçmişi okunarak; tarayıcıda el
   - Kanıt: `advance` karar bekleyen konu varken ilerlemez ve karar penceresini açar (gameStore.ts); commit aca73d5.
 - [x] Haber bildirimi daha belirgin olmalı.
   - Kanıt: Devam'ı durduran haberler için üstte haber kutusu (NewsAlert.tsx), tıklanınca habere ya da teklife gider; Ayarlar'dan kapatılabilir.
-- [ ] 2D saha tam ekrandayken üstte çıkan bildirim skorun arkasında kalıyor.
-  - Not: bildirim (NoticeToast) tam ekran öğesinin dışında çiziliyor; tam ekranda büyük olasılıkla hiç görünmüyor. Çözüm: tam ekran saha
-    paneli içinde de bildirim göstermek ya da bildirimi fullscreen öğesine taşımak. Doğrulanmadı.
+- [x] 2D saha tam ekrandayken üstte çıkan bildirim skorun arkasında kalıyor.
+  - Neden: tam ekranda skor şeridi (`.fs-bar`, top 10px, z-index 5) sahanın üstüne biniyor; sahadaki olay etiketi ("Korner", "Kurtarış"…, `.pitch-label`) de ortada top 16px'te
+    duruyordu, geniş ekranda saha ekranı doldurduğu için tam şeridin arkasına düşüyordu. Ayrıca kısa bildirim (`NoticeToast`) tam ekran öğesinin dışında çizildiği için tam ekranda hiç görünmüyordu.
+  - Düzeltme: tam ekranda olay etiketi şeridin altına (top 62px); bildirim tam ekran öğesinin içine (portal) çiziliyor ve etiketin altında (top 116px).
+  - Doğrulama: gerçek CSS ve aynı işaretlemeyle 1920×1080 tam ekran düzeni ekran görüntüsünde üçü ayrı. Gerçek tarayıcı tam ekranında elle denenmedi (başsız tarayıcı tam ekrana giremiyor).
 
 ## 2D maç sahası
 - [x] Akıcılık düşük, atlamalar var.

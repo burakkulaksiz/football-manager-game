@@ -3656,6 +3656,15 @@ select {
   padding: 8px;
 }
 
+/* Tam ekranda skor şeridi (top 10px, ~40px yüksek) sahanın üstüne biner: olay etiketi şeridin, bildirim de etiketin altında */
+.pitch-panel.fullscreen .pitch-label {
+  top: 62px;
+}
+
+.toast.toast-fs {
+  top: 116px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pitch-banner,
   .pitch-banner-title,

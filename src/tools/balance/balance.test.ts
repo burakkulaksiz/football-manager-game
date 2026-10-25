@@ -45,7 +45,7 @@ function match(hg: number, ag: number, overrides: Partial<MatchRow> = {}): Match
 function club(id: string, position: number, strength: number, balance = 5e7): ClubSeason {
   return {
     clubId: id, position, points: 80 - position * 15, goalsFor: 50, goalsAgainst: 40, strength, balance,
-    wageBudget: 4e7, income12: 8e7, transferSpend12: 1e7, transferIncome12: 5e6, wages12: 4e7, otherExpense12: 5e6, prize12: 2e6,
+    wageBudget: 4e7, income12: 8e7, transferSpend12: 1e7, transferIncome12: 5e6, wages12: 4e7, otherExpense12: 5e6, prize12: 2e6, baseBudget: 2e7, transferBudget: 1e7,
   };
 }
 
@@ -55,7 +55,7 @@ function season(career: number, year: number, over: Partial<SeasonSnapshot> = {}
     matches: [match(2, 1), match(1, 1), match(0, 2), match(3, 1)],
     clubs: [club('a', 1, 120), club('b', 2, 110), club('c', 3, 100), club('d', 4, 90)],
     topScorerGoals: 24, topAssists: 12,
-    transfers: { count: 10, fee: 1e8, maxFee: 3e7, free: 5, loans: 3 },
+    transfers: { count: 10, fee: 1e8, maxFee: 3e7, free: 5, loans: 3, fees: [1e7, 1e7, 1e7, 1e7, 1e7, 1e7, 1e7, 1e7, 1e7, 1e7], cas: [140, 140, 140, 140, 140, 140, 140, 140, 140, 140] },
     europe: [{ comp: 'cl', turkishClubs: 2, turkishKnockout: 1, turkishFinalists: 0, turkishWinner: false }],
     pool: { squadMean: 26, squadMin: 22, freeAgents: 100 + (year - 2026) * 10, academy: 300, total: 2500 },
     cohort: { size: 100, alive: 95, meanCA: 120 + (year - 2026), meanAge: 26 + (year - 2026) },

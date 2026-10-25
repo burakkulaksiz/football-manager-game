@@ -10,6 +10,7 @@ import { generateSeason, seasonLabel } from '../league/schedule';
 import { addNews } from '../news';
 import { foreignFinanceShares, foreignIntake, isForeign } from '../generation/foreign';
 import { pruneKnowledge } from '../transfer/scouting';
+import { trailingIncome } from '../finance/finance';
 import { ageOn } from '../player';
 import type { Rng } from '../rng';
 import type { Club, GameWorld, Player } from '../types';
@@ -187,6 +188,19 @@ function applyLeagueChanges(world: GameWorld): void {
   }
 }
 
+/** Yıllık transfer bütçesi, kulübün transfer dışı yıllık gelirinin bu kadarını aşamaz (temel bütçenin altına da inmez). */
+export const TRANSFER_BUDGET_INCOME_CAP = 0.5;
+
+/**
+ * Yeni sezon transfer bütçesi: temel bütçe + kasa fazlasının %30'u; ama gelirin yarısını aşmaz. Sınırsızken kasa birikip bütçeyi şişiriyor,
+ * kulüpler giderek daha iyi (pahalı) oyuncu alıyordu: transfer edilenlerin ortalama CA'sı 10 sezonda 139 → 157, bedeller ×3,3 (denge raporu).
+ */
+export function seasonTransferBudget(club: Club, fin: GameWorld['finances'][string]): number {
+  const surplus = Math.max(0, fin.balance - fin.wageBudget / 4);
+  const cap = Math.max(club.budget, trailingIncome(fin) * TRANSFER_BUDGET_INCOME_CAP);
+  return Math.round(Math.min(club.budget + surplus * 0.3, cap));
+}
+
 /** Yeni sezon bütçeleri ve gelirleri; beklentiler itibar sırasından. */
 function newSeasonFinances(world: GameWorld): void {
   const ranked = [...leagueClubs(world)].sort((a, b) => b.reputation - a.reputation);
@@ -196,16 +210,14 @@ function newSeasonFinances(world: GameWorld): void {
     if (isForeign(club)) {
       foreignFinanceShares(fin);
       fin.sponsorIncome = Math.round(fin.wageBudget * 0.3);
-      const surplus = Math.max(0, fin.balance - fin.wageBudget / 4);
-      fin.transferBudget = Math.round(club.budget + surplus * 0.3);
+      fin.transferBudget = seasonTransferBudget(club, fin);
       continue;
     }
     fin.tvIncome = Math.round(fin.wageBudget * (top ? 0.45 : 0.3));
     fin.sponsorIncome = Math.round(fin.wageBudget * 0.3);
     fin.ticketPrice = Math.round(8 + club.reputation * 0.3);
-    // Temel bütçe + kasadaki fazlanın bir kısmı
-    const surplus = Math.max(0, fin.balance - fin.wageBudget / 4);
-    fin.transferBudget = Math.round(club.budget + surplus * 0.3);
+    // Temel bütçe + kasadaki fazlanın bir kısmı (gelire bağlı üst sınırla)
+    fin.transferBudget = seasonTransferBudget(club, fin);
     club.fanExpectation = top ? expectationForRank(ranked.indexOf(club) + 1) : 'avoid_relegation';
   }
 }

@@ -131,6 +131,7 @@ function economyMetrics(seasons: SeasonSnapshot[]): MetricResult[] {
     }),
     meanMetric(g, 'transferCount', 'Sezon başına transfer (bonservisli)', 'adet', counts, null),
     meanMetric(g, 'transferVolume', 'Sezon başına transfer hacmi', '€ Mn', volumes, null),
+    metric(g, 'feeMedian', 'Transfer bedeli (medyan)', '€ Mn', median(seasons.flatMap((s) => s.transfers.fees)) / M, seasons.reduce((a, s) => a + s.transfers.fees.length, 0), null),
     meanMetric(g, 'transferMax', 'En pahalı transfer (sezon ortalaması)', '€ Mn', seasons.map((s) => s.transfers.maxFee / M), null),
     meanMetric(g, 'freeAndLoans', 'Sezon başına bedelsiz + kiralık hareket', 'adet', seasons.map((s) => s.transfers.free + s.transfers.loans), null),
     metric(g, 'balanceDrift', 'Kasa medyanı: son sezon / ilk sezon', 'oran', medBalance(lastY) / (medBalance(first) || NaN), lastY.length, null, {
@@ -307,6 +308,15 @@ function computeTrends(raw: RawData): Report['trends'] {
     series('cfTransfer', 'Net transfer harcaması, medyan', '€ Mn', (l) => median(flow(l, (c) => c.transferSpend12 - c.transferIncome12))),
     series('cfOther', 'Diğer giderler, medyan', '€ Mn', (l) => median(flow(l, (c) => c.otherExpense12))),
     series('cfNet', 'Net nakit akışı, medyan', '€ Mn', (l) => median(flow(l, (c) => c.income12 - c.wages12 - c.otherExpense12 - c.transferSpend12))),
+    series('feeMedian', 'Transfer bedeli, medyan', '€ Mn', (l) => median(l.flatMap((s) => s.transfers.fees)) / M),
+    series('feeMean', 'Transfer bedeli, ortalama', '€ Mn', (l) => mean(l.map((s) => (s.transfers.count === 0 ? NaN : s.transfers.fee / s.transfers.count / M)).filter((x) => !Number.isNaN(x)))),
+    // Bedel / (1500·exp(CA/17)): sabitse enflasyon yalnızca transfer edilen oyuncuların kalitesinden (CA) geliyor, artıyorsa aynı kaliteye daha çok ödeniyor
+    series('feeIndex', 'Bedel / piyasa değeri formülü (medyan, 1 = formül)', 'oran', (l) => median(l.flatMap((s) => s.transfers.fees.map((f, i) => f / (1500 * Math.exp(s.transfers.cas[i]! / 17)))))),
+    series('feeCA', 'Transfer edilenlerin CA ortalaması', 'CA', (l) => mean(l.flatMap((s) => s.transfers.cas))),
+    series('feeMax', 'En pahalı transfer', '€ Mn', (l) => mean(l.map((s) => s.transfers.maxFee / M))),
+    series('count', 'Transfer sayısı (bonservisli)', 'adet', (l) => mean(l.map((s) => s.transfers.count))),
+    series('budgetBase', 'Temel transfer bütçesi, medyan (yapay zekâ)', '€ Mn', (l) => median(flow(l, (c) => c.baseBudget))),
+    series('budgetLeft', 'Sezon sonu kalan transfer bütçesi, medyan', '€ Mn', (l) => median(flow(l, (c) => c.transferBudget))),
     series('squad', 'Süper Lig kadro büyüklüğü', 'oyuncu', (l) => mean(l.map((s) => s.pool.squadMean))),
     series('free', 'Serbest oyuncu havuzu', 'oyuncu', (l) => mean(l.map((s) => s.pool.freeAgents))),
     series('transfers', 'Transfer hacmi', '€ Mn', (l) => mean(l.map((s) => s.transfers.fee)) / M),

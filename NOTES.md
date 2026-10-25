@@ -477,6 +477,8 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
   (`aiSigningWage`; `wageDemand`'ın eski maaş × 1,1 / × 1,05 zammı yalnızca kullanıcıyla pazarlıkta kalır). 30 Haziran'da yapay zekâ kulübü en iyiden başlayarak yeniler; maaş toplamı
   `wageBudget × WAGE_BUDGET_SLACK` (1,05) aşılırsa kadro sırası `CORE_RENEW_RANK` (11) ve üstündekiler gider. Alımlarda aday maaşı bütçeye sığmıyorsa elenir. Nedeni: zam sarmalı + üstel
   maaş formülü + bütçe kontrolsüzlüğü maaş gideri 10 sezonda ×2,6 yapıp kasaları eksiye indiriyordu (FINDINGS.md > Denge). Rapor "Ekonomi: nakit akışı" ölçüleriyle izler.
+- Transfer bütçesi sınırı (season/rollover.ts `seasonTransferBudget`): yıllık bütçe = temel bütçe + kasa fazlasının %30'u, en çok transfer dışı yıllık gelirin yarısı (`TRANSFER_BUDGET_INCOME_CAP`),
+  temel bütçenin altına inmez. Nedeni: kasa birikip bütçeyi şişiriyor, kulüpler giderek daha pahalı oyuncu alıyordu (transfer edilenlerin ortalama CA'sı 139 → 157, bedeller ×3,3).
 - Denge raporu bu iki sorunu kalıcı ölçülerle izler ("Oyuncu havuzu": kadro büyüklüğü, serbest havuz, havuz eğimi). Kullanıcı kulübü kadro ölçülerine girmez (ihmal ediliyor).
 
 ## Açık konular / ileride

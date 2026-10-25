@@ -10,6 +10,7 @@ import {
   computeStandings,
   createWorld,
   EUROPE_COMPETITIONS,
+  getClub,
   EUROPE_FINAL,
   europeChampion,
   europeFixtures,
@@ -97,12 +98,14 @@ function snapshot(world: GameWorld, career: number, strengths: Map<string, numbe
       wages12: sumLast12(world, row.clubId, (m) => m.expense.wages),
       otherExpense12: sumLast12(world, row.clubId, (m) => m.expense.bonuses + m.expense.signingBonuses + m.expense.agentFees + m.expense.scouting + m.expense.facilities),
       prize12: sumLast12(world, row.clubId, (m) => m.income.prize),
+      baseBudget: getClub(world, row.clubId).budget,
+      transferBudget: fin.transferBudget,
     };
   });
 
   // Yalnızca Süper Lig kulüplerini ilgilendiren hareketler (yurtdışı kulüpler arası trafik sayılmaz)
   const leagueIds = new Set(clubs.map((c) => c.id));
-  const transfers = { count: 0, fee: 0, maxFee: 0, free: 0, loans: 0 };
+  const transfers = { count: 0, fee: 0, maxFee: 0, free: 0, loans: 0, fees: [] as number[], cas: [] as number[] };
   for (const p of Object.values(world.players)) {
     for (const m of p.moves ?? []) {
       if (m.date < seasonStart) continue;
@@ -110,6 +113,8 @@ function snapshot(world: GameWorld, career: number, strengths: Map<string, numbe
       if (m.kind === 'transfer') {
         transfers.count++;
         transfers.fee += m.fee;
+        transfers.fees.push(m.fee);
+        transfers.cas.push(p.currentAbility);
         transfers.maxFee = Math.max(transfers.maxFee, m.fee);
       } else if (m.kind === 'free') transfers.free++;
       else if (m.kind === 'loan') transfers.loans++;

@@ -86,8 +86,16 @@ Maç düzeyindeki ölçülerin tamamı hedef aralıkta: gol 2,74, ev galibiyeti 
   - Sonuç (3 × 10 sezon): medyan maaş gideri 8,2–9,4 Mn € arasında sabit; net nakit akışı her sezon pozitif (+1,2…+4,9); kasa medyanı +43 Mn €'ya çıkıyor; kadro 23–25 oyuncu; serbest havuz ~240'ta doygun.
     6 × 4 sezon: eksi kasalı kulüp %11,8 → %2,1; net nakit akışı +3,8 Mn €; maaş/gelir 0,53.
   - Yan etki düzeltildi: ilk denemede (yalnızca bütçe sınırı) `wageDemand`'ın eski maaşın ×1,1'i serbest oyuncuları bütçeye sığdırmıyor, kadrolar 19'a iniyordu; imzada adil maaşa geçilince çözüldü.
-  - Kalan (açık): transfer hacmi hâlâ büyüyor (159 → 1078 Mn €, 10 sezonda ×7; transfer başına bedel son/ilk ×3,3, "belirsiz"). Kasa birikip transfer bütçesine (`club.budget + fazla × 0,3`) aktığı ve piyasa değeri CA'ya üstel
-    (`1500·exp(CA/17)`, +1 CA ≈ +%6) olduğu için yıldız CA'sındaki artış (171 → 187) fiyatı katlıyor. Bütçe yenilemesini ve yıldız CA artışını sınırlamak ayrı iş.
+  - Transfer fiyatları için bir sonraki maddeye bak.
+- [ ] **Transfer fiyat enflasyonu (kısmen düzeltildi):** 3 × 10 sezonda transfer bedeli ortalaması 8,3 → 27,5 Mn €, medyan 4,8 → 16 Mn € (×3,3), hacim 159 → 1078 Mn €/sezon; transfer sayısı sabit (19–38).
+  - Tanı: bedel / piyasa değeri formülü oranı neredeyse sabit (0,88 → 1,09), yani fiyat formülü değil, **transfer edilen oyuncuların kalitesi** artıyor: ortalama CA 139 → 157 (exp(18/17) ≈ ×2,9 bedel artışını açıklıyor).
+    İki itici güç: (1) kasa birikip transfer bütçesine (`club.budget + fazla × 0,3`) sınırsız akıyordu (medyan kalan bütçe 1 → 7 Mn €); (2) ligin üst seviyesinin yavaş yükselmesi (ilk 11 CA 137 → 146, en yüksek CA 171 → 184).
+  - Düzeltme: `season/rollover.ts` → `seasonTransferBudget`: yıllık transfer bütçesi, transfer dışı yıllık gelirin yarısını (`TRANSFER_BUDGET_INCOME_CAP`) aşamaz, temel bütçenin altına da inmez (`finance.ts` → `trailingIncome`).
+  - Sonuç (3 × 10): ortalama bedel 27,5 → 19,9 Mn €, hacim 1078 → 578 Mn €; kadro, nakit akışı, serbest havuz değişmedi. Transfer edilenlerin CA'sı hâlâ yükseliyor (139 → 154): asıl itici güç üst seviye yetenek kayması, ayrı iş.
+  - Açık: ilk 11 CA eğimi 10 sezonda +1,1/sezon (sınır ±0,8; S8'den sonra düzleşiyor), en yüksek CA 171 → 184. Neden büyük olasılıkla "ligin dünyadan yetenek çekmesi" (Süper Lig başlangıçta 123, yurtdışı 151 ortalama CA);
+    gerçekten sorun mu, yoksa yeni bir dengeye yaklaşma mı olduğu belirsiz.
+- [ ] **Gol ortalaması uzun vadede yükseliyor (yeni, 3 × 10 sezon):** maç başına gol 2,7 (S1) → ~3,0 (S9–S10); hedef 2,45–2,75, en son koşuda ❌ (2,84 ±). Yetenek kaymasıyla birlikte; muhtemelen hücum yeteneği kaleci / savunmadan hızlı artıyor
+  (`TUNING.goalBase`, `finishingExponent`; kaleci ve savunma ağırlıkları `engine.ts`).
 - [ ] **Sonuncunun puanı düşük (belirsiz):** ilk ölçümde 16,5 (referans 18–32). Kullanıcı kulübü hariç yapay zekâ kulüplerinde 17,5 ±2,0 (düzeltme sonrası, 24 sezon): düşüklüğün bir kısmı
   ihmal edilen kullanıcı kulübünün sık sonuncu bitmesinden geliyordu. Hâlâ referansın biraz altında; daha çok sezonla doğrula (zayıf takımlar biraz fazla zayıf olabilir).
 - [ ] **Şampiyon çeşitliliği az:** 24 sezonda yalnızca 3 farklı şampiyon, şampiyon–ikinci farkı ortalama 5,75 puan. Hedef tanımlı değil; gerçek Süper Lig'de de büyük 3–4 kulüp baskın, ama 3 çok az olabilir.

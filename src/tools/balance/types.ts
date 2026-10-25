@@ -36,6 +36,9 @@ export interface ClubSeason {
   wages12: number;
   otherExpense12: number;
   prize12: number;
+  /** Kulübün temel transfer bütçesi (club.budget) ve sezon sonunda kalan transfer bütçesi (€). */
+  baseBudget: number;
+  transferBudget: number;
 }
 
 export interface EuropeSeason {
@@ -59,7 +62,8 @@ export interface SeasonSnapshot {
   clubs: ClubSeason[];
   topScorerGoals: number;
   topAssists: number;
-  transfers: { count: number; fee: number; maxFee: number; free: number; loans: number };
+  /** `fees`: bonservisli transferlerin bedelleri (€), `cas`: aynı sırayla oyuncuların sezon sonundaki CA'sı. */
+  transfers: { count: number; fee: number; maxFee: number; free: number; loans: number; fees: number[]; cas: number[] };
   europe: EuropeSeason[];
   /** Dünyanın büyüklüğü: Süper Lig A takım büyüklükleri, serbest oyuncu havuzu, altyapı havuzu (sezon sonu). */
   pool: { squadMean: number; squadMin: number; freeAgents: number; academy: number; total: number };

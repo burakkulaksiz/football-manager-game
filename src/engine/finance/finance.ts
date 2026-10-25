@@ -61,6 +61,13 @@ export function addExpense(fin: ClubFinance, category: ExpenseCategory, amount: 
   fin.current.expense[category] += a;
 }
 
+/** Son `months` ayın transfer dışı geliri (bilet, yayın, sponsor, ödül); transfer satışları hariç. */
+export function trailingIncome(fin: ClubFinance, months = 12): number {
+  let sum = 0;
+  for (const m of fin.history.slice(-months)) sum += m.income.tickets + m.income.tv + m.income.sponsor + m.income.prize;
+  return sum;
+}
+
 export function reportTotals(r: MonthReport): { income: number; expense: number; net: number } {
   const income = Object.values(r.income).reduce((a, b) => a + b, 0);
   const expense = Object.values(r.expense).reduce((a, b) => a + b, 0);

@@ -17,15 +17,25 @@ export function naturalPositions(player: Player): Position[] {
   return POSITIONS.filter((p) => (player.positions[p] ?? 0) >= NATURAL_FAMILIARITY);
 }
 
-/** Oyuncunun asıl pozisyonu: en yüksek yatkınlık (eşitlikte saha sırası). */
+const POSITION_ORDER: ReadonlyMap<string, number> = new Map(POSITIONS.map((p, i) => [p, i]));
+
+/**
+ * Oyuncunun asıl pozisyonu: en yüksek yatkınlık (eşitlikte saha sırası; hiç yatkınlık yoksa saha sırasının ilki).
+ * Çok sık çağrılır (kadro seçimi, maç motoru): 14 mevkinin hepsi yerine yalnızca oyuncunun yatkın olduğu (genelde 1–5) mevkiler taranır;
+ * sonuç saha sırasıyla tam taramayla aynıdır.
+ */
 export function primaryPosition(player: Player): Position {
-  let best: Position = 'ST';
-  let bestValue = -1;
-  for (const p of POSITIONS) {
-    const v = player.positions[p] ?? 0;
-    if (v > bestValue) {
-      best = p;
+  let best: Position = POSITIONS[0]!;
+  let bestValue = 0;
+  let bestOrder = 0;
+  for (const key in player.positions) {
+    const order = POSITION_ORDER.get(key);
+    if (order === undefined) continue;
+    const v = player.positions[key as Position] ?? 0;
+    if (v > bestValue || (v === bestValue && v > 0 && order < bestOrder)) {
+      best = key as Position;
       bestValue = v;
+      bestOrder = order;
     }
   }
   return best;

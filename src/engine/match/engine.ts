@@ -161,8 +161,6 @@ interface Units {
 const DEFENSIVE_SLOTS: ReadonlySet<Position> = new Set(['DR', 'DC', 'DL', 'WBR', 'WBL']);
 const ATTACKING_SLOTS: ReadonlySet<Position> = new Set(['AMR', 'AMC', 'AML', 'ST']);
 
-const average = (xs: number[], fallback: number) => (xs.length === 0 ? fallback : xs.reduce((a, b) => a + b, 0) / xs.length);
-
 /** Kaptan (sahada değilse yardımcı kaptan) liderliğine göre takıma küçük bir çarpan (±%3). */
 function captainBonus(team: TeamState, lookup: PlayerLookup): number {
   const id = [team.captainId, team.viceCaptainId].find((x) => x !== null && team.onPitch.includes(x));
@@ -170,18 +168,38 @@ function captainBonus(team: TeamState, lookup: PlayerLookup): number {
   return 1 + (lookup[id]!.attributes.leadership - 10) * 0.003;
 }
 
+/**
+ * Kalecinin gücü: teamUnits'in `gk` alanıyla aynı hesap. Şutta yalnızca bu gerekir; takımın bütün birimlerini (11 oyuncu) yeniden
+ * hesaplamak maç simülasyonunun belirgin bir payıydı.
+ */
+function keeperUnit(state: MatchState, team: TeamState, lookup: PlayerLookup): number {
+  let gk = 4; // kalede kaleci yoksa (teamUnits ile aynı)
+  for (const id of team.onPitch) {
+    const ps = state.players[id]!;
+    if (ps.slot !== 'GK') continue;
+    const p = lookup[id]!;
+    gk = keeperScore(p.attributes) * efficiency(ps, p);
+  }
+  return gk;
+}
+
 function teamUnits(state: MatchState, team: TeamState, lookup: PlayerLookup): Units {
   let att = 0;
   let mid = 0;
   let def = 0;
   let gk = 4; // kalede kaleci yoksa (kırmızı kart, değişiklik hakkı bitti) çok zayıf
-  const passing: number[] = [];
-  const defencePace: number[] = [];
-  const attackPace: number[] = [];
-  const attackAerial: number[] = [];
-  const creativity: number[] = [];
-  const defencePassing: number[] = [];
-  const defenceAwareness: number[] = [];
+  // Her dakika iki takım için çağrılır: profil ortalamaları dizi yerine toplam + sayıyla tutulur
+  // (toplama sırası aynı olduğundan sonuç dizi ortalamasıyla bit bit aynıdır).
+  let passing = 0;
+  let creativity = 0;
+  let outfield = 0;
+  let defencePace = 0;
+  let defencePassing = 0;
+  let defenceAwareness = 0;
+  let defenders = 0;
+  let attackPace = 0;
+  let attackAerial = 0;
+  let attackers = 0;
   let tightMarkers = 0;
   for (const id of team.onPitch) {
     const ps = state.players[id]!;
@@ -197,34 +215,38 @@ function teamUnits(state: MatchState, team: TeamState, lookup: PlayerLookup): Un
     att += w.att * o.att * eff * attackScore(a);
     mid += w.mid * o.mid * eff * midfieldScore(a);
     def += w.def * o.def * eff * defenceScore(a);
-    passing.push((a.passing + a.technique) / 2);
-    creativity.push((a.creativity + a.flair) / 2);
+    passing += (a.passing + a.technique) / 2;
+    creativity += (a.creativity + a.flair) / 2;
+    outfield++;
     if (ps.orders?.tightMarking) tightMarkers++;
     if (DEFENSIVE_SLOTS.has(ps.slot!)) {
-      defencePace.push(a.pace);
-      defencePassing.push((a.passing + a.composure) / 2);
-      defenceAwareness.push((a.concentration + a.anticipation) / 2);
+      defencePace += a.pace;
+      defencePassing += (a.passing + a.composure) / 2;
+      defenceAwareness += (a.concentration + a.anticipation) / 2;
+      defenders++;
     }
     if (ATTACKING_SLOTS.has(ps.slot!)) {
-      attackPace.push(a.pace);
-      attackAerial.push((a.heading + a.jumping) / 2);
+      attackPace += a.pace;
+      attackAerial += (a.heading + a.jumping) / 2;
+      attackers++;
     }
   }
   const fw = team.fullWeights;
   const cap = captainBonus(team, lookup);
+  const avg = (sum: number, n: number) => (n === 0 ? 10 : sum / n);
   return {
     att: (att / fw.att) * cap,
     mid: (mid / fw.mid) * cap,
     def: (def / fw.def) * cap,
     gk,
     profile: {
-      passing: average(passing, 10),
-      defencePace: average(defencePace, 10),
-      attackPace: average(attackPace, 10),
-      attackAerial: average(attackAerial, 10),
-      creativity: average(creativity, 10),
-      defencePassing: average(defencePassing, 10),
-      defenceAwareness: average(defenceAwareness, 10),
+      passing: avg(passing, outfield),
+      defencePace: avg(defencePace, defenders),
+      attackPace: avg(attackPace, attackers),
+      attackAerial: avg(attackAerial, attackers),
+      creativity: avg(creativity, outfield),
+      defencePassing: avg(defencePassing, defenders),
+      defenceAwareness: avg(defenceAwareness, defenders),
       tightMarkers,
     },
   };
@@ -624,7 +646,7 @@ function resolveShot(
 
   const keeperId = keeperOf(ctx, oppSide);
   const keeperName = keeperId !== null ? nameOf(ctx, keeperId) : 'kalede kimse';
-  const gk = teamUnits(state, opp, lookup).gk;
+  const gk = keeperUnit(state, opp, lookup);
 
   // Taktik: kendi şut kalitemiz ve rakibin savunma hattının açtığı/kapattığı alan.
   const quality = ctx.effects[side].shotQuality * (setPiece?.quality ?? 1);

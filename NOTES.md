@@ -481,6 +481,8 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
   temel bütçenin altına inmez. Nedeni: kasa birikip bütçeyi şişiriyor, kulüpler giderek daha pahalı oyuncu alıyordu (transfer edilenlerin ortalama CA'sı 139 → 157, bedeller ×3,3).
 - Yapay zekâ alım eşiği mevki grubuna göre (transfer/ai.ts `groupLevel`): aday CA'sı, alınacak grubun kadrodaki en iyi oyuncularının (kaleci 1, defans 4, orta saha 3, forvet 3)
   ortalamasının 8 altından düşük olamaz. Önceden tek eşik "ilk 11 ortalaması − 8" idi; CA ölçeği mevkiye göre farklı olduğundan kaleciler eşiğe zor ulaşıyordu.
+- Performans (sonucu değiştirmeyen): `primaryPosition` yalnızca oyuncunun mevkilerini tarar (saha sırası eşitlik kuralı korunur), şutta `keeperUnit`, `teamUnits` ortalamaları
+  toplam + sayıyla. Motor performans değişikliğinden sonra: bir sezonun skor + oyuncu CA + RNG durumu parmak izini önce / sonra karşılaştır (birebir aynı olmalı).
 - Denge raporu bu iki sorunu kalıcı ölçülerle izler ("Oyuncu havuzu": kadro büyüklüğü, serbest havuz, havuz eğimi). Kullanıcı kulübü kadro ölçülerine girmez (ihmal ediliyor).
 
 ## Açık konular / ileride

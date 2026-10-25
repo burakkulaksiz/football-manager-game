@@ -49,13 +49,16 @@ Son gözden geçirme: 2026-10-25 (kod ve git geçmişi okunarak; tarayıcıda el
   - Not: StatusBar hâlâ GameShell'de çiziliyor (ekmek kırıntısı + haber bandı). Kaldırılırsa ekmek kırıntısı ve haber bandı için yer kararı gerekir.
 
 ## Testler
-- [ ] Tam sezon simülasyonu testleri yük altında 30 sn'lik varsayılan zaman aşımına takılıyor; sonradan ele alınacak.
-  - Gözlem (2026-10-25): tam test koşusunda `season.test.ts` "ikinci sezon da sonuna kadar oynanır" ve `career.test.ts`
-    "sezon sonunda forma giyen herkesin sezonu yazılır…" zaman aşımına düştü. İkisi tek başına geçti, birlikte 38 sn sürdü.
-    Aynı gün farklı koşularda bir seferinde 1, bir seferinde 2 test düştü.
-  - Geçici çözüm: bu iki teste test başına 120 sn zaman aşımı verildi.
-  - Yapılacak: testlerin neden bu kadar yavaş olduğuna bakmak (tam sezon simülasyonunu paylaşmak, daha küçük sezon / az kulüp
-    ile aynı kuralı sınamak, ya da `playSeason`'u hızlandırmak). Kök neden henüz bilinmiyor; "yük" yalnızca olası açıklama.
+- [ ] **Tam sezon simülasyonu testleri yavaş (kısmen düzeltildi).** Yük altında 30 sn'lik varsayılan zaman aşımına takılıyorlardı; iki teste geçici olarak 120 sn verildi.
+  - Ölçüm (2026-10-25, JSON raporlayıcı): süreyi tam sezon oynatan dosyalar yiyor: season.test 63 sn, gameFlow.test 41, manager.test 31, saves.test 29, career.test 14 (toplam ~280 sn, 398 test).
+    Yani asıl darboğaz motorun sezon simülasyonu hızı.
+  - CPU profili (tek sezon): maç simülasyonu %42 (`teamUnits` %17), milli maçlar %25, yapay zekâ kadro / diziliş seçimi %19, `primaryPosition` tek başına %9,4 kendi süresi.
+  - Düzeltme (sonucu değiştirmeyen saf performans): `primaryPosition` yalnızca oyuncunun yatkın olduğu mevkileri tarıyor (önbellek değil: bir test mevki nesnesini yerinde değiştiriyor);
+    şutta rakip kalecinin gücü için takımın tüm birimleri yerine `keeperUnit`; `teamUnits` profil ortalamaları dizi yerine toplam + sayıyla (aynı toplama sırası).
+  - Doğrulama: bir sezonun parmak izi (tüm skorlar, oyuncu CA ve kulüpleri, RNG durumu; SHA-256) değişiklikten önce ve sonra **birebir aynı**. Tek sezon 8,9 → 5,4 sn;
+    season.test + gameFlow.test sırayla 50–65 → 41 sn.
+  - Kalan: milli maçlar (sezonun ~%25'i, onlarca tam maç), `clubPlayers` her çağrıda tüm oyuncuları tarıyor (fikstür kurulumu ve moral %4'ten fazla; kulüp → oyuncu dizini gerekir,
+    ama kadro değişikliklerinde bayatlama riski var), `teamUnits` dakika başına iki kez (zorunlu iş). 120 sn'lik zaman aşımları şimdilik kalsın.
 
 ## Denge (otomatik rapor)
 Kaynak: `npm run balance`, 6 kariyer × 4 sezon = 24 sezon (7344 lig maçı), tohum 9000, 2026-10-25. Aynı ayarla tekrar koşunca sonuçlar birebir aynı çıktı

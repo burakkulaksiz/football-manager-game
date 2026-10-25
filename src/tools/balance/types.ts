@@ -65,6 +65,8 @@ export interface SeasonSnapshot {
   /** `fees`: bonservisli transferlerin bedelleri (€), `cas`: aynı sırayla oyuncuların sezon sonundaki CA'sı. */
   transfers: { count: number; fee: number; maxFee: number; free: number; loans: number; fees: number[]; cas: number[] };
   europe: EuropeSeason[];
+  /** Süper Lig ↔ yurtdışı oyuncu akışı (bonservisli + bedelsiz): gelen / giden sayısı ve sezon sonundaki CA'ları. */
+  abroad: { inCas: number[]; outCas: number[] };
   /** Dünyanın büyüklüğü: Süper Lig A takım büyüklükleri, serbest oyuncu havuzu, altyapı havuzu (sezon sonu). */
   pool: { squadMean: number; squadMin: number; freeAgents: number; academy: number; total: number };
   /** İlk sezon sonunda ligdeki oyuncuların aynı grubu: sonraki sezonlarda (hangi kulüpte olursa olsun) hayatta kalanların ortalaması. */

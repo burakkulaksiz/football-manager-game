@@ -108,11 +108,14 @@ Maç düzeyindeki ölçülerin tamamı hedef aralıkta: gol 2,74, ev galibiyeti 
     PA ortalaması 167,6 (%45'i ≥ 170), yıllık alımda 145,4 (%12). Bu ~100 "süper genç" ilk yıllarda potansiyeline ulaşıp elit katmanı şişiriyordu.
     Düzeltme: `worldGenerator.ts` → kadro şablonundaki gençler alımla aynı model (`YOUTH_LEVEL_GAP`, `youthExtraPotential`; tek çekiliş, rastgelelik akışının uzunluğu aynı;
     şablonu pratikte yalnızca yurtdışı kulüpler kullanıyor, 38 yurtiçi kulübün gerçek kadrosu var). Sonuç: dünya elit katmanı sabit (CA ≥ 170: 127 → 122, CA ≥ 160: 327 → 320, ilk 50 ort. 182,6 → 182,1).
-  - **Ama Süper Lig eğilimi neredeyse değişmedi** (3 × 10): ilk 11 CA eğimi 1,21 → 1,00/sezon, transfer edilenlerin CA'sı yine 135 → 153, ortalama bedel yine ×2,7, en yüksek CA 171 → 187.
-    En olası açıklama yakınsama: dünyanın tepesi sabit ve ligden çok güçlü (dünya ilk 50 ort. ~182, lig ilk 11'leri ~137); Türk kulüpleri her yıl bu havuzdan net oyuncu çekiyor
-    (önceki tanı: yurtdışından sezonda 14–28 oyuncu, CA ~145 geliyor; yurtdışına 3–13 gidiyor). Sonraki adım (doğrulanmadı): yurtdışı kulüplerinin alım sıklığı bilerek düşük
-    (`FOREIGN_BUY_FACTOR = 0.4`) ve yıldızlarını kolay satıyorlar; yurtdışı kulüpleri kadrolarının en iyilerini tutsun ya da Türk oyuncularını daha çok alsın. Hedef: ligin net yetenek
-    akışının yaklaşık dengede olması (gerçekte Süper Lig en iyi gençlerini büyük liglere satar).
+  - Süper Lig eğilimi (ilk 11 CA +1/sezon, transfer edilenlerin CA'sı ve bedeller artıyor) için dört hipotez veriyle elendi (2026-10-25, 3 × 10 sezon, aynı tohumlar):
+    (1) yurtdışı kulüpleri aynı itibarda daha güçlü → hayır, Türk kulüpleri eşit ya da güçlü (Galatasaray itibar 92 / ilk 11 160, Club Brugge 90 / 154);
+    (2) lig yurtdışından net yetenek çekiyor → hayır, yeni "net yetenek akışı" ölçüsü sıfıra yakın ya da eksi (gelen 3–10, giden 4–16 oyuncu / sezon); yurtdışı alım hızını 0,4 → 1,0
+    yapmak eğimi değiştirmedi (1,00 → 0,92, gürültü), uygulanmadı; (3) başlangıç altyapısı dengenin yarısı → altyapıyı denge büyüklüğünde başlatmak eğimi düzeltmedi (1,00 → 1,18), geri alındı;
+    (4) gençlerin potansiyeli bugünkü yıldızlardan yüksek → hayır (17–21 yaş PA ort. 125,7 / ilk 30'u 151,8; 25–29 yaş CA ort. 128,3 / ilk 30'u 153,4).
+  - **Sonuç: sarmal değil, tek seferlik yakınsama.** 2 × 20 sezonluk koşuda ilk 11 ortalaması 137 → 145 (S9) sonra S10–S20 boyunca ~141–149'da yatay; en yüksek CA S12'den sonra 190–191,
+    22 yaş altı ~142–148'de sabit. Başlangıçtaki gerçek kadrolar simülasyonun dengesinin ~8 CA altında başlıyor, ilk ~9 sezonda dengeye çıkıyor. Motor değişikliği gerekmiyor; istenirse
+    başlangıç gücü ayarlanabilir (gerçek kadroların yetenek eşlemesi). Bu madde fiyat / hacim açısından da kapanabilir: bedeller yakınsamayla birlikte artıyor (yine de uzun koşuda 20–27 Mn €'da dalgalanıyor).
 - [ ] **Gol ortalaması uzun vadede yükseliyor (kısmen düzeltildi, neden tam bulunmadı):** 3 × 10 sezonda maç başına gol 2,7 (S1) → ~3,0 (S9–S10), 10 sezon ortalaması 2,85 (hedef 2,45–2,75).
   - Ölçüm: forvetlerin üst seviyesi kaleci ve savunmadan hızlı yükseliyor (her kulübün en iyi 3 forveti 137 → 149, en iyi kalecisi 136 → 142, en iyi 4 defansı 138 → 144);
     şut ve isabetli şut +%5, gol / isabetli şut dönüşümü sabit (~%28).
@@ -123,6 +126,10 @@ Maç düzeyindeki ölçülerin tamamı hedef aralıkta: gol 2,74, ev galibiyeti 
   - Sonuç (3 × 10, aynı tohumlar): 10 sezon gol ortalaması 2,85 → 2,72 (hedefte; fark ~5 standart hata). **Ama** forvet üst seviyesi hâlâ kaleciden hızlı yükseliyor (137 → 150 vs. 138 → 141)
     ve son iki sezonda gol yine 2,85–2,93. Yani asimetri gerçekti ama tek neden değil. Sonraki adım: maç motorunda şut olasılığının hücum / savunma oranına duyarlılığı (`TUNING.threatExponent`)
     ve forvetlerin hangi yoldan (transfer mi, altyapı mı) üst seviyeye girdiği; ya da şut olasılığını lig ortalamasına göre normalize etmek.
+- [ ] **Uzun vadede (10+ sezon) gol ortalaması sürekli tırmanıyor (yeni, 2 × 20 sezon):** 2,83 (S1) → S8–S11'de 2,9–3,15 → S16–S20'de 3,3–3,7. Lig yeteneği S10'dan sonra
+  yatayken gol artmaya devam ediyor: yetenekten bağımsız bir mekanizma. Aynı dönemde kadrolar inceliyor (aşağıdaki madde); ince kadro → yorgunluk, rotasyon ve savunma zayıflaması olası bağlantı (doğrulanmadı).
+- [ ] **Uzun vadede kadrolar yine küçülüyor (yeni, 2 × 20 sezon):** Süper Lig kadro ortalaması 27,5 → S10'da 24,1 → S20'de 21,6 (hedef `MIN_AI_SQUAD` 24); serbest havuz S12'den sonra yeniden
+  büyüyor (232 → 354). Yedek tamamlama (`fillAiDepth`) 10 sezona kadar yetiyor, sonrasında yetmiyor; olası neden maaş bütçesi sınırı (kasa birikiyor ama maaş bütçesi sabit) ya da aday aralığı (seviye −30 / +6). İncelenecek.
 - [ ] **Sonuncunun puanı düşük (belirsiz):** ilk ölçümde 16,5 (referans 18–32). Kullanıcı kulübü hariç yapay zekâ kulüplerinde 17,5 ±2,0 (düzeltme sonrası, 24 sezon): düşüklüğün bir kısmı
   ihmal edilen kullanıcı kulübünün sık sonuncu bitmesinden geliyordu. Hâlâ referansın biraz altında; daha çok sezonla doğrula (zayıf takımlar biraz fazla zayıf olabilir).
 - [ ] **Şampiyon çeşitliliği az:** 24 sezonda yalnızca 3 farklı şampiyon, şampiyon–ikinci farkı ortalama 5,75 puan. Hedef tanımlı değil; gerçek Süper Lig'de de büyük 3–4 kulüp baskın, ama 3 çok az olabilir.

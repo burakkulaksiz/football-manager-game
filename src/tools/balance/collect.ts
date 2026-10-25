@@ -127,10 +127,16 @@ function snapshot(world: GameWorld, career: number, strengths: Map<string, numbe
   // Yalnızca Süper Lig kulüplerini ilgilendiren hareketler (yurtdışı kulüpler arası trafik sayılmaz)
   const leagueIds = new Set(clubs.map((c) => c.id));
   const transfers = { count: 0, fee: 0, maxFee: 0, free: 0, loans: 0, fees: [] as number[], cas: [] as number[] };
+  const abroad = { inCas: [] as number[], outCas: [] as number[] };
+  const isForeignClub = (id: string | null) => id !== null && world.clubs.find((c) => c.id === id)?.country !== undefined;
   for (const p of Object.values(world.players)) {
     for (const m of p.moves ?? []) {
       if (m.date < seasonStart) continue;
       if (!(m.fromClubId && leagueIds.has(m.fromClubId)) && !(m.toClubId && leagueIds.has(m.toClubId))) continue;
+      if (m.kind === 'transfer' || m.kind === 'free') {
+        if (isForeignClub(m.fromClubId) && m.toClubId && leagueIds.has(m.toClubId)) abroad.inCas.push(p.currentAbility);
+        if (isForeignClub(m.toClubId) && m.fromClubId && leagueIds.has(m.fromClubId)) abroad.outCas.push(p.currentAbility);
+      }
       if (m.kind === 'transfer') {
         transfers.count++;
         transfers.fee += m.fee;
@@ -166,6 +172,7 @@ function snapshot(world: GameWorld, career: number, strengths: Map<string, numbe
     topScorerGoals: topScorers(league, 1)[0]?.goals ?? 0,
     topAssists: topAssists(league, 1)[0]?.value ?? 0,
     transfers,
+    abroad,
     europe: EUROPE_COMPETITIONS.map((c) => europeSeason(world, c)).filter((e): e is EuropeSeason => e !== null),
     pool: {
       squadMean: squadSizes.reduce((a, b) => a + b, 0) / squadSizes.length,

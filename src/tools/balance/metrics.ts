@@ -324,6 +324,12 @@ function computeTrends(raw: RawData): Report['trends'] {
     // Bedel / (1500·exp(CA/17)): sabitse enflasyon yalnızca transfer edilen oyuncuların kalitesinden (CA) geliyor, artıyorsa aynı kaliteye daha çok ödeniyor
     series('feeIndex', 'Bedel / piyasa değeri formülü (medyan, 1 = formül)', 'oran', (l) => median(l.flatMap((s) => s.transfers.fees.map((f, i) => f / (1500 * Math.exp(s.transfers.cas[i]! / 17)))))),
     series('feeCA', 'Transfer edilenlerin CA ortalaması', 'CA', (l) => mean(l.flatMap((s) => s.transfers.cas))),
+    series('abroadIn', 'Yurtdışından gelen (adet)', 'adet', (l) => mean(l.map((s) => s.abroad.inCas.length))),
+    series('abroadOut', 'Yurtdışına giden (adet)', 'adet', (l) => mean(l.map((s) => s.abroad.outCas.length))),
+    series('abroadInCA', 'Yurtdışından gelenlerin CA ort.', 'CA', (l) => mean(l.flatMap((s) => s.abroad.inCas))),
+    series('abroadOutCA', 'Yurtdışına gidenlerin CA ort.', 'CA', (l) => mean(l.flatMap((s) => s.abroad.outCas))),
+    // Net yetenek akışı: gelenlerin CA toplamı − gidenlerin (sezon başına); pozitifse lig dünyadan yetenek çekiyor
+    series('abroadNet', 'Net yetenek akışı (Σ CA gelen − giden) / 100', 'CA×100', (l) => mean(l.map((s) => (s.abroad.inCas.reduce((a, b) => a + b, 0) - s.abroad.outCas.reduce((a, b) => a + b, 0)) / 100))),
     series('feeMax', 'En pahalı transfer', '€ Mn', (l) => mean(l.map((s) => s.transfers.maxFee / M))),
     series('count', 'Transfer sayısı (bonservisli)', 'adet', (l) => mean(l.map((s) => s.transfers.count))),
     series('budgetBase', 'Temel transfer bütçesi, medyan (yapay zekâ)', '€ Mn', (l) => median(flow(l, (c) => c.baseBudget))),

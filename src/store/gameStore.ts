@@ -29,7 +29,8 @@ import {
 } from '../engine';
 import { DEFAULT_SQUAD_FILTERS, type SquadFilters, type SquadView } from '../ui/squadFilters';
 import { gameData } from '../gameData';
-import { autosave, loadGame, saveGame } from '../persistence/saves';
+import { autosave, liveMatchLabel, loadGame, loadSavedMatch, saveGame } from '../persistence/saves';
+import { autosaveDue, loadSettings, saveSettings, type Settings } from './settings';
 
 /** Fikstür ekranı sekmeleri. */
 export type FixturesTab = 'club' | 'round' | 'cup' | 'europe';
@@ -41,6 +42,7 @@ export function tabFor(competition: Competition | undefined): FixturesTab {
 
 /** Sol menüden açılan ekranlar + menü dışı ekranlar ('player'). */
 export type ScreenId =
+  | 'settings'
   | 'inbox'
   | 'squad'
   | 'tactics'
@@ -81,6 +83,8 @@ interface GameState {
   /** Dünyadaki her değişiklikte artar; kayıt anındaki değer savedRevision'a yazılır. */
   revision: number;
   savedRevision: number;
+  /** Maç ortasında son alınan kaydın maç imzası (bkz. matchSignature); maç sonradan ilerlediyse kayıt eskimiş sayılır. */
+  savedMatchSig: string | null;
   /** Bu kariyerde en son elle kaydedilen/yüklenen slot (kayıt penceresinde öne çıkar). */
   currentSaveId: number | null;
   /** Kısa süreli bildirim (kayıt alındı, hata…). */
@@ -115,6 +119,10 @@ interface GameState {
   decisionsOpen: boolean;
   /** Devam'ı durduran yeni haberler (belirgin uyarı; tıklanınca ilgili yere gidilir). */
   newsAlert: number[] | null;
+  /** Oyun ayarları (tarayıcıda saklanır, kariyerler arasında ortak). */
+  settings: Settings;
+  /** Son otomatik kaydın oyun içi tarihi (otomatik kayıt sıklığı için; kariyere girince sıfırlanır). */
+  lastAutosave: string | null;
 
   openNewGame: () => void;
   openLoadGame: () => void;
@@ -132,6 +140,7 @@ interface GameState {
   setScreen: (screen: ScreenId, preset?: Record<string, unknown>) => void;
   setUi: (key: string, value: unknown) => void;
   setDecisionsOpen: (open: boolean) => void;
+  updateSettings: (change: Partial<Settings>) => void;
   dismissNewsAlert: () => void;
   openPlayer: (playerId: number) => void;
   openReport: (fixtureId: number) => void;
@@ -195,16 +204,23 @@ function enterGame(world: GameWorld) {
     liveMatch: null,
     revision: 0,
     savedRevision: 0,
+    savedMatchSig: null,
     ui: {},
     area: START_ROUTE.screen,
     decisionsOpen: false,
     newsAlert: null,
+    lastAutosave: null,
   };
 }
 
 /** Kaydedilmemiş ilerleme var mı (çıkışta uyarı için). */
-export function hasUnsavedProgress(s: Pick<GameState, 'revision' | 'savedRevision'>): boolean {
-  return s.revision !== s.savedRevision;
+/** Maçın ilerleyişini özetler (dakika, devre, olay sayısı): iki imza farklıysa maç kayıttan sonra ilerlemiştir. */
+export function matchSignature(match: MatchState): string {
+  return `${match.fixtureId}:${match.period}:${match.minute}:${match.events.length}`;
+}
+
+export function hasUnsavedProgress(s: Pick<GameState, 'revision' | 'savedRevision' | 'liveMatch' | 'savedMatchSig'>): boolean {
+  return s.revision !== s.savedRevision || (s.liveMatch !== null && matchSignature(s.liveMatch) !== s.savedMatchSig);
 }
 
 let noticeCounter = 0;
@@ -223,11 +239,14 @@ export const useGameStore = create<GameState>()((set, get) => {
    */
   const runAutosave = () => {
     setTimeout(() => {
-      const { world, revision, liveMatch } = get();
+      const { world, revision, liveMatch, settings, lastAutosave } = get();
       // Kovulduysan otomatik kayıt alınmaz: önceki kayıttan devam edebilmelisin.
       if (!world || world.gameOver || liveMatch) return;
+      // Ayarlardaki sıklık: kapalı / her maç günü / haftada / ayda bir
+      if (!autosaveDue(settings.autosave, lastAutosave, world.date)) return;
+      const date = world.date;
       autosave(world)
-        .then(() => set({ savedRevision: revision }))
+        .then(() => set({ savedRevision: revision, lastAutosave: date }))
         .catch((e: unknown) => get().showNotice(`Otomatik kayıt başarısız: ${String(e)}`, 'error'));
     }, AUTOSAVE_DELAY_MS);
   };
@@ -237,6 +256,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     world: null,
     revision: 0,
     savedRevision: 0,
+    savedMatchSig: null,
     currentSaveId: null,
     notice: null,
     screen: START_ROUTE.screen,
@@ -255,6 +275,8 @@ export const useGameStore = create<GameState>()((set, get) => {
     area: START_ROUTE.screen,
     decisionsOpen: false,
     newsAlert: null,
+    settings: loadSettings(),
+    lastAutosave: null,
 
     openNewGame: () => set({ phase: 'newGame' }),
 
@@ -278,13 +300,12 @@ export const useGameStore = create<GameState>()((set, get) => {
     saveCurrent: async (name, overwriteId) => {
       const { world, liveMatch, revision } = get();
       if (!world) return false;
-      if (liveMatch) {
-        get().showNotice('Maç sürerken kayıt yapılamaz.', 'error');
-        return false;
-      }
+      // Maç yerinde ilerler: imza kayıt başlarken alınır, yazma beklenirken ilerleme kayda dahil sayılmaz
+      const matchSig = liveMatch ? matchSignature(liveMatch) : null;
       try {
-        const id = await saveGame(world, name, overwriteId);
-        set({ savedRevision: revision, currentSaveId: id });
+        // Maç sürüyorsa maçın o anki durumu da kaydedilir
+        const id = await saveGame(world, name, overwriteId, liveMatch);
+        set({ savedRevision: revision, savedMatchSig: matchSig, currentSaveId: id });
         get().showNotice(`Oyun kaydedildi: ${name}`);
         return true;
       } catch (e) {
@@ -296,7 +317,13 @@ export const useGameStore = create<GameState>()((set, get) => {
     loadSave: async (id) => {
       try {
         const world = await loadGame(id);
-        set({ ...enterGame(world), currentSaveId: id, notice: null });
+        const match = await loadSavedMatch(id, world);
+        set({ ...enterGame(world), currentSaveId: id, notice: null, lastAutosave: world.date, liveMatch: match, savedMatchSig: match ? matchSignature(match) : null });
+        // Maç ortasında alınmış kayıt: maç ekranından kaldığı yerden devam eder
+        if (match) {
+          get().navigate({ screen: 'match' });
+          get().showNotice(`Maç kaldığı yerden devam ediyor: ${liveMatchLabel(world, match)}`);
+        }
         return true;
       } catch (e) {
         get().showNotice(e instanceof Error ? e.message : String(e), 'error');
@@ -329,6 +356,12 @@ export const useGameStore = create<GameState>()((set, get) => {
     setUi: (key, value) => set((s) => ({ ui: { ...s.ui, [key]: value } })),
 
     setDecisionsOpen: (open) => set({ decisionsOpen: open }),
+
+    updateSettings: (change) => {
+      const settings = { ...get().settings, ...change };
+      saveSettings(settings);
+      set({ settings });
+    },
 
     dismissNewsAlert: () => set({ newsAlert: null }),
 
@@ -381,7 +414,9 @@ export const useGameStore = create<GameState>()((set, get) => {
         return;
       }
       // Motor dünyayı yerinde değiştirir; yeni referans React'in yeniden çizmesi için.
-      const result = advance(world, gameData);
+      // Ayarlarda kapatılan haber türlerinde Devam durmaz
+      const muted = new Set(get().settings.mutedNews);
+      const result = advance(world, gameData, { stopOn: (n) => !muted.has(n.category) });
       if (result.kind === 'userMatch') {
         const state = startUserMatch(world);
         touch(world);
@@ -397,7 +432,9 @@ export const useGameStore = create<GameState>()((set, get) => {
         runAutosave();
       } else if (result.news.length > 0) {
         // Devam bir haber yüzünden durdu: belirgin uyarı (tıklanınca habere / teklife gidilir)
-        set({ newsAlert: result.news.map((n) => n.id) });
+        if (get().settings.newsAlert) set({ newsAlert: result.news.map((n) => n.id) });
+        // Haber kutusu kapalıysa kısa bildirim: Devam neden durdu
+        else get().showNotice(`Yeni haber: ${result.news[0]!.title}${result.news.length > 1 ? ` (+${result.news.length - 1})` : ''}`);
       }
     },
 

@@ -37,6 +37,7 @@
   /* Vurgular */
   --accent: #f6cf3c;
   --accent-ink: #1d1a0b;
+  --accent-rgb: 246 207 60;
   --good: #8fe877;
   --low: #e9806f;
 
@@ -707,12 +708,12 @@ select {
 }
 
 .data-table tbody tr.selected {
-  background: rgba(246, 207, 60, 0.16);
+  background: rgb(var(--accent-rgb) / 0.16);
   box-shadow: inset 3px 0 var(--accent);
 }
 
 .data-table tbody tr.own-row {
-  background: rgba(246, 207, 60, 0.12);
+  background: rgb(var(--accent-rgb) / 0.12);
   font-weight: 600;
 }
 
@@ -1227,8 +1228,8 @@ select {
 .motm {
   padding: 8px 14px;
   border-radius: var(--radius);
-  background: rgba(246, 207, 60, 0.12);
-  border: 1px solid rgba(246, 207, 60, 0.3);
+  background: rgb(var(--accent-rgb) / 0.12);
+  border: 1px solid rgb(var(--accent-rgb) / 0.3);
   color: var(--text);
 }
 
@@ -1326,7 +1327,7 @@ select {
 }
 
 .ev-goal {
-  background: rgba(246, 207, 60, 0.14);
+  background: rgb(var(--accent-rgb) / 0.14);
   box-shadow: inset 4px 0 var(--accent);
 }
 
@@ -1373,7 +1374,7 @@ select {
 }
 
 .lu-row.selected {
-  background: rgba(246, 207, 60, 0.18);
+  background: rgb(var(--accent-rgb) / 0.18);
   box-shadow: inset 3px 0 var(--accent);
 }
 
@@ -1579,7 +1580,7 @@ select {
 
 .bench-cell.drop {
   box-shadow: 0 0 0 2px var(--accent);
-  background: rgba(246, 207, 60, 0.12);
+  background: rgb(var(--accent-rgb) / 0.12);
 }
 
 /* Sahadan listeye bırakma: kadro dışı */
@@ -1675,7 +1676,7 @@ select {
 }
 
 .pitch-slot.selected {
-  background: rgba(246, 207, 60, 0.25);
+  background: rgb(var(--accent-rgb) / 0.25);
   box-shadow: 0 0 0 2px var(--accent);
 }
 
@@ -1699,7 +1700,7 @@ select {
 }
 
 .fit-good { background: #3ddc84; }
-.fit-ok { background: #f6cf3c; }
+.fit-ok { background: var(--accent); }
 .fit-bad { background: #ef4444; }
 
 .armband {
@@ -1933,7 +1934,7 @@ select {
 }
 
 .save-row.current {
-  background: rgba(246, 207, 60, 0.1);
+  background: rgb(var(--accent-rgb) / 0.1);
   box-shadow: inset 3px 0 var(--accent);
 }
 
@@ -2095,7 +2096,7 @@ select {
 }
 
 .negotiation.signed { background: rgba(34, 163, 90, 0.25); color: #b7f5c9; }
-.negotiation.counter { background: rgba(246, 207, 60, 0.15); color: var(--accent); }
+.negotiation.counter { background: rgb(var(--accent-rgb) / 0.15); color: var(--accent); }
 .negotiation.rejected,
 .negotiation.collapsed,
 .negotiation.error { background: rgba(214, 69, 61, 0.2); color: #ffb3aa; }
@@ -2112,7 +2113,7 @@ select {
 }
 
 .agent-style.fair { background: rgba(34, 163, 90, 0.25); color: #b7f5c9; }
-.agent-style.greedy { background: rgba(246, 207, 60, 0.18); color: var(--accent); }
+.agent-style.greedy { background: rgb(var(--accent-rgb) / 0.18); color: var(--accent); }
 .agent-style.tough { background: rgba(214, 69, 61, 0.22); color: #ffb3aa; }
 
 .agent-hint {
@@ -2514,7 +2515,7 @@ select {
 
 .focus-card.active {
   border-color: var(--accent);
-  background: rgba(246, 207, 60, 0.12);
+  background: rgb(var(--accent-rgb) / 0.12);
   box-shadow: inset 3px 0 var(--accent);
 }
 
@@ -2582,7 +2583,7 @@ select {
 }
 
 .inbox-row.selected {
-  background: rgba(246, 207, 60, 0.14);
+  background: rgb(var(--accent-rgb) / 0.14);
   box-shadow: inset 3px 0 var(--accent);
 }
 
@@ -2743,8 +2744,8 @@ select {
   margin: 0 14px 10px;
   padding: 8px 12px;
   border-radius: 8px;
-  background: rgba(246, 207, 60, 0.1);
-  border: 1px solid rgba(246, 207, 60, 0.35);
+  background: rgb(var(--accent-rgb) / 0.1);
+  border: 1px solid rgb(var(--accent-rgb) / 0.35);
   font-size: 12.5px;
 }
 
@@ -2822,7 +2823,7 @@ select {
   padding: 10px 14px;
   border-left: 4px solid var(--accent);
   border-radius: 8px;
-  background: rgba(246, 207, 60, 0.08);
+  background: rgb(var(--accent-rgb) / 0.08);
 }
 
 .cmp-advice-title {
@@ -2976,7 +2977,7 @@ select {
 }
 
 .report-ratings tr.motm-row td {
-  background: rgba(246, 207, 60, 0.1);
+  background: rgb(var(--accent-rgb) / 0.1);
 }
 
 .motm-star {
@@ -3365,7 +3366,7 @@ select {
 }
 
 .event-bar.goal {
-  background: linear-gradient(90deg, rgba(246, 207, 60, 0.35), rgba(0, 0, 0, 0.35));
+  background: linear-gradient(90deg, rgb(var(--accent-rgb) / 0.35), rgba(0, 0, 0, 0.35));
   color: #fff;
   font-size: 15px;
 }
@@ -3588,7 +3589,7 @@ select {
 }
 
 .pitch-banner.penalty {
-  background: #f6cf3c;
+  background: var(--accent);
   color: #1a1a1a;
   border-color: #1a1a1a;
 }
@@ -3752,7 +3753,7 @@ select {
 
 /* ================= Transfer / kiralık listesi ================= */
 .tag-list-transfer {
-  background: rgba(246, 207, 60, 0.3);
+  background: rgb(var(--accent-rgb) / 0.3);
   color: #fff2c2;
 }
 
@@ -3808,7 +3809,7 @@ select {
 }
 
 .advice-badge.high { background: rgba(239, 68, 68, 0.35); color: #ffe0e0; }
-.advice-badge.medium { background: rgba(246, 207, 60, 0.3); color: #fff2c2; }
+.advice-badge.medium { background: rgb(var(--accent-rgb) / 0.3); color: #fff2c2; }
 .advice-badge.low { background: rgba(255, 255, 255, 0.12); color: var(--text-soft); }
 
 .assistant-panel.compact .advice {
@@ -3821,7 +3822,7 @@ select {
   padding: 10px 12px;
   border-left: 4px solid var(--accent);
   border-radius: 6px;
-  background: rgba(246, 207, 60, 0.1);
+  background: rgb(var(--accent-rgb) / 0.1);
   line-height: 1.45;
 }
 
@@ -3847,13 +3848,13 @@ select {
   text-align: center;
 }
 
-.level-leader { background: rgba(246, 207, 60, 0.35); color: #fff2c2; }
+.level-leader { background: rgb(var(--accent-rgb) / 0.35); color: #fff2c2; }
 .level-influential { background: rgba(47, 116, 208, 0.4); color: #dbe8ff; }
 .level-respected { background: rgba(23, 160, 106, 0.35); color: #d4f7e6; }
 .level-other { background: rgba(255, 255, 255, 0.1); color: var(--text-muted); }
 
 .data-table tr.row-leader td {
-  background: rgba(246, 207, 60, 0.06);
+  background: rgb(var(--accent-rgb) / 0.06);
 }
 
 .influence-bar {
@@ -4432,7 +4433,7 @@ select {
   border: 2px solid var(--accent);
   border-radius: 14px;
   background: linear-gradient(180deg, rgba(20, 52, 22, 0.98), rgba(10, 30, 12, 0.98));
-  box-shadow: 0 0 0 4px rgba(246, 207, 60, 0.15), 0 20px 50px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 0 4px rgb(var(--accent-rgb) / 0.15), 0 20px 50px rgba(0, 0, 0, 0.6);
   transform: translateX(-50%);
   animation: news-alert-in 0.35s cubic-bezier(0.2, 1.4, 0.5, 1);
 }
@@ -4482,7 +4483,7 @@ select {
 
 .news-alert-item:hover {
   border-color: var(--accent);
-  background: rgba(246, 207, 60, 0.1);
+  background: rgb(var(--accent-rgb) / 0.1);
 }
 
 .news-alert-text {
@@ -4620,7 +4621,7 @@ select {
 .pitch.editing .pitch-slot.moving {
   z-index: 3;
   cursor: grabbing;
-  background: rgba(246, 207, 60, 0.2);
+  background: rgb(var(--accent-rgb) / 0.2);
 }
 
 .shape-zones span {
@@ -4647,4 +4648,462 @@ select {
   color: var(--accent);
   font-size: 12px;
   text-align: center;
+}
+
+/* ================= Ayarlar ================= */
+.settings-note {
+  margin-bottom: 12px;
+  padding: 0 2px;
+  font-size: 12px;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.settings-grid > .panel {
+  margin-bottom: 0;
+}
+
+.settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.setting-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.setting-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--text-soft);
+}
+
+.setting-hint {
+  max-width: 62ch;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.setting-links {
+  display: flex;
+  gap: 14px;
+  margin-top: 6px;
+}
+
+.link-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.link-btn:hover {
+  filter: brightness(1.2);
+}
+
+.settings-reset {
+  padding-top: 10px;
+  border-top: 1px solid var(--row-line);
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px 5px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.swatch:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.swatch.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  color: var(--text);
+}
+
+.swatch-dot,
+.swatch-sample {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.swatch-bg .swatch-sample {
+  border-radius: 4px;
+}
+
+.swatch-bg.bg-grass .swatch-sample {
+  background: repeating-linear-gradient(90deg, #2a6326 0 4px, #275c23 4px 8px);
+}
+
+.swatch-bg.bg-plain .swatch-sample {
+  background: #26581f;
+}
+
+.swatch-bg.bg-navy .swatch-sample {
+  background: #16213a;
+}
+
+/* Zemin seçenekleri (ayarlardan): çim şeritli varsayılandır */
+html[data-bg='plain'] .pitch-bg {
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(255, 255, 255, 0.06), transparent 60%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.3)),
+    #26581f;
+}
+
+html[data-bg='navy'] {
+  --panel: rgba(10, 18, 34, 0.78);
+  --panel-head-1: #2b3d63;
+  --panel-head-2: #1c2a47;
+}
+
+html[data-bg='navy'] .pitch-bg {
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(255, 255, 255, 0.07), transparent 60%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.35)),
+    #16213a;
+}
+
+/* Ana menüden ayarlar */
+.splash-settings {
+  height: 100%;
+  overflow: auto;
+  padding: 24px 32px;
+}
+
+.splash-settings-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.splash-settings-title {
+  margin: 0;
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 34px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ================= Klavye kısayolları ================= */
+kbd {
+  display: inline-block;
+  min-width: 22px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-bottom-width: 2px;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.shortcuts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 4px 24px;
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--row-line);
+  font-size: 12px;
+}
+
+.shortcut-keys {
+  flex: none;
+  min-width: 78px;
+  white-space: nowrap;
+}
+
+.shortcut-plus {
+  margin: 0 3px;
+  color: var(--text-dim);
+}
+
+.shortcut-text {
+  color: var(--text-soft);
+}
+
+/* Sol menüdeki tuş ipuçları: rozetin soluna dizilir */
+.menu-key {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.45;
+  font-size: 10px;
+  line-height: 1.3;
+  background: transparent;
+}
+
+.menu-item:hover .menu-key,
+.menu-item.active .menu-key {
+  opacity: 0.9;
+}
+
+.sidebar-menu.hotkeys .menu-badge {
+  right: 34px;
+}
+
+/* ================= Grafikler ================= */
+.screen > .tabs {
+  margin-bottom: 12px;
+}
+
+/* Koyu zemin için doğrulanmış kategorik sıra (mavi, turuncu, aqua); bağlam ve ikincil çizgiler nötr */
+.viz,
+.viz-filters {
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
+  --viz-3: #199e70;
+  --viz-context: rgba(255, 255, 255, 0.2);
+  --viz-muted: #a9b9a6;
+  --viz-surface: #10291a;
+  --viz-grid: rgba(255, 255, 255, 0.08);
+  position: relative;
+}
+
+.viz-filters,
+.viz-form-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-bottom: 10px;
+}
+
+.viz-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-filter select {
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--text);
+  font: inherit;
+}
+
+.viz-strong {
+  color: var(--text);
+}
+
+.viz-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-bottom: 4px;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.viz-legend span,
+.viz-tooltip-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Çizgi anahtarı: kısa çizgi; renk currentColor'dan */
+.viz-key {
+  display: inline-block;
+  width: 16px;
+  height: 0;
+  border-top: 2px solid currentColor;
+  vertical-align: middle;
+}
+
+.viz-key.dashed {
+  border-top-style: dashed;
+}
+
+.viz-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.viz-plot {
+  position: relative;
+}
+
+.viz-plot svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  outline: none;
+}
+
+.viz-plot svg:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.viz-grid line {
+  stroke: var(--viz-grid);
+  stroke-width: 1;
+}
+
+.viz-grid text,
+.viz-tick {
+  fill: var(--text-muted);
+  font-size: 11px;
+}
+
+.viz-band-cl { fill: rgb(59 130 246 / 0.1); }
+.viz-band-el { fill: rgb(245 158 11 / 0.08); }
+.viz-band-rel { fill: rgb(239 68 68 / 0.1); }
+
+.viz-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.viz-line.primary {
+  stroke-width: 3;
+}
+
+.viz-line.dashed {
+  stroke-dasharray: 5 4;
+}
+
+.viz-line.context {
+  stroke: var(--viz-context);
+  stroke-width: 1.5;
+}
+
+/* Uç işareti: yüzey renginde 2px halka */
+.viz-dot {
+  stroke: var(--viz-surface);
+  stroke-width: 2;
+}
+
+.viz-label {
+  fill: var(--text-soft);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.viz-cross {
+  stroke: rgba(255, 255, 255, 0.35);
+  stroke-width: 1;
+}
+
+.viz-tooltip {
+  position: absolute;
+  top: 8px;
+  z-index: 5;
+  min-width: 150px;
+  max-width: 280px;
+  margin-left: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(6, 18, 10, 0.94);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.viz-tooltip.left {
+  transform: translateX(-100%);
+  margin-left: -12px;
+}
+
+.viz-tooltip-head {
+  margin-bottom: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.viz-tooltip-row {
+  display: flex;
+  color: var(--text-muted);
+}
+
+.viz-tooltip-row strong {
+  min-width: 34px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.viz-tooltip-note {
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid var(--row-line);
+  color: var(--text-soft);
+}
+
+.viz-table-toggle {
+  margin-top: 8px;
+}
+
+.viz-table {
+  max-height: 260px;
+  margin-top: 8px;
+  overflow: auto;
+}
+
+/* Maç ortasında alınmış kayıtlar */
+.save-live {
+  margin-top: 2px;
+  color: var(--accent);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.save-live-note {
+  padding: 0 0 10px;
+  color: var(--accent);
 }

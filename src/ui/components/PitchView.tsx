@@ -1,6 +1,8 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { getClub, type MatchState, type Side } from '../../engine';
-import { useWorld } from '../../store/gameStore';
+import { useGameStore, useWorld } from '../../store/gameStore';
+import { MATCH_SPEED_FACTOR } from '../../store/settings';
+import { uiZoom } from '../appearance';
 import { readableText } from '../colors';
 import {
   cameraTransform,
@@ -153,7 +155,7 @@ function useFitHeight(ref: React.RefObject<HTMLDivElement | null>, layoutKey: st
   useLayoutEffect(() => {
     const measure = () => {
       if (fullscreen) {
-        setHeight(Math.max(320, window.innerHeight - FULLSCREEN_MARGIN));
+        setHeight(Math.max(320, window.innerHeight / uiZoom() - FULLSCREEN_MARGIN));
         return;
       }
       const el = ref.current;
@@ -217,6 +219,8 @@ export type CameraMode = 'full' | 'follow';
 
 export function PitchView({ match, camera, fullscreen }: { match: MatchState; camera: CameraMode; fullscreen: boolean }) {
   const world = useWorld();
+  // Maç hızı (Ayarlar): sahne zamanı bu çarpanla akar
+  const speed = MATCH_SPEED_FACTOR[useGameStore((s) => s.settings.matchSpeed)];
   const ref = useRef<HTMLDivElement>(null);
   const play = match.lastPlay;
   const kickoff = play === null;
@@ -266,7 +270,7 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
     let lastIndex = -1;
     let lastTime = performance.now();
     const tick = (now: number) => {
-      const t = now - begin;
+      const t = (now - begin) * speed;
       let sample = sampleScene(scene, spots, t, from, starts);
       if (reduce && !sample.leadIn) {
         sample = { ...sample, players: spots[sample.index]!, ball: scene[sample.index]!.ball, height: 0 };
@@ -320,7 +324,7 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [scene, spots, starts, stageWidth, view, camera, kickoff]);
+  }, [scene, spots, starts, stageWidth, view, camera, kickoff, speed]);
 
   const homeClub = getClub(world, match.home.clubId);
   const awayClub = getClub(world, match.away.clubId);

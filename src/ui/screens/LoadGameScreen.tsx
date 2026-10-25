@@ -73,7 +73,10 @@ export function LoadGameScreen() {
                       <td>
                         <span className={`save-kind${s.isAutosave ? ' auto' : ''}`}>{s.isAutosave ? 'Otomatik' : 'Kayıt'}</span>
                       </td>
-                      <td className="strong">{s.name}</td>
+                      <td className="strong">
+                        {s.name}
+                        {s.liveMatch && <div className="save-live">Maç ortasında: {s.liveMatch}</div>}
+                      </td>
                       <td>
                         <span className="club-cell">
                           {club && <ClubBadge club={club} size={16} />} {s.clubName}

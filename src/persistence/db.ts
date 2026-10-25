@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
-import type { GameWorld } from '../engine';
+import type { GameWorld, MatchState } from '../engine';
 
 /**
  * Kayıt listesinde gösterilen bilgiler. Oyunun kendisi ayrı tabloda (SaveData) durur;
@@ -19,6 +19,8 @@ export interface SaveSlot {
   updatedAt: number;
   /** Menajer adı (biçim 5 öncesi kayıtlarda yok). */
   managerName?: string;
+  /** Maç ortasında alınan kayıt: maçın o anki durumu ("Galatasaray 1-0 Fenerbahçe · 34'"). */
+  liveMatch?: string;
   /** Kayıt biçimi sürümü; ileride biçim değişirse eski kayıtları dönüştürmek için. */
   formatVersion: number;
 }
@@ -26,6 +28,8 @@ export interface SaveSlot {
 export interface SaveData {
   id: number;
   world: GameWorld;
+  /** Maç ortasında alınan kayıtta sürmekte olan maç (dünya, maçın başladığı günkü hâlinde). */
+  liveMatch?: MatchState;
 }
 
 export const db = new Dexie('fm-super-lig') as Dexie & {

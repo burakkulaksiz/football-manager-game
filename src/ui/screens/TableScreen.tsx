@@ -1,7 +1,8 @@
 import { computeStandings, getClub, goalDifference, leagueClubs, seasonLabel } from '../../engine';
-import { useWorld } from '../../store/gameStore';
+import { useUiState, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { OutcomeBox } from '../components/OutcomeBox';
+import { TableCharts } from '../components/TableCharts';
 
 /** Sıraya göre bölge: Avrupa kupaları ve küme düşme hattı. */
 function zoneClass(position: number, total: number): string {
@@ -12,6 +13,19 @@ function zoneClass(position: number, total: number): string {
 }
 
 export function TableScreen() {
+  const [view, setView] = useUiState<'table' | 'charts'>('table.view', 'table');
+  return (
+    <div className="screen">
+      <div className="tabs" role="tablist">
+        <button className={`tab${view === 'table' ? ' active' : ''}`} onClick={() => setView('table')}>Tablo</button>
+        <button className={`tab${view === 'charts' ? ' active' : ''}`} onClick={() => setView('charts')}>Grafikler</button>
+      </div>
+      {view === 'table' ? <StandingsTable /> : <TableCharts />}
+    </div>
+  );
+}
+
+function StandingsTable() {
   const world = useWorld();
   const table = computeStandings(leagueClubs(world).map((c) => c.id), world.season.fixtures);
 

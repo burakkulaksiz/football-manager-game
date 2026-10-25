@@ -1,8 +1,10 @@
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { hasUnsavedProgress, useGameStore, type ScreenId } from '../../store/gameStore';
 import { DecisionsDialog } from '../components/DecisionsDialog';
 import { GameOverOverlay } from '../components/GameOverOverlay';
 import { NewsAlert } from '../components/NewsAlert';
+import { ShortcutsDialog } from '../components/ShortcutList';
+import { useGlobalHotkeys } from '../hotkeys';
 import { AcademyScreen } from '../screens/AcademyScreen';
 import { ClubInfoScreen } from '../screens/ClubInfoScreen';
 import { DynamicsScreen } from '../screens/DynamicsScreen';
@@ -10,6 +12,7 @@ import { FinanceScreen } from '../screens/FinanceScreen';
 import { InternationalScreen } from '../screens/InternationalScreen';
 import { ManagerScreen } from '../screens/ManagerScreen';
 import { FacilitiesScreen } from '../screens/FacilitiesScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
 import { FixturesScreen } from '../screens/FixturesScreen';
 import { InboxScreen } from '../screens/InboxScreen';
 import { MatchReportScreen } from '../screens/MatchReportScreen';
@@ -47,6 +50,7 @@ function ScreenContent({ screen }: { screen: ScreenId }) {
     case 'international': return <InternationalScreen />;
     case 'manager': return <ManagerScreen />;
     case 'facilities': return <FacilitiesScreen />;
+    case 'settings': return <SettingsScreen />;
     default: return <PlaceholderScreen screen={screen} />;
   }
 }
@@ -57,7 +61,10 @@ export function GameShell() {
   const playerId = useGameStore((s) => s.selectedPlayerId);
   const fixtureId = useGameStore((s) => s.selectedFixtureId);
   const unsaved = useGameStore(hasUnsavedProgress);
+  const warnUnsaved = useGameStore((s) => s.settings.warnUnsaved);
   const historyIndex = useGameStore((s) => s.historyIndex);
+  const [helpOpen, setHelpOpen] = useState(false);
+  useGlobalHotkeys(() => setHelpOpen(true));
   const pageKey = `${screen}-${playerId ?? ''}-${fixtureId ?? ''}`;
   // Geri / ileri dönüşte sayfanın kaydırma konumu geri gelir (geçmişteki yer + sayfa başına)
   const mainRef = useRef<HTMLElement>(null);
@@ -70,11 +77,11 @@ export function GameShell() {
 
   // Kaydedilmemiş ilerleme varken sekme kapatılır/yenilenirse tarayıcı uyarsın.
   useEffect(() => {
-    if (!unsaved) return;
+    if (!unsaved || !warnUnsaved) return;
     const warn = (e: BeforeUnloadEvent) => e.preventDefault();
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
-  }, [unsaved]);
+  }, [unsaved, warnUnsaved]);
 
   return (
     <div className="shell">
@@ -96,6 +103,7 @@ export function GameShell() {
       <GameOverOverlay />
       <NewsAlert />
       <DecisionsDialog />
+      {helpOpen && <ShortcutsDialog onClose={() => setHelpOpen(false)} />}
     </div>
   );
 }

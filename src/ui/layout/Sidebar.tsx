@@ -3,6 +3,7 @@ import { getClub, nextFixtureFor, shortFixtureLabel, unreadCount } from '../../e
 import { hasUnsavedProgress, useGameStore, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { QuitDialog, SaveDialog } from '../components/SaveDialogs';
+import { SCREEN_KEYS, useHotkeys } from '../hotkeys';
 import { formatDayMonth } from '../labels';
 import { MENU } from '../screens';
 import { actionableOffers } from '../screens/TransferScreen';
@@ -47,12 +48,20 @@ export function Sidebar() {
   const pendingActions = actionableOffers(world.offers, world.playerClubId);
   const unread = unreadCount(world);
   const [dialog, setDialog] = useState<'save' | 'quit' | null>(null);
+  const quitConfirm = useGameStore((s) => s.settings.quitConfirm);
+  const quitToMenu = useGameStore((s) => s.quitToMenu);
+  const hotkeys = useGameStore((s) => s.settings.hotkeys);
+  useHotkeys((e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.key.toLowerCase() !== 's') return false;
+    setDialog('save');
+    return true;
+  });
   // Oyuncu profili açıkken "Kadro" vurgulu kalsın.
   const isActive = (id: string) => id === screen || (screen === 'player' && id === 'squad');
 
   return (
     <aside className="sidebar">
-      <nav className="sidebar-menu">
+      <nav className={`sidebar-menu${hotkeys ? ' hotkeys' : ''}`}>
         {MENU.map((group) => (
           <div key={group.title} className="menu-group">
             <div className="menu-group-title">{group.title}</div>
@@ -63,6 +72,7 @@ export function Sidebar() {
                 onClick={() => setScreen(item.id)}
               >
                 {item.label}
+                {hotkeys && SCREEN_KEYS[item.id] && <kbd className="menu-key">{SCREEN_KEYS[item.id]!.toUpperCase()}</kbd>}
                 {item.id === 'transfers' && pendingActions > 0 && <span className="menu-badge">{pendingActions}</span>}
                 {item.id === 'inbox' && unread > 0 && <span className="menu-badge inbox-badge">{unread}</span>}
               </button>
@@ -76,12 +86,18 @@ export function Sidebar() {
           <button
             className="action-link"
             onClick={() => setDialog('save')}
-            disabled={liveMatch !== null}
-            title={liveMatch ? 'Maç sürerken kayıt yapılamaz' : unsaved ? 'Kaydedilmemiş ilerleme var' : 'Tüm ilerleme kayıtlı'}
+            title={unsaved ? (liveMatch ? 'Maç son kayıttan beri ilerledi; kayıt maçı bu dakikadan sürdürür' : 'Kaydedilmemiş ilerleme var') : 'Tüm ilerleme kayıtlı'}
           >
-            Kaydet{unsaved && !liveMatch && <i className="unsaved-dot" />}
+            Kaydet{unsaved && <i className="unsaved-dot" />}
           </button>
-          <button className="action-link" onClick={() => setDialog('quit')}>
+          <button
+            className="action-link"
+            onClick={() => {
+              // Ayar: yalnızca kaydedilmemiş ilerleme varken sor
+              if (quitConfirm === 'unsaved' && !unsaved) quitToMenu();
+              else setDialog('quit');
+            }}
+          >
             Ana Menü
           </button>
         </div>

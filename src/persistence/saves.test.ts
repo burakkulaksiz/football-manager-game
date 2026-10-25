@@ -1,11 +1,11 @@
 // Node'da IndexedDB yok; sahte bir uygulama (bellek içi) Dexie'den önce yüklenmeli.
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { advance, createWorld, type GameWorld } from '../engine';
+import { advance, createWorld, startUserMatch, stepMatch, type GameWorld, type MatchState } from '../engine';
 import { makeResult } from '../engine/testing';
 import { gameData } from '../gameData';
 import { db } from './db';
-import { autosave, careerIdOf, deleteSave, listSaves, loadGame, saveGame } from './saves';
+import { autosave, careerIdOf, deleteSave, listSaves, loadGame, loadSavedMatch, saveGame } from './saves';
 
 const START = '2026-07-01';
 
@@ -14,6 +14,15 @@ function playRounds(world: GameWorld, matchDays: number): void {
   while (played < matchDays) {
     if (advance(world, gameData, { autoPlayUserMatch: true }).kind === 'played') played++;
   }
+}
+
+/** Kullanıcının maç gününe kadar ilerler ve canlı maçı kurup birkaç dakika oynatır. */
+function midMatch(world: GameWorld, steps: number): MatchState {
+  let guard = 0;
+  while (advance(world, gameData).kind !== 'userMatch' && guard++ < 400);
+  const match = startUserMatch(world)!;
+  for (let i = 0; i < steps; i++) stepMatch(match, world.players);
+  return match;
 }
 
 beforeEach(async () => {
@@ -62,6 +71,57 @@ describe('kayıt sistemi', () => {
     expect(autos).toHaveLength(2);
     const auto = autos.find((s) => s.careerId === careerIdOf(a))!;
     expect(auto.gameDate).toBe(a.date);
+  });
+
+  it('maç ortasında alınan kayıt maçı kaldığı yerden yükler', async () => {
+    const world = createWorld(gameData, 21, 'galatasaray', START);
+    const match = midMatch(world, 30);
+    expect(match.minute).toBeGreaterThan(10);
+    const id = await saveGame(world, 'Maç ortası', undefined, match);
+    // Kayıttan sonra maç ilerlese de kayıt, alındığı anı korur
+    const minuteAtSave = match.minute;
+    stepMatch(match, world.players);
+
+    expect(await loadGame(id)).toEqual(world);
+    const restored = await loadSavedMatch(id, world);
+    expect(restored).not.toBeNull();
+    expect(restored!.minute).toBe(minuteAtSave);
+    expect(restored!.fixtureId).toBe(match.fixtureId);
+    // Kayıt listesinde maçın durumu görünür
+    const slot = (await listSaves()).find((s) => s.id === id)!;
+    expect(slot.liveMatch).toMatch(/\d+-\d+ .* · /);
+
+    // Yüklenen maç aynı rastgelelikle sürer: kayıttan devam eden maç, hiç kaydedilmeden sürenle aynı bitiş skorunu verir
+    const a = structuredClone(restored!);
+    const b = structuredClone(restored!);
+    for (let i = 0; i < 120; i++) {
+      stepMatch(a, world.players);
+      stepMatch(b, world.players);
+    }
+    expect(a.score).toEqual(b.score);
+    expect(a.period).toBe('full');
+  });
+
+  it('maçsız kayıtta ve otomatik kayıtta canlı maç yoktur; üzerine yazma maçı siler', async () => {
+    const world = createWorld(gameData, 22, 'galatasaray', START);
+    const match = midMatch(world, 20);
+    const id = await saveGame(world, 'Önce maçlı', undefined, match);
+    expect(await loadSavedMatch(id, world)).not.toBeNull();
+    await saveGame(world, 'Sonra maçsız', id);
+    expect(await loadSavedMatch(id, world)).toBeNull();
+    expect((await listSaves()).find((s) => s.id === id)!.liveMatch).toBeUndefined();
+
+    const autoId = await autosave(world);
+    expect(await loadSavedMatch(autoId, world)).toBeNull();
+  });
+
+  it('maçı artık oynanmış kayıt geçersizdir (maç yok sayılır)', async () => {
+    const world = createWorld(gameData, 23, 'galatasaray', START);
+    const match = midMatch(world, 20);
+    const id = await saveGame(world, 'Maç ortası', undefined, match);
+    const played = structuredClone(world);
+    played.season.fixtures.find((f) => f.id === match.fixtureId)!.result = makeResult(1, 0);
+    expect(await loadSavedMatch(id, played)).toBeNull();
   });
 
   it('silinen kayıt listeden ve veriden kalkar', async () => {

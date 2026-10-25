@@ -108,7 +108,8 @@ describe('sezon döngüsü', () => {
     if (world.gameOver) return; // nadiren kovulabilir; döngü yine de çalıştı
     expect(world.history).toHaveLength(2);
     expect(world.history[1]!.year).toBe(2027);
-  });
+    // Tam sezon simülasyonu: yük altında 30 sn'lik varsayılanı aşabiliyor (bkz. FINDINGS.md, test süreleri)
+  }, 120_000);
 });
 
 describe('serbest oyuncular', () => {

@@ -9,9 +9,11 @@ import {
   PLAN_LABELS,
   primaryPosition,
   type GameWorld,
+  type MatchEventType,
   type MatchState,
   type Side,
 } from '../../engine';
+import { MATCH_SPEEDS, MATCH_SPEED_FACTOR, MATCH_SPEED_LABELS } from '../../store/settings';
 import { useGameStore, userSide, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { readableText } from '../colors';
@@ -20,6 +22,7 @@ import { MatchStatRows } from '../components/MatchStatRows';
 import { AssistantPanel } from '../components/AssistantPanel';
 import { MatchMaps } from '../components/MatchMaps';
 import { PitchView, type CameraMode } from '../components/PitchView';
+import { useHotkeys } from '../hotkeys';
 import { buildScene, isHighlight, QUIET_MINUTE_MS, revealDelayMs, sceneDurationMs } from '../pitchScene';
 import { MENTALITY_LABELS, POSITION_LABELS, positionGroup, ratingClass } from '../labels';
 
@@ -188,17 +191,6 @@ function StatsPanel({ match }: { match: MatchState }) {
   );
 }
 
-const PITCH_PREF_KEY = 'fm.showPitch';
-
-/** Tercih tarayıcıda hatırlanır; depolama kapalıysa varsayılan açık. */
-function readPitchPref(): boolean {
-  try {
-    return localStorage.getItem(PITCH_PREF_KEY) !== '0';
-  } catch {
-    return true;
-  }
-}
-
 /** Sahanın altında son olay (FM'deki yorum şeridi gibi). */
 function EventBar({ match, held }: { match: MatchState; held: Held | null }) {
   const world = useWorld();
@@ -226,40 +218,18 @@ function EventBar({ match, held }: { match: MatchState; held: Held | null }) {
   );
 }
 
-/** 2D saha açık/kapalı tercihi (tarayıcıda hatırlanır). */
+/** 2D saha açık/kapalı tercihi (Ayarlar'da da değişir, tarayıcıda hatırlanır). */
 function usePitchPref(): [boolean, () => void] {
-  const [show, setShow] = useState(readPitchPref);
-  const toggle = () => {
-    setShow(!show);
-    try {
-      localStorage.setItem(PITCH_PREF_KEY, show ? '0' : '1');
-    } catch {
-      // depolama kapalı: tercih yalnızca bu oturumda geçerli
-    }
-  };
-  return [show, toggle];
+  const show = useGameStore((s) => s.settings.showPitch);
+  const update = useGameStore((s) => s.updateSettings);
+  return [show, () => update({ showPitch: !show })];
 }
 
-const CAMERA_PREF_KEY = 'fm.pitchCamera';
-
-/** Kamera tercihi (tam saha / yakın) tarayıcıda hatırlanır. */
+/** Kamera tercihi (tam saha / yakın; Ayarlar'da da değişir). */
 function useCameraPref(): [CameraMode, (mode: CameraMode) => void] {
-  const [mode, setMode] = useState<CameraMode>(() => {
-    try {
-      return localStorage.getItem(CAMERA_PREF_KEY) === 'follow' ? 'follow' : 'full';
-    } catch {
-      return 'full';
-    }
-  });
-  const change = (next: CameraMode) => {
-    setMode(next);
-    try {
-      localStorage.setItem(CAMERA_PREF_KEY, next);
-    } catch {
-      // depolama kapalı: tercih yalnızca bu oturumda geçerli
-    }
-  };
-  return [mode, change];
+  const camera = useGameStore((s) => s.settings.camera);
+  const update = useGameStore((s) => s.updateSettings);
+  return [camera, (mode) => update({ camera: mode })];
 }
 
 /** Tam ekranda tabela görünmez: sahanın üstünde skor, saat ve oynat/duraklat. */
@@ -353,16 +323,20 @@ function PitchPanel({ match, held, show, toggle, running, onToggleRun, camera, f
   );
 }
 
+/** "Önemli olaylar" anlatımında gizlenen sıradan olaylar. */
+const MINOR_EVENTS: ReadonlySet<MatchEventType> = new Set(['corner', 'foul', 'tackle', 'blocked', 'info']);
+
 function Commentary({ match, held }: { match: MatchState; held: Held | null }) {
+  const mode = useGameStore((s) => s.settings.commentary);
   const visible = shownEvents(match, held);
-  const events = [...visible].reverse();
+  const events = [...visible].map((e, i) => ({ e, key: i })).filter(({ e }) => mode === 'all' || !MINOR_EVENTS.has(e.type)).reverse();
   return (
     <section className="panel">
       <h2 className="panel-title">Anlatım</h2>
       <div className="commentary">
         {events.length === 0 && <div className="muted commentary-empty">Maç henüz başlamadı.</div>}
-        {events.map((e, i) => (
-          <div key={visible.length - i} className={`ev ev-${e.type}${e.side ? ` ev-${e.side}` : ''}`}>
+        {events.map(({ e, key }) => (
+          <div key={key} className={`ev ev-${e.type}${e.side ? ` ev-${e.side}` : ''}`}>
             <span className="ev-minute">{e.type === 'kickoff' ? '' : formatMinute(e.minute, e.extra)}</span>
             <span className="ev-text">{e.text}</span>
           </div>
@@ -566,6 +540,8 @@ export function MatchScreen() {
   const [running, setRunning] = useState(false);
   const [showTactics, setShowTactics] = useState(false);
   const [showPitch, togglePitch] = usePitchPref();
+  // Maç hızı (Ayarlar): saat ve 2D sahadaki sahneler bu çarpanla hızlanır
+  const speed = MATCH_SPEED_FACTOR[useGameStore((s) => s.settings.matchSpeed)];
   const [camera, setCamera] = useCameraPref();
   const pitchRef = useRef<HTMLElement>(null);
   const [fullscreen, enterFullscreen, exitFullscreen] = useFullscreen(pitchRef);
@@ -573,6 +549,39 @@ export function MatchScreen() {
   // Saatin attığı son adımdan önceki durum ve önemli an sürerken gizlenen sonuç
   const pendingHold = useRef<Held | null>(null);
   const [held, setHeld] = useState<Held | null>(null);
+
+  const finishMatch = useGameStore((s) => s.finishLiveMatch);
+  const updateSettings = useGameStore((s) => s.updateSettings);
+  const showNotice = useGameStore((s) => s.showNotice);
+  const matchSpeed = useGameStore((s) => s.settings.matchSpeed);
+
+  // Başlama ve devre arası bir adımla geçilir (Kontroller'deki "Başlat" ile aynı)
+  const toggleRun = () => {
+    if (!match) return;
+    if (running) {
+      setRunning(false);
+      return;
+    }
+    if (match.period === 'pre' || match.period === 'half') step();
+    setRunning(true);
+  };
+
+  // Klavye: Boşluk başlat / duraklat (maç bitince Maçı Bitir), +/- maç hızı
+  useHotkeys((e) => {
+    if (!match || e.ctrlKey || e.altKey || e.metaKey) return false;
+    if (e.key === ' ') {
+      if (e.repeat) return true;
+      if (match.period === 'full') finishMatch();
+      else toggleRun();
+      return true;
+    }
+    const delta = e.key === '+' || e.key === '=' ? 1 : e.key === '-' ? -1 : 0;
+    if (delta === 0) return false;
+    const next = MATCH_SPEEDS[Math.min(MATCH_SPEEDS.length - 1, Math.max(0, MATCH_SPEEDS.indexOf(matchSpeed) + delta))]!;
+    if (next !== matchSpeed) updateSettings({ matchSpeed: next });
+    showNotice(`Maç hızı: ${MATCH_SPEED_LABELS[next]}`);
+    return true;
+  });
 
   // Başlama öncesi Taktik ekranına gidilip dönüldüyse maçı güncel kadroyla yeniden kur.
   useEffect(() => {
@@ -588,8 +597,8 @@ export function MatchScreen() {
       return;
     }
     const delay = showPitch && isHighlight(match.lastPlay)
-      ? sceneDurationMs(buildScene(match, match.lastPlay, match.minute))
-      : QUIET_MINUTE_MS;
+      ? sceneDurationMs(buildScene(match, match.lastPlay, match.minute)) / speed
+      : QUIET_MINUTE_MS / speed;
     const timer = setTimeout(() => {
       pendingHold.current = snapshot(match);
       step();
@@ -604,7 +613,7 @@ export function MatchScreen() {
     if (!match || !before || !showPitch || !isHighlight(match.lastPlay)) return;
     setHeld(before);
     // Sonuç karesine gelince (golde sevinçten önce) açıklanır
-    const timer = setTimeout(() => setHeld(null), revealDelayMs(buildScene(match, match.lastPlay, match.minute)));
+    const timer = setTimeout(() => setHeld(null), revealDelayMs(buildScene(match, match.lastPlay, match.minute)) / speed);
     return () => {
       clearTimeout(timer);
       setHeld(null);
@@ -668,15 +677,7 @@ export function MatchScreen() {
         fullscreen={fullscreen}
         onExitFullscreen={exitFullscreen}
         panelRef={pitchRef}
-        onToggleRun={() => {
-          if (running) {
-            setRunning(false);
-            return;
-          }
-          // Başlama ve devre arası bir adımla geçilir (Kontroller'deki "Başlat" ile aynı)
-          if (match.period === 'pre' || match.period === 'half') step();
-          setRunning(true);
-        }}
+        onToggleRun={toggleRun}
       />
       <div className="match-grid">
         <TeamPanel match={match} side="home" />

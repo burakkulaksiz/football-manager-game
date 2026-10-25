@@ -2,7 +2,7 @@
  * Kayıt sistemi: kaydet, yükle, listele, sil, otomatik kayıt.
  * GameWorld düz veri olduğu için IndexedDB'ye olduğu gibi yazılır.
  */
-import { CURRENT_WORLD_VERSION, getClub, migrateWorld, type GameWorld } from '../engine';
+import { CURRENT_WORLD_VERSION, displayMinute, formatMinute, getClub, migrateWorld, type GameWorld, type MatchState } from '../engine';
 import { gameData } from '../gameData';
 import { db, type SaveSlot } from './db';
 
@@ -20,7 +20,16 @@ export function defaultSaveName(world: GameWorld): string {
   return `${getClub(world, world.playerClubId).name} — ${d}.${m}.${y}`;
 }
 
-function meta(world: GameWorld, name: string, isAutosave: boolean): Omit<SaveSlot, 'id' | 'createdAt'> {
+/** Kayıt listesinde maçın durumu: "Galatasaray 1-0 Fenerbahçe · 34'" (başlamadıysa "maç başlamadan"). */
+export function liveMatchLabel(world: GameWorld, match: MatchState): string {
+  const home = getClub(world, match.home.clubId).name;
+  const away = getClub(world, match.away.clubId).name;
+  const { minute, extra } = displayMinute(match);
+  const when = match.period === 'pre' ? 'maç başlamadan' : match.period === 'half' ? 'devre arası' : match.period === 'full' ? 'maç bitti' : formatMinute(minute, extra);
+  return `${home} ${match.score.home}-${match.score.away} ${away} · ${when}`;
+}
+
+function meta(world: GameWorld, name: string, isAutosave: boolean, liveMatch: MatchState | null = null): Omit<SaveSlot, 'id' | 'createdAt'> {
   return {
     name,
     careerId: careerIdOf(world),
@@ -32,6 +41,7 @@ function meta(world: GameWorld, name: string, isAutosave: boolean): Omit<SaveSlo
     updatedAt: Date.now(),
     formatVersion: SAVE_FORMAT_VERSION,
     managerName: world.manager?.name,
+    ...(liveMatch ? { liveMatch: liveMatchLabel(world, liveMatch) } : {}),
   };
 }
 
@@ -42,13 +52,15 @@ export async function listSaves(): Promise<SaveSlot[]> {
 
 /**
  * Oyunu kaydeder. `overwriteId` verilirse o slotun üzerine yazar, yoksa yeni slot açar.
+ * Maç sürerken alınırsa `liveMatch` (maçın o anki durumu) da yazılır; yüklenince maç kaldığı yerden devam eder.
  * Dünya, kayıt sürerken oyun devam ederse bozulmasın diye kopyalanarak yazılır.
  */
-export async function saveGame(world: GameWorld, name: string, overwriteId?: number): Promise<number> {
+export async function saveGame(world: GameWorld, name: string, overwriteId?: number, liveMatch: MatchState | null = null): Promise<number> {
   const snapshot = structuredClone(world);
+  const matchSnapshot = liveMatch ? structuredClone(liveMatch) : undefined;
   return db.transaction('rw', db.saves, db.saveData, async () => {
     const existing = overwriteId !== undefined ? await db.saves.get(overwriteId) : undefined;
-    const data = meta(snapshot, name, false);
+    const data = meta(snapshot, name, false, matchSnapshot ?? null);
     let id: number;
     if (existing) {
       id = existing.id;
@@ -56,7 +68,7 @@ export async function saveGame(world: GameWorld, name: string, overwriteId?: num
     } else {
       id = await db.saves.add({ ...data, createdAt: Date.now() } as SaveSlot);
     }
-    await db.saveData.put({ id, world: snapshot });
+    await db.saveData.put({ id, world: snapshot, ...(matchSnapshot ? { liveMatch: matchSnapshot } : {}) });
     return id;
   });
 }
@@ -78,6 +90,14 @@ export async function autosave(world: GameWorld): Promise<number> {
     await db.saveData.put({ id, world: snapshot });
     return id;
   });
+}
+
+/** Maç ortasında alınmış kaydın sürmekte olan maçı; yoksa (ya da maç artık geçersizse) null. */
+export async function loadSavedMatch(id: number, world: GameWorld): Promise<MatchState | null> {
+  const match = (await db.saveData.get(id))?.liveMatch;
+  if (!match) return null;
+  const fixture = world.season.fixtures.find((f) => f.id === match.fixtureId);
+  return fixture && fixture.result === null ? match : null;
 }
 
 export async function loadGame(id: number): Promise<GameWorld> {

@@ -54,13 +54,13 @@ export function isSeasonOver(world: GameWorld): boolean {
  * Tek günlük ilerleme: takvim + günlük işler (finans, transfer, kiralıklar…).
  * Kullanıcıyı ilgilendiren yeni haberleri döndürür.
  */
-function advanceOneDay(world: GameWorld, data: GameData): NewsItem[] {
+function advanceOneDay(world: GameWorld, data: GameData, stopOn: (n: NewsItem) => boolean): NewsItem[] {
   const before = world.nextNewsId;
   world.date = addDays(world.date, 1);
   const rng = Rng.fromState(world.rngState);
   processDay(world, rng, data);
   world.rngState = rng.getState();
-  return world.news.filter((n) => n.id >= before && n.important);
+  return world.news.filter((n) => n.id >= before && n.important && stopOn(n));
 }
 
 /** Bugünkü (kalan) tüm maçları arka planda oynatır. */
@@ -106,8 +106,13 @@ export function finishUserMatch(world: GameWorld, state: MatchState): Fixture[] 
  *  - Değilse, gün gün ilerleyerek bir sonraki maç gününe gelir; kullanıcıyı ilgilendiren bir haber
  *    (teklif yanıtı, gelen teklif, transfer dönemi…) çıkarsa o gün durur.
  *  - Sezon bittiyse bir gün ilerler (yeni sezon döngüsü 9. aşamada).
+ * `stopOn`: hangi önemli haberde durulacağı (ayarlar: kapatılan haber türlerinde Devam durmaz); verilmezse hepsinde.
  */
-export function advance(world: GameWorld, data: GameData, options: { autoPlayUserMatch?: boolean } = {}): AdvanceResult {
+export function advance(
+  world: GameWorld,
+  data: GameData,
+  options: { autoPlayUserMatch?: boolean; stopOn?: (n: NewsItem) => boolean } = {},
+): AdvanceResult {
   if (world.gameOver) return { kind: 'moved', days: 0, news: [] };
   const userFixture = todaysUserFixture(world);
   if (userFixture && !options.autoPlayUserMatch) return { kind: 'userMatch', fixture: userFixture };
@@ -122,7 +127,7 @@ export function advance(world: GameWorld, data: GameData, options: { autoPlayUse
   let days = 0;
   let news: NewsItem[] = [];
   do {
-    news = advanceOneDay(world, data);
+    news = advanceOneDay(world, data, options.stopOn ?? (() => true));
     days++;
   } while (news.length === 0 && !world.gameOver && world.date < next);
   return { kind: 'moved', days, news };

@@ -3,6 +3,7 @@ import type { SaveSlot } from '../../persistence/db';
 import { listSaves } from '../../persistence/saves';
 import { useGameStore } from '../../store/gameStore';
 import { formatSavedAt } from '../components/SaveDialogs';
+import { SettingsPanel } from '../components/SettingsPanel';
 
 export function MainMenu() {
   const openNewGame = useGameStore((s) => s.openNewGame);
@@ -10,6 +11,7 @@ export function MainMenu() {
   const loadSave = useGameStore((s) => s.loadSave);
   // null = okunuyor, 'error' = veritabanı açılamadı
   const [saves, setSaves] = useState<SaveSlot[] | null | 'error'>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     listSaves()
@@ -18,6 +20,18 @@ export function MainMenu() {
   }, []);
 
   const latest = Array.isArray(saves) ? saves[0] : undefined;
+
+  if (settingsOpen) {
+    return (
+      <div className="splash-settings pitch-bg">
+        <div className="splash-settings-bar">
+          <h1 className="splash-settings-title">Ayarlar</h1>
+          <button className="btn" onClick={() => setSettingsOpen(false)}>‹ Ana Menü</button>
+        </div>
+        <SettingsPanel />
+      </div>
+    );
+  }
 
   return (
     <div className="splash pitch-bg">
@@ -33,6 +47,7 @@ export function MainMenu() {
           {latest && (
             <div className="splash-latest">
               {latest.managerName ? `${latest.managerName} · ` : ''}{latest.name} · {formatSavedAt(latest.updatedAt)}
+              {latest.liveMatch && <div className="save-live">Maç ortasında: {latest.liveMatch}</div>}
             </div>
           )}
           <button className={latest ? 'btn btn-wide' : 'btn-continue btn-wide'} onClick={openNewGame}>
@@ -40,6 +55,9 @@ export function MainMenu() {
           </button>
           <button className="btn btn-wide" disabled={!latest} onClick={openLoadGame}>
             Kayıt Yükle
+          </button>
+          <button className="btn btn-wide" onClick={() => setSettingsOpen(true)}>
+            Ayarlar
           </button>
         </div>
         <div className="splash-footer">

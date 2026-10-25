@@ -50,6 +50,27 @@ export function wageDemand(world: GameWorld, player: Player, clubId: string): nu
   return Math.max(12_000, roundNice(demand));
 }
 
+/** Yapay zekâ kulübünün maaş toplamı, maaş bütçesinin bu katını aşmamalı (yenileme ve alımlarda). */
+export const WAGE_BUDGET_SLACK = 1.05;
+/** Maaş bütçesi dolsa bile sözleşmesi yenilenen çekirdek: kadro sırası bunun altındaki en iyi oyuncular. */
+export const CORE_RENEW_RANK = 11;
+
+/**
+ * Yapay zekâ kulübünün yenileme maaşı: adil maaşın altına inmez, eski maaşa zam yapılmaz. Zamlı talep (wageDemand: yenilemede ×1,05)
+ * maaşları ve kulübün maaş ölçeğini (clubWageScale = ödenen / ham maaş) sürekli yukarı itiyor, gelir sabitken kasa eriyordu.
+ */
+export function aiRenewalWage(world: GameWorld, player: Player, clubId: string): number {
+  return Math.max(12_000, roundNice(Math.max(fairWage(world, player, clubId), player.contract.wage)));
+}
+
+/**
+ * Yapay zekâ kulübünün yeni imzada ödediği maaş: adil maaş. Oyuncunun eski maaşının ×1,1'i (wageDemand) kullanıcıyla pazarlığın başlangıcıdır;
+ * yapay zekâ imzalarında kullanılırsa her transferde maaş artar ve serbest oyuncular bütçeye sığmaz hâle gelir.
+ */
+export function aiSigningWage(world: GameWorld, player: Player, clubId: string): number {
+  return Math.max(12_000, roundNice(fairWage(world, player, clubId)));
+}
+
 /** Yaşa göre istenen sözleşme süresi [en az, en çok]. */
 export function preferredYears(age: number): [number, number] {
   if (age < 24) return [3, 5];

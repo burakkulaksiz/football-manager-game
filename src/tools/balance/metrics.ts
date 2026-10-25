@@ -143,6 +143,32 @@ function economyMetrics(seasons: SeasonSnapshot[]): MetricResult[] {
   ];
 }
 
+/** Nakit akışı kalemleri (yapay zekâ kulüpleri; kullanıcı kulübü ihmal edildiği için hariç), kulüp-sezon başına, € Mn. */
+function flow(seasons: SeasonSnapshot[], pick: (c: SeasonSnapshot['clubs'][number]) => number): number[] {
+  return seasons.flatMap((s) => s.clubs.filter((c) => c.clubId !== s.userClubId).map((c) => pick(c) / M));
+}
+
+function cashFlowMetrics(seasons: SeasonSnapshot[]): MetricResult[] {
+  const g = 'Ekonomi: nakit akışı (yapay zekâ kulüpleri)';
+  const incomeAll = seasons.flatMap((s) => s.clubs.filter((c) => c.clubId !== s.userClubId));
+  const ratio = incomeAll.filter((c) => c.income12 > 0).map((c) => c.wages12 / c.income12);
+  const net = (c: SeasonSnapshot['clubs'][number]) => c.income12 - c.wages12 - c.otherExpense12 - c.transferSpend12 + 0; // transfersIn zaten income12 içinde
+  return [
+    metric(g, 'wageActualRatio', 'Gerçek maaş gideri / yıllık gelir (medyan)', 'oran', median(ratio), ratio.length, [0.4, 0.95], {
+      tune: 'transfer/market.ts: wageDemand (yenilemede ×1,05, transferde ×1,1: maaş hiç düşmüyor); finance.ts gelir payları',
+      note: 'Gelir transfer satışlarını da içerir. Sınır.',
+    }),
+    metric(g, 'incomeMedian', 'Yıllık gelir (medyan)', '€ Mn', median(flow(seasons, (c) => c.income12)), incomeAll.length, null),
+    metric(g, 'wagesMedian', 'Yıllık maaş gideri (medyan)', '€ Mn', median(flow(seasons, (c) => c.wages12)), incomeAll.length, null),
+    metric(g, 'transferNetMedian', 'Net transfer harcaması: alım − satış (medyan)', '€ Mn', median(flow(seasons, (c) => c.transferSpend12 - c.transferIncome12)), incomeAll.length, null),
+    metric(g, 'otherMedian', 'Diğer giderler: prim, imza, menajer, gözlemci, tesis (medyan)', '€ Mn', median(flow(seasons, (c) => c.otherExpense12)), incomeAll.length, null),
+    metric(g, 'netFlowMedian', 'Net nakit akışı (medyan)', '€ Mn', median(flow(seasons, net)), incomeAll.length, [-5, 100], {
+      tune: 'Kasa yıllık eksiye gidiyorsa: maaş talebi (market.ts), transfer bütçesi yenilemesi (rollover.ts newSeasonFinances: kasadan bağımsız sıfırlanıyor)',
+      note: 'Sınır: medyan kulüp yılda 5 Mn € üzerinde eriyorsa kasa uzun vadede eksiye iner.',
+    }),
+  ];
+}
+
 function talentMetrics(seasons: SeasonSnapshot[], careers: RawData['careers']): MetricResult[] {
   const g = 'Oyuncu yeteneği (uzun vade)';
   // Kariyer içi eğim (sezon başına); kariyerler arası ortalaması
@@ -244,6 +270,7 @@ export function computeMetrics(raw: RawData): MetricResult[] {
     ...matchMetrics(seasons),
     ...seasonMetrics(seasons),
     ...economyMetrics(seasons),
+    ...cashFlowMetrics(seasons),
     ...talentMetrics(seasons, raw.careers),
     ...poolMetrics(seasons, raw.careers),
     ...europeMetrics(seasons),
@@ -275,6 +302,11 @@ function computeTrends(raw: RawData): Report['trends'] {
     series('caO29', '29+ yaş ort. CA', 'CA', (l) => mean(l.map((s) => s.talent.caByAge.o29))),
     series('age', 'Ortalama yaş', 'yaş', (l) => mean(l.map((s) => s.talent.meanAge))),
     series('balance', 'Kasa medyanı', '€ Mn', (l) => median(l.flatMap((s) => s.clubs.map((c) => c.balance))) / M),
+    series('cfIncome', 'Gelir, medyan (yapay zekâ kulüpleri)', '€ Mn', (l) => median(flow(l, (c) => c.income12))),
+    series('cfWages', 'Maaş gideri, medyan', '€ Mn', (l) => median(flow(l, (c) => c.wages12))),
+    series('cfTransfer', 'Net transfer harcaması, medyan', '€ Mn', (l) => median(flow(l, (c) => c.transferSpend12 - c.transferIncome12))),
+    series('cfOther', 'Diğer giderler, medyan', '€ Mn', (l) => median(flow(l, (c) => c.otherExpense12))),
+    series('cfNet', 'Net nakit akışı, medyan', '€ Mn', (l) => median(flow(l, (c) => c.income12 - c.wages12 - c.otherExpense12 - c.transferSpend12))),
     series('squad', 'Süper Lig kadro büyüklüğü', 'oyuncu', (l) => mean(l.map((s) => s.pool.squadMean))),
     series('free', 'Serbest oyuncu havuzu', 'oyuncu', (l) => mean(l.map((s) => s.pool.freeAgents))),
     series('transfers', 'Transfer hacmi', '€ Mn', (l) => mean(l.map((s) => s.transfers.fee)) / M),

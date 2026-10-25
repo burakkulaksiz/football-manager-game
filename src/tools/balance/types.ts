@@ -32,6 +32,10 @@ export interface ClubSeason {
   income12: number;
   transferSpend12: number;
   transferIncome12: number;
+  /** Son 12 ayın gerçek maaş gideri, diğer giderler (prim, imza, menajer, gözlemci, tesis) ve ödül geliri (€). */
+  wages12: number;
+  otherExpense12: number;
+  prize12: number;
 }
 
 export interface EuropeSeason {

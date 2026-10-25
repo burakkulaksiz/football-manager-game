@@ -473,6 +473,10 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
   ilk 11 seviyesine yakın oyuncuları alıyor, sözleşme yenileme yalnızca sıra < `AI_RENEW_RANK` (22) olanlara; yedekler gidince kadrolar 28 → 20'ye küçülüyor, serbest
   havuz şişiyor, ligin ortalama CA'sı yapay yükseliyordu (FINDINGS.md > Denge).
 - İşsiz oyuncuların emekliliği (season/rollover.ts `retirementChance`): 31+ yaş +%40; 24–30 yaş CA < 100 → +%25, değilse +%10 (24 altı yok). Serbest havuz ~250'de doyar.
+- Maaş disiplini (transfer/market.ts, season/rollover.ts, transfer/ai.ts): yapay zekâ sözleşme yenilemesi zamsız (`aiRenewalWage` = max(adil, eski maaş)), yeni imza adil maaşla
+  (`aiSigningWage`; `wageDemand`'ın eski maaş × 1,1 / × 1,05 zammı yalnızca kullanıcıyla pazarlıkta kalır). 30 Haziran'da yapay zekâ kulübü en iyiden başlayarak yeniler; maaş toplamı
+  `wageBudget × WAGE_BUDGET_SLACK` (1,05) aşılırsa kadro sırası `CORE_RENEW_RANK` (11) ve üstündekiler gider. Alımlarda aday maaşı bütçeye sığmıyorsa elenir. Nedeni: zam sarmalı + üstel
+  maaş formülü + bütçe kontrolsüzlüğü maaş gideri 10 sezonda ×2,6 yapıp kasaları eksiye indiriyordu (FINDINGS.md > Denge). Rapor "Ekonomi: nakit akışı" ölçüleriyle izler.
 - Denge raporu bu iki sorunu kalıcı ölçülerle izler ("Oyuncu havuzu": kadro büyüklüğü, serbest havuz, havuz eğimi). Kullanıcı kulübü kadro ölçülerine girmez (ihmal ediliyor).
 
 ## Açık konular / ileride

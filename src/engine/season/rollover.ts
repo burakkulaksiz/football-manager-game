@@ -14,11 +14,13 @@ import { ageOn } from '../player';
 import type { Rng } from '../rng';
 import type { Club, GameWorld, Player } from '../types';
 import {
+  aiRenewalWage,
   contractExpiry,
+  CORE_RENEW_RANK,
   formatPlain,
   preferredYears,
   releasePlayer,
-  wageDemand,
+  WAGE_BUDGET_SLACK,
 } from '../transfer/market';
 import { divisionOf, EXPECTATION_TARGET, expectationForRank } from './expectation';
 
@@ -52,19 +54,34 @@ export function processExpiringContracts(world: GameWorld, rng: Rng): void {
     ranks.set(club.id, clubPlayers(world, club.id).sort((a, b) => b.currentAbility - a.currentAbility).map((p) => p.id));
   }
   const nextSeasonDay = addDays(world.date, 1);
+  const expiring = Object.values(world.players).filter((p) => p.clubId && !p.loan && p.contract.expires <= world.date);
+  const expiringIds = new Set(expiring.map((p) => p.id));
+  // Kulüplerin sözleşmesi süren oyuncularının maaş toplamı: yenilemeler bu bütçenin üstüne çıkmasın
+  const payroll = new Map<string, number>();
   for (const p of Object.values(world.players)) {
-    if (!p.clubId || p.loan || p.contract.expires > world.date) continue;
-    const clubId = p.clubId;
+    if (p.clubId && !expiringIds.has(p.id)) payroll.set(p.clubId, (payroll.get(p.clubId) ?? 0) + p.contract.wage);
+  }
+  // Yapay zekâ kulüplerinde en iyiden başlayarak: bütçe dolarsa yedekler gider, çekirdek kalır
+  const rankOf = (p: Player) => ranks.get(p.clubId!)!.indexOf(p.id);
+  for (const p of [...expiring].sort((a, b) => rankOf(a) - rankOf(b) || a.id - b.id)) {
+    const clubId = p.clubId!;
     if (clubId === world.playerClubId) {
       released.push(p);
       releasePlayer(world, p);
       continue;
     }
-    const rank = ranks.get(clubId)!.indexOf(p.id);
+    const rank = rankOf(p);
     const age = ageOn(p.birthDate, world.date);
     if (rank < AI_RENEW_RANK && age <= 32) {
+      const wage = aiRenewalWage(world, p, clubId);
+      const budget = world.finances[clubId]!.wageBudget * WAGE_BUDGET_SLACK;
+      if (rank >= CORE_RENEW_RANK && (payroll.get(clubId) ?? 0) + wage > budget) {
+        releasePlayer(world, p);
+        continue;
+      }
       const [minYears, maxYears] = preferredYears(age);
-      p.contract = { wage: wageDemand(world, p, clubId), expires: contractExpiry(nextSeasonDay, rng.int(minYears, maxYears)) };
+      p.contract = { wage, expires: contractExpiry(nextSeasonDay, rng.int(minYears, maxYears)) };
+      payroll.set(clubId, (payroll.get(clubId) ?? 0) + wage);
     } else {
       releasePlayer(world, p);
     }

@@ -9,14 +9,15 @@ import { ageOn, marketValue, primaryPosition, roundNice } from '../player';
 import { Rng } from '../rng';
 import type { Club, GameWorld, Player } from '../types';
 import {
+  aiSigningWage,
   askingPrice,
   formatPlain,
   groupOf,
   preferredYears,
   squadRanks,
   transferPlayer,
+  WAGE_BUDGET_SLACK,
   type SquadRanks,
-  wageDemand,
   willingToJoin,
   type PositionGroup,
 } from './market';
@@ -112,14 +113,27 @@ function attemptPurchase(world: GameWorld, buyer: Club, rng: Rng, ctx: DayContex
   }
   if (candidates.length === 0) return;
   candidates.sort((a, b) => b.score - a.score);
-  const pick = candidates[Math.min(candidates.length - 1, rng.int(0, 2))]!;
+  const first = Math.min(candidates.length - 1, rng.int(0, 2));
+  // Maaş bütçesine sığmayan adaylar elenir (önceden hiç kontrol edilmiyordu: maaş toplamı sürekli şişiyordu)
+  const wageRoom = fin.wageBudget * WAGE_BUDGET_SLACK - totalWages(squad, buyer.id);
+  let pick: (typeof candidates)[number] | undefined;
+  let wage = 0;
+  for (const c of [...candidates.slice(first), ...candidates.slice(0, first)].slice(0, 6)) {
+    const w = aiSigningWage(world, c.player, buyer.id);
+    if (w <= wageRoom) {
+      pick = c;
+      wage = w;
+      break;
+    }
+  }
+  if (!pick) return;
   const fee = Math.min(fin.transferBudget, roundNice(pick.price * rng.float(0.9, 1.08)));
   const [minYears, maxYears] = preferredYears(ageOn(pick.player.birthDate, world.date));
   const sellerId = pick.player.clubId;
   if (sellerId) squadSizes.set(sellerId, (squadSizes.get(sellerId) ?? 1) - 1);
   squadSizes.set(buyer.id, (squadSizes.get(buyer.id) ?? 0) + 1);
   transferPlayer(world, pick.player, buyer.id, fee, {
-    wage: wageDemand(world, pick.player, buyer.id),
+    wage,
     years: rng.int(minYears, maxYears),
     signingBonus: 0,
   });
@@ -221,7 +235,7 @@ export function fillAiDepth(world: GameWorld): void {
       if (p.clubId) continue;
       if (ageOn(p.birthDate, world.date) > 34) continue;
       if (p.currentAbility < level - DEPTH_BELOW || p.currentAbility > level + DEPTH_ABOVE) continue;
-      const wage = wageDemand(world, p, club.id);
+      const wage = aiSigningWage(world, p, club.id);
       if (wage > wageRoom) continue;
       const score = p.currentAbility + (groupOf(primaryPosition(p)) === group ? DEPTH_GROUP_BONUS : 0) + rng.float(0, 4);
       if (!best || score > best.score) best = { player: p, wage, score };

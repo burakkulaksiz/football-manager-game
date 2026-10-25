@@ -77,11 +77,17 @@ Maç düzeyindeki ölçülerin tamamı hedef aralıkta: gol 2,74, ev galibiyeti 
 - [ ] **Transfer hacmi hızla büyüyor:** Süper Lig kulüplerini ilgilendiren bonservisli transfer toplamı 181 → 272 → 365 → 477 Mn € (4 sezonda ×2,6), kulüp kasası medyanı sabit (~13 Mn €).
   - Transfer başına ortalama bedel son/ilk sezon oranı 1,49 (sınırımız 0,6–1,8 içinde, ama eğilim yukarı). Enflasyonla ilişkili olabilir (CA yükselince piyasa değeri yükselir).
   - Yapılacak: `transfer/market.ts` (piyasa değeri, bonservis formülü) ve `ai.ts` (yapay zekâ alım sıklığı) incele; kasa büyümediği hâlde hacmin büyümesi tutarsız.
-- [ ] **Ekonomi uzun vadede bozuluyor (yeni, 3 × 10 sezon):** kulüp kasası medyanı S4'te +20 Mn € iken S7'de 0'a, S10'da −14,9 Mn €'ya iniyor; sezon sonunda kasası eksi olan kulüp oranı %30,7
-  (sınırımız %35). Aynı sürede transfer hacmi 223 → 940 Mn €/sezon, transfer başına ortalama bedel son/ilk sezon oranı 3,83 (sınırımız 1,8; n küçük, "belirsiz").
-  - Olası bağlantı: piyasa değeri CA'ya çok duyarlı olabilir (CA %9 artınca fiyat ×3,8); küçük yetenek kayması büyük fiyat enflasyonu yapar. `transfer/market.ts` (marketValue, askingPrice) ve
-    kulüp bütçe yenilemesi (`season/rollover.ts`, `finance/finance.ts`) incelenmeli. Maaş bütçesi / gelir oranı normal (0,57), yani sorun transfer harcamasında / kasa yenilemesinde.
-  - Not: kadro tamamlama düzeltmesi (24 oyuncu) maaş toplamını biraz artırmış olabilir; ama kasa düşüşü düzeltmeden önceki 4 sezonluk koşuda da başlamıştı (S3'ten S4'e 16,0 → 12,8). Ayrıştırılmadı.
+- [x] **Ekonomi uzun vadede bozuluyordu (maaş enflasyonu): düzeltildi.** 3 × 10 sezonda kasa medyanı +20 Mn €'dan −14,9 Mn €'ya iniyor, eksi kasalı kulüp oranı %30,7'ydi.
+  - Tanı: nakit akışı kalemlerine bakınca net transfer harcaması medyanda ~0, diğer giderler sabitti; sızıntı **maaştı**: medyan maaş gideri 8,4 → 21,6 Mn € (×2,6), gelir ise sabit/düşüyordu.
+    Nedenler: (1) `clubWageScale` (ödenen / ham maaş) ile `fairWage` birbirini besliyordu; yenilemede talep `max(adil, eski maaş × 1,05)`, yeni imzada `× 1,1` olduğundan maaş hiç düşmüyor,
+    ölçek her yenilemede yukarı kayıyordu; (2) maaş formülü CA'ya üstel (`exp(CA/25)`): yavaş CA kayması bile maaşı büyütüyor; (3) yapay zekâ yenileme ve alımlarında maaş bütçesi hiç kontrol edilmiyordu.
+  - Düzeltme: `transfer/market.ts` → `aiRenewalWage` (zam yok) ve `aiSigningWage` (adil maaş; eski maaşın ×1,1'i değil), `WAGE_BUDGET_SLACK` (1,05) ve `CORE_RENEW_RANK` (11);
+    `season/rollover.ts` → sözleşme bitişlerinde yapay zekâ kulübü en iyiden başlayarak yeniler, maaş toplamı bütçenin 1,05 katını aşarsa çekirdek (ilk 11) dışındakileri bırakır; `transfer/ai.ts` → alımlarda maaş bütçesi kontrolü.
+  - Sonuç (3 × 10 sezon): medyan maaş gideri 8,2–9,4 Mn € arasında sabit; net nakit akışı her sezon pozitif (+1,2…+4,9); kasa medyanı +43 Mn €'ya çıkıyor; kadro 23–25 oyuncu; serbest havuz ~240'ta doygun.
+    6 × 4 sezon: eksi kasalı kulüp %11,8 → %2,1; net nakit akışı +3,8 Mn €; maaş/gelir 0,53.
+  - Yan etki düzeltildi: ilk denemede (yalnızca bütçe sınırı) `wageDemand`'ın eski maaşın ×1,1'i serbest oyuncuları bütçeye sığdırmıyor, kadrolar 19'a iniyordu; imzada adil maaşa geçilince çözüldü.
+  - Kalan (açık): transfer hacmi hâlâ büyüyor (159 → 1078 Mn €, 10 sezonda ×7; transfer başına bedel son/ilk ×3,3, "belirsiz"). Kasa birikip transfer bütçesine (`club.budget + fazla × 0,3`) aktığı ve piyasa değeri CA'ya üstel
+    (`1500·exp(CA/17)`, +1 CA ≈ +%6) olduğu için yıldız CA'sındaki artış (171 → 187) fiyatı katlıyor. Bütçe yenilemesini ve yıldız CA artışını sınırlamak ayrı iş.
 - [ ] **Sonuncunun puanı düşük (belirsiz):** ilk ölçümde 16,5 (referans 18–32). Kullanıcı kulübü hariç yapay zekâ kulüplerinde 17,5 ±2,0 (düzeltme sonrası, 24 sezon): düşüklüğün bir kısmı
   ihmal edilen kullanıcı kulübünün sık sonuncu bitmesinden geliyordu. Hâlâ referansın biraz altında; daha çok sezonla doğrula (zayıf takımlar biraz fazla zayıf olabilir).
 - [ ] **Şampiyon çeşitliliği az:** 24 sezonda yalnızca 3 farklı şampiyon, şampiyon–ikinci farkı ortalama 5,75 puan. Hedef tanımlı değil; gerçek Süper Lig'de de büyük 3–4 kulüp baskın, ama 3 çok az olabilir.

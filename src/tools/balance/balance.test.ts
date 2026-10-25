@@ -45,7 +45,7 @@ function match(hg: number, ag: number, overrides: Partial<MatchRow> = {}): Match
 function club(id: string, position: number, strength: number, balance = 5e7): ClubSeason {
   return {
     clubId: id, position, points: 80 - position * 15, goalsFor: 50, goalsAgainst: 40, strength, balance,
-    wageBudget: 4e7, income12: 8e7, transferSpend12: 1e7, transferIncome12: 5e6,
+    wageBudget: 4e7, income12: 8e7, transferSpend12: 1e7, transferIncome12: 5e6, wages12: 4e7, otherExpense12: 5e6, prize12: 2e6,
   };
 }
 

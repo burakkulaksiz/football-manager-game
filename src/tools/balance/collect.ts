@@ -94,6 +94,9 @@ function snapshot(world: GameWorld, career: number, strengths: Map<string, numbe
       income12: sumLast12(world, row.clubId, totalIncome),
       transferSpend12: sumLast12(world, row.clubId, (m) => m.expense.transfersOut),
       transferIncome12: sumLast12(world, row.clubId, (m) => m.income.transfersIn),
+      wages12: sumLast12(world, row.clubId, (m) => m.expense.wages),
+      otherExpense12: sumLast12(world, row.clubId, (m) => m.expense.bonuses + m.expense.signingBonuses + m.expense.agentFees + m.expense.scouting + m.expense.facilities),
+      prize12: sumLast12(world, row.clubId, (m) => m.income.prize),
     };
   });
 

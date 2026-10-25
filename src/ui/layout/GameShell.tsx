@@ -28,7 +28,6 @@ import { TransferScreen } from '../screens/TransferScreen';
 import { Header } from './Header';
 import { NavBar } from './NavBar';
 import { Sidebar } from './Sidebar';
-import { StatusBar } from './StatusBar';
 
 function ScreenContent({ screen }: { screen: ScreenId }) {
   switch (screen) {
@@ -99,7 +98,6 @@ export function GameShell() {
           <ScreenContent screen={screen} />
         </main>
       </div>
-      <StatusBar />
       <GameOverOverlay />
       <NewsAlert />
       <DecisionsDialog />

@@ -48,8 +48,12 @@ Son gözden geçirme: 2026-10-25 (kod ve git geçmişi okunarak; tarayıcıda el
   - Kanıt: `MAX_COMPARE = 4` (squad/compare.ts), Taktik ekranında `CompareBar`, "Yardımcı Antrenör" kutusu (CompareDialog.tsx); commit 0663997.
 
 ## Genel arayüz
-- [ ] Alt çubuk (footer) kalkmalı.
-  - Not: StatusBar hâlâ GameShell'de çiziliyor (ekmek kırıntısı + haber bandı). Kaldırılırsa ekmek kırıntısı ve haber bandı için yer kararı gerekir.
+- [x] Alt çubuk (footer) kalkmalı.
+  - Düzeltme: `layout/StatusBar.tsx` silindi; konum yolu (yalnızca alt çubukta kullanılıyordu, `pageHeading.breadcrumb`) ve kayan sonuç / transfer bandı da kalktı.
+    Sayfa başlığı üstteki haptan, sıradaki maç gezinme çubuğundan, sonuçlar Fikstür ekranından okunur. Sayfa düzeni esnek sütun: içerik alanı kendiliğinden alta uzar.
+  - Doğrulama: oyun kabuğu sunucu tarafında çizilip 1400×820 ekran görüntüsünde alt boşluk yok.
+- [ ] Sol menü küçük ekranda sığmıyor (yeni): 820 px yükseklikte "Milli Takımlar" ve "Ayarlar" görünür alanın dışında, menü kaydırılarak ulaşılıyor
+  (sıradaki maç kartı altta yer kaplıyor). Mobil / dar ekran uyumu maddesiyle (IDEAS.md) birlikte ele alınabilir.
 
 ## Testler
 - [ ] **Tam sezon simülasyonu testleri yavaş (kısmen düzeltildi).** Yük altında 30 sn'lik varsayılan zaman aşımına takılıyorlardı; iki teste geçici olarak 120 sn verildi.

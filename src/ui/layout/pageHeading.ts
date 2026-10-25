@@ -1,4 +1,4 @@
-import { competitionName, fixtureLabel, getClub, nextFixtureFor, primaryPosition, seasonLabel, tournamentTitle, type GameWorld } from '../../engine';
+import { fixtureLabel, getClub, nextFixtureFor, primaryPosition, seasonLabel, tournamentTitle, type GameWorld } from '../../engine';
 import type { ScreenId } from '../../store/gameStore';
 import { nationName, POSITION_NAMES } from '../labels';
 import { screenInfo } from '../screens';
@@ -12,11 +12,9 @@ export interface PageHeading {
   title: string;
   subtitle: string;
   colors: { primary: string; secondary: string };
-  /** Alt çubuktaki konum yolu. */
-  breadcrumb: string[];
 }
 
-/** Üst başlıktaki büyük hap (FM'deki gibi) ve alt çubuk için sayfa bilgisi. */
+/** Üst başlıktaki büyük hap (FM'deki gibi) için sayfa bilgisi. */
 export function pageHeading(
   world: GameWorld,
   screen: ScreenId,
@@ -35,7 +33,6 @@ export function pageHeading(
       title,
       subtitle: fixture ? `Maç Raporu · ${fixtureLabel(fixture)}` : 'Maç Raporu',
       colors: LEAGUE_COLORS,
-      breadcrumb: [fixture ? competitionName(fixture) : 'Süper Lig', 'Fikstür', 'Maç Raporu'],
     };
   }
 
@@ -47,14 +44,13 @@ export function pageHeading(
         title: `${player.firstName} ${player.lastName}`,
         subtitle: `${POSITION_NAMES[primaryPosition(player)]} · ${nationName(player.nationality)}`,
         colors: club.colors,
-        breadcrumb: ['Süper Lig', club.name, 'Kadro', `${player.firstName} ${player.lastName}`],
       };
     }
   }
 
   if (screen === 'squad') {
     const club = getClub(world, viewedClubId ?? ownClub.id);
-    return { title: club.name, subtitle: 'Kadro', colors: club.colors, breadcrumb: ['Süper Lig', club.name, 'Kadro'] };
+    return { title: club.name, subtitle: 'Kadro', colors: club.colors };
   }
 
   if (screen === 'match') {
@@ -67,7 +63,6 @@ export function pageHeading(
       title,
       subtitle: fixture ? fixtureLabel(fixture) : 'Süper Lig',
       colors: LEAGUE_COLORS,
-      breadcrumb: [fixture ? competitionName(fixture) : 'Süper Lig', 'Maç Günü', title],
     };
   }
 
@@ -77,7 +72,6 @@ export function pageHeading(
       title: info.label,
       subtitle: `${tournamentTitle(world.international.year, world.international.kind)} döngüsü`,
       colors: NATIONAL_COLORS,
-      breadcrumb: ['Uluslararası', info.label],
     };
   }
   if (screen === 'fixtures' || screen === 'table' || screen === 'stats') {
@@ -85,13 +79,11 @@ export function pageHeading(
       title: info.label,
       subtitle: `Süper Lig ${seasonLabel(world.season.year)}`,
       colors: LEAGUE_COLORS,
-      breadcrumb: ['Süper Lig', info.label],
     };
   }
   return {
     title: info.label,
     subtitle: ownClub.name,
     colors: ownClub.colors,
-    breadcrumb: ['Süper Lig', ownClub.name, info.label],
   };
 }

@@ -96,7 +96,7 @@ src/persistence/saves.ts  saveGame, autosave, loadGame, listSaves, deleteSave (t
 src/ui/                React. Motoru sadece çağırır, oyun mantığı içermez.
   labels.ts            Türkçe etiketler (özellik, mevki, beklenti), para/tarih biçimleri.
   squadFilters.ts      Kadro ekranı filtreleri/görünümleri (saf, testli: squadFilters.test.ts).
-  layout/              GameShell, Header, NavBar, Sidebar, StatusBar, pageHeading (başlık hapı + konum yolu)
+  layout/              GameShell, Header, NavBar, Sidebar, pageHeading (başlık hapı; alt çubuk kaldırıldı)
   screens/             MainMenu, NewGameScreen, SquadScreen, PlayerProfile, ClubInfoScreen,
                        FixturesScreen, TableScreen, StatsScreen, MatchScreen, TacticsScreen, TransferScreen
                        (ara / teklifler / haberler), FinanceScreen, TrainingScreen, InboxScreen, LoadGameScreen

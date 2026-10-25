@@ -500,68 +500,7 @@ select {
     repeating-linear-gradient(90deg, var(--grass-1) 0 90px, var(--grass-2) 90px 180px);
 }
 
-/* --- Alt çubuk --- */
-.statusbar {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  height: 36px;
-  padding: 0 18px;
-  background: linear-gradient(180deg, #243049, #1a2333);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  font-size: 12px;
-}
-
-.breadcrumb {
-  flex-shrink: 0;
-  color: var(--slate-300);
-}
-
-.breadcrumb span + span::before {
-  content: '›';
-  margin: 0 8px;
-  color: var(--slate-400);
-}
-
-.breadcrumb .current {
-  color: #fff;
-  font-weight: 600;
-}
-
-.ticker {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  height: 22px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.3);
-  mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
-}
-
-.ticker-track {
-  display: inline-flex;
-  white-space: nowrap;
-  animation: ticker 45s linear infinite;
-}
-
-.ticker-track span {
-  padding-right: 48px;
-  font-family: var(--font-display);
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  color: var(--slate-200);
-}
-
-@keyframes ticker {
-  to {
-    transform: translateX(-50%);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .ticker-track,
   .nav-status.matchday::before {
     animation: none;
   }

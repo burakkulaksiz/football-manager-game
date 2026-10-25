@@ -32,8 +32,9 @@ Son gözden geçirme: 2026-10-25 (kod ve git geçmişi okunarak; tarayıcıda el
 - [x] Kornerin kullanıldığı gösterilmiyor.
   - Kanıt: korner sahnesinde kullanan oyuncu bayrağa gider, ceza sahası dolar ve sahada etiket çıkar (pitchScene.ts, `playLabel`).
     Kod okunarak doğrulandı, elle denenmedi.
-- [ ] 2D saha futbol topu siyah beyaz olsun.
-  - Not: top şu an düz beyaz, 1 px siyah halka (`.pball-body`, styles.css). Siyah beyaz futbol topu deseni yok.
+- [x] 2D saha futbol topu siyah beyaz olsun.
+  - Düzeltme: `.pball-body` (styles.css) beyaz zemin üstünde ortada bir, kenarlarda yarısı görünen beş siyah yama (CSS radial-gradient; ek görsel yok).
+  - Doğrulama: --u = 6 / 9 / 14 / 20 / 40 px boyutlarında ekran görüntüsü; 9 px ve üstünde futbol topu olarak okunuyor. Yamalar yuvarlak (beşgen değil); topun sahadaki boyutunda fark edilmiyor.
 - [x] Maç bittikten sonra denge çubuğunda "Galatasaray atakta" gibi yazılar çıkmasın; maçın bittiğini ifade etsin.
   - Kanıt: "maç sonu baskı çubuğu"; commit aca73d5.
 

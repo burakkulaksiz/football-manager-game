@@ -483,6 +483,8 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
   ortalamasının 8 altından düşük olamaz. Önceden tek eşik "ilk 11 ortalaması − 8" idi; CA ölçeği mevkiye göre farklı olduğundan kaleciler eşiğe zor ulaşıyordu.
 - Performans (sonucu değiştirmeyen): `primaryPosition` yalnızca oyuncunun mevkilerini tarar (saha sırası eşitlik kuralı korunur), şutta `keeperUnit`, `teamUnits` ortalamaları
   toplam + sayıyla. Motor performans değişikliğinden sonra: bir sezonun skor + oyuncu CA + RNG durumu parmak izini önce / sonra karşılaştır (birebir aynı olmalı).
+- Kadro şablonundaki gençler (generateClubSquad, role 'youth') yıllık genç alımıyla (generateYouthPlayer) aynı model: seviye temel − `YOUTH_LEVEL_GAP` (4,5),
+  ek potansiyel `youthExtraPotential` (%6 cevher +20…45, yoksa −5…18; tek çekiliş). Önceden başlangıçtaki yurtdışı gençleri çok yüksek potansiyelliydi, dünya elit katmanı şişiyordu.
 - Denge raporu bu iki sorunu kalıcı ölçülerle izler ("Oyuncu havuzu": kadro büyüklüğü, serbest havuz, havuz eğimi). Kullanıcı kulübü kadro ölçülerine girmez (ihmal ediliyor).
 
 ## Açık konular / ileride

@@ -215,12 +215,15 @@ export function generateClubSquad(rng: Rng, data: GameData, club: Club, date: Ga
   const squad = SQUAD_TEMPLATE.map(({ position, role }) => {
     const player = generatePlayer(rng, data, id++, date, {
       position,
-      level: levelForRole(rng, base, role),
+      level: role === 'youth' ? base - YOUTH_LEVEL_GAP + rng.normal(0, 1) : levelForRole(rng, base, role),
       age: ageForRole(rng, role),
       nationality: pickNationality(rng, data, role, club.reputation, club.country),
       clubId: club.id,
       wageFactor,
-      extraPotential: role === 'youth' ? rng.int(5, 30) : 0,
+      // Gençler, her yaz katılan gençlerle (generateYouthPlayer) aynı modelle: önceden seviye − 3 ve sabit +5…+30 ek potansiyel
+      // alıyordu; başlangıçtaki yurtdışı gençlerinin PA ortalaması 168 (yıllık alımda 145) çıkıyor, ilk yıllarda elit katman
+      // %35 şişiyordu (denge raporu). Tek çekilişle: rastgelelik akışının uzunluğu değişmez.
+      extraPotential: role === 'youth' ? youthExtraPotential(rng.float(0, 1)) : 0,
     });
     return { player, role, position };
   });
@@ -341,6 +344,17 @@ function realClubSquad(rng: Rng, data: GameData, club: Club, date: GameDate, fir
 
 /** Altyapı gencinin gerçek bir cevher (yüksek ek potansiyel) olma olasılığı. */
 export const WONDERKID_CHANCE = 0.06;
+/** Altyapıdan gelen gencin seviyesi, kulübün temel seviyesinin bu kadar altında (generateYouthPlayer ve kadro şablonundaki gençler). */
+export const YOUTH_LEVEL_GAP = 4.5;
+
+/**
+ * Gencin ek potansiyeli, [0, 1) aralığındaki tek bir sayıdan: WONDERKID_CHANCE olasılıkla cevher (+20…+45), yoksa −5…+18.
+ * generateYouthPlayer'daki dağılımın aynısı; tek çekilişle (kadro şablonunda rastgelelik akışının uzunluğu değişmesin diye).
+ */
+export function youthExtraPotential(u: number): number {
+  if (u < WONDERKID_CHANCE) return 20 + Math.min(25, Math.floor((u / WONDERKID_CHANCE) * 26));
+  return -5 + Math.min(23, Math.floor(((u - WONDERKID_CHANCE) / (1 - WONDERKID_CHANCE)) * 24));
+}
 
 /** Altyapıdan gelen genç oyuncu (varsayılan 16–17 yaş): düşük seviye, potansiyeli yaşla gelir; ara sıra cevher. */
 export function generateYouthPlayer(
@@ -357,7 +371,7 @@ export function generateYouthPlayer(
   const position = positions[rng.weightedIndex([1, 2, 1, 1, 1, 2, 1, 1, 1, 2])]!;
   const player = generatePlayer(rng, data, id, date, {
     position,
-    level: clubBaseLevel(club.reputation) - 4.5 + bonus.level + rng.normal(0, 1),
+    level: clubBaseLevel(club.reputation) - YOUTH_LEVEL_GAP + bonus.level + rng.normal(0, 1),
     age: rng.int(ages[0], ages[1]),
     nationality: pickNationality(rng, data, 'youth', club.reputation, club.country),
     clubId: club.id,

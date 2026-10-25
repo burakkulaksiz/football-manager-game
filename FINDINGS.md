@@ -87,9 +87,7 @@ Maç düzeyindeki ölçülerin tamamı hedef aralıkta: gol 2,74, ev galibiyeti 
     (önceden 519'a sürekli büyüyordu). 3 × 10 sezonluk koşuda ilk 11 CA eğimi +0,78 (sınır içinde).
   - Raporda artık kalıcı ölçüler var: kadro büyüklüğü, serbest havuz, havuz eğimi, altyapı havuzu, dünya büyüklüğü eğimi ("Oyuncu havuzu").
   - Kalan: yetenek hâlâ yavaş yükseliyor (ligdeki en yüksek CA 171 → 187, 10 sezonda +2/sezon; 22–28 yaş ortalaması +1,3/sezon). Aşağıdaki fiyat enflasyonu bunu büyütüyor.
-- [ ] **Transfer hacmi hızla büyüyor:** Süper Lig kulüplerini ilgilendiren bonservisli transfer toplamı 181 → 272 → 365 → 477 Mn € (4 sezonda ×2,6), kulüp kasası medyanı sabit (~13 Mn €).
-  - Transfer başına ortalama bedel son/ilk sezon oranı 1,49 (sınırımız 0,6–1,8 içinde, ama eğilim yukarı). Enflasyonla ilişkili olabilir (CA yükselince piyasa değeri yükselir).
-  - Yapılacak: `transfer/market.ts` (piyasa değeri, bonservis formülü) ve `ai.ts` (yapay zekâ alım sıklığı) incele; kasa büyümediği hâlde hacmin büyümesi tutarsız.
+- [x] **Transfer hacmi hızla büyüyor:** aşağıdaki "Transfer fiyat enflasyonu" maddesiyle aynı kök (hacim = sayı × bedel; sayı sabit, bedel artıyor); orada izleniyor.
 - [x] **Ekonomi uzun vadede bozuluyordu (maaş enflasyonu): düzeltildi.** 3 × 10 sezonda kasa medyanı +20 Mn €'dan −14,9 Mn €'ya iniyor, eksi kasalı kulüp oranı %30,7'ydi.
   - Tanı: nakit akışı kalemlerine bakınca net transfer harcaması medyanda ~0, diğer giderler sabitti; sızıntı **maaştı**: medyan maaş gideri 8,4 → 21,6 Mn € (×2,6), gelir ise sabit/düşüyordu.
     Nedenler: (1) `clubWageScale` (ödenen / ham maaş) ile `fairWage` birbirini besliyordu; yenilemede talep `max(adil, eski maaş × 1,05)`, yeni imzada `× 1,1` olduğundan maaş hiç düşmüyor,
@@ -105,8 +103,16 @@ Maç düzeyindeki ölçülerin tamamı hedef aralıkta: gol 2,74, ev galibiyeti 
     İki itici güç: (1) kasa birikip transfer bütçesine (`club.budget + fazla × 0,3`) sınırsız akıyordu (medyan kalan bütçe 1 → 7 Mn €); (2) ligin üst seviyesinin yavaş yükselmesi (ilk 11 CA 137 → 146, en yüksek CA 171 → 184).
   - Düzeltme: `season/rollover.ts` → `seasonTransferBudget`: yıllık transfer bütçesi, transfer dışı yıllık gelirin yarısını (`TRANSFER_BUDGET_INCOME_CAP`) aşamaz, temel bütçenin altına da inmez (`finance.ts` → `trailingIncome`).
   - Sonuç (3 × 10): ortalama bedel 27,5 → 19,9 Mn €, hacim 1078 → 578 Mn €; kadro, nakit akışı, serbest havuz değişmedi. Transfer edilenlerin CA'sı hâlâ yükseliyor (139 → 154): asıl itici güç üst seviye yetenek kayması, ayrı iş.
-  - Açık: ilk 11 CA eğimi 10 sezonda +1,1/sezon (sınır ±0,8; S8'den sonra düzleşiyor), en yüksek CA 171 → 184. Neden büyük olasılıkla "ligin dünyadan yetenek çekmesi" (Süper Lig başlangıçta 123, yurtdışı 151 ortalama CA);
-    gerçekten sorun mu, yoksa yeni bir dengeye yaklaşma mı olduğu belirsiz.
+  - Dünya geneli (2026-10-25): elit katman ilk 6 sezonda şişiyordu (CA ≥ 170 oyuncu 127 → 171, CA ≥ 160 328 → 394). Neden: başlangıçta yurtdışı kadroları üretilirken
+    "genç" rolü yıllık genç alımından (`generateYouthPlayer`) cömertti: seviye kulüp seviyesi − 3 (alımda − 4,5) ve sabit +5…+30 ek potansiyel. Başlangıçtaki yurtdışı gençlerin
+    PA ortalaması 167,6 (%45'i ≥ 170), yıllık alımda 145,4 (%12). Bu ~100 "süper genç" ilk yıllarda potansiyeline ulaşıp elit katmanı şişiriyordu.
+    Düzeltme: `worldGenerator.ts` → kadro şablonundaki gençler alımla aynı model (`YOUTH_LEVEL_GAP`, `youthExtraPotential`; tek çekiliş, rastgelelik akışının uzunluğu aynı;
+    şablonu pratikte yalnızca yurtdışı kulüpler kullanıyor, 38 yurtiçi kulübün gerçek kadrosu var). Sonuç: dünya elit katmanı sabit (CA ≥ 170: 127 → 122, CA ≥ 160: 327 → 320, ilk 50 ort. 182,6 → 182,1).
+  - **Ama Süper Lig eğilimi neredeyse değişmedi** (3 × 10): ilk 11 CA eğimi 1,21 → 1,00/sezon, transfer edilenlerin CA'sı yine 135 → 153, ortalama bedel yine ×2,7, en yüksek CA 171 → 187.
+    En olası açıklama yakınsama: dünyanın tepesi sabit ve ligden çok güçlü (dünya ilk 50 ort. ~182, lig ilk 11'leri ~137); Türk kulüpleri her yıl bu havuzdan net oyuncu çekiyor
+    (önceki tanı: yurtdışından sezonda 14–28 oyuncu, CA ~145 geliyor; yurtdışına 3–13 gidiyor). Sonraki adım (doğrulanmadı): yurtdışı kulüplerinin alım sıklığı bilerek düşük
+    (`FOREIGN_BUY_FACTOR = 0.4`) ve yıldızlarını kolay satıyorlar; yurtdışı kulüpleri kadrolarının en iyilerini tutsun ya da Türk oyuncularını daha çok alsın. Hedef: ligin net yetenek
+    akışının yaklaşık dengede olması (gerçekte Süper Lig en iyi gençlerini büyük liglere satar).
 - [ ] **Gol ortalaması uzun vadede yükseliyor (kısmen düzeltildi, neden tam bulunmadı):** 3 × 10 sezonda maç başına gol 2,7 (S1) → ~3,0 (S9–S10), 10 sezon ortalaması 2,85 (hedef 2,45–2,75).
   - Ölçüm: forvetlerin üst seviyesi kaleci ve savunmadan hızlı yükseliyor (her kulübün en iyi 3 forveti 137 → 149, en iyi kalecisi 136 → 142, en iyi 4 defansı 138 → 144);
     şut ve isabetli şut +%5, gol / isabetli şut dönüşümü sabit (~%28).
@@ -130,8 +136,12 @@ Maç düzeyindeki ölçülerin tamamı hedef aralıkta: gol 2,74, ev galibiyeti 
   - Hedeflerin çoğu "referans" ya da "sınır"; kesin değil (bkz. `src/tools/balance/metrics.ts`).
   - Koşu sıralı (6 × 4 sezon ≈ 2 dk). Çok büyük örnek için kariyerleri paralel çalıştırmak gerekecek.
 
-Elle eklediklerim
+elle eklediklerim
  pozisyon gol olmadan gol olduğu ekranda yazıyor.
  top kornere çıkmadan korner kararı çıkıyor.
  penaltılar çok hızlı kullanılıyor penaltı kararı ve kullanılması anlık oluyor.
  maça git tıkladığımda fikstüre mi gidiyor ne oluyor sonra devam yazıyor sonra bir daha maça git yazıyor bu maça git eventinde bir sorun var gibi. 
+ maç esnasında bazen herkes sabitken bir oyuncu çok uzaktan başka bir yere geçiş yapıyor.
+ oyuncu ve taktik değişikliği tam ekrandan çıkmadan da yapılabilmeli
+ maçtan sonra puan durumuna tıklayınca maç şampiyonlar ligi ya da t kupası da olsa süper lig maçlarına gidiyor
+ beşkitaş gibi takımların isimlerini siyah yazığımız zaman bazı yerlerde okunurluk düşük oluyor. (maç durumu baskı çubuğunda mesela)

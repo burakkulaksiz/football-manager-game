@@ -479,6 +479,8 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
   maaş formülü + bütçe kontrolsüzlüğü maaş gideri 10 sezonda ×2,6 yapıp kasaları eksiye indiriyordu (FINDINGS.md > Denge). Rapor "Ekonomi: nakit akışı" ölçüleriyle izler.
 - Transfer bütçesi sınırı (season/rollover.ts `seasonTransferBudget`): yıllık bütçe = temel bütçe + kasa fazlasının %30'u, en çok transfer dışı yıllık gelirin yarısı (`TRANSFER_BUDGET_INCOME_CAP`),
   temel bütçenin altına inmez. Nedeni: kasa birikip bütçeyi şişiriyor, kulüpler giderek daha pahalı oyuncu alıyordu (transfer edilenlerin ortalama CA'sı 139 → 157, bedeller ×3,3).
+- Yapay zekâ alım eşiği mevki grubuna göre (transfer/ai.ts `groupLevel`): aday CA'sı, alınacak grubun kadrodaki en iyi oyuncularının (kaleci 1, defans 4, orta saha 3, forvet 3)
+  ortalamasının 8 altından düşük olamaz. Önceden tek eşik "ilk 11 ortalaması − 8" idi; CA ölçeği mevkiye göre farklı olduğundan kaleciler eşiğe zor ulaşıyordu.
 - Denge raporu bu iki sorunu kalıcı ölçülerle izler ("Oyuncu havuzu": kadro büyüklüğü, serbest havuz, havuz eğimi). Kullanıcı kulübü kadro ölçülerine girmez (ihmal ediliyor).
 
 ## Açık konular / ileride

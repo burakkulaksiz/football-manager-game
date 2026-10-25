@@ -94,8 +94,16 @@ Maç düzeyindeki ölçülerin tamamı hedef aralıkta: gol 2,74, ev galibiyeti 
   - Sonuç (3 × 10): ortalama bedel 27,5 → 19,9 Mn €, hacim 1078 → 578 Mn €; kadro, nakit akışı, serbest havuz değişmedi. Transfer edilenlerin CA'sı hâlâ yükseliyor (139 → 154): asıl itici güç üst seviye yetenek kayması, ayrı iş.
   - Açık: ilk 11 CA eğimi 10 sezonda +1,1/sezon (sınır ±0,8; S8'den sonra düzleşiyor), en yüksek CA 171 → 184. Neden büyük olasılıkla "ligin dünyadan yetenek çekmesi" (Süper Lig başlangıçta 123, yurtdışı 151 ortalama CA);
     gerçekten sorun mu, yoksa yeni bir dengeye yaklaşma mı olduğu belirsiz.
-- [ ] **Gol ortalaması uzun vadede yükseliyor (yeni, 3 × 10 sezon):** maç başına gol 2,7 (S1) → ~3,0 (S9–S10); hedef 2,45–2,75, en son koşuda ❌ (2,84 ±). Yetenek kaymasıyla birlikte; muhtemelen hücum yeteneği kaleci / savunmadan hızlı artıyor
-  (`TUNING.goalBase`, `finishingExponent`; kaleci ve savunma ağırlıkları `engine.ts`).
+- [ ] **Gol ortalaması uzun vadede yükseliyor (kısmen düzeltildi, neden tam bulunmadı):** 3 × 10 sezonda maç başına gol 2,7 (S1) → ~3,0 (S9–S10), 10 sezon ortalaması 2,85 (hedef 2,45–2,75).
+  - Ölçüm: forvetlerin üst seviyesi kaleci ve savunmadan hızlı yükseliyor (her kulübün en iyi 3 forveti 137 → 149, en iyi kalecisi 136 → 142, en iyi 4 defansı 138 → 144);
+    şut ve isabetli şut +%5, gol / isabetli şut dönüşümü sabit (~%28).
+  - Elenen açıklamalar (geçici tanı betikleriyle): (1) gelişim formülü mevkiye göre dengeli: bir özellik puanı başına beklenen CA kazancı 0,55 (kaleci) – 0,62 (forvet);
+    yalnızca gelişim kuralı 5 yıl işletilince ≤21 yaşta kaleci +19, forvet +16 CA; (2) başlangıçtaki yaş / potansiyel yapısı da açıklamıyor (kaleciler en genç grup, PA−CA farkı en büyük).
+  - Bulunan ve düzeltilen bir asimetri: yapay zekâ alım eşiği tüm mevkiler için tek "ilk 11 ortalaması − 8" idi; CA ölçeği mevkiye göre farklı (başlangıçta kaleci ~115, defans ~124, orta saha ~125,
+    forvet ~122) olduğundan kaleciler eşiğe zor ulaşıyordu. `transfer/ai.ts` → `groupLevel`: eşik artık alınacak mevki grubunun kendi seviyesi (kaleci en iyi 1, defans 4, orta saha 3, forvet 3).
+  - Sonuç (3 × 10, aynı tohumlar): 10 sezon gol ortalaması 2,85 → 2,72 (hedefte; fark ~5 standart hata). **Ama** forvet üst seviyesi hâlâ kaleciden hızlı yükseliyor (137 → 150 vs. 138 → 141)
+    ve son iki sezonda gol yine 2,85–2,93. Yani asimetri gerçekti ama tek neden değil. Sonraki adım: maç motorunda şut olasılığının hücum / savunma oranına duyarlılığı (`TUNING.threatExponent`)
+    ve forvetlerin hangi yoldan (transfer mi, altyapı mı) üst seviyeye girdiği; ya da şut olasılığını lig ortalamasına göre normalize etmek.
 - [ ] **Sonuncunun puanı düşük (belirsiz):** ilk ölçümde 16,5 (referans 18–32). Kullanıcı kulübü hariç yapay zekâ kulüplerinde 17,5 ±2,0 (düzeltme sonrası, 24 sezon): düşüklüğün bir kısmı
   ihmal edilen kullanıcı kulübünün sık sonuncu bitmesinden geliyordu. Hâlâ referansın biraz altında; daha çok sezonla doğrula (zayıf takımlar biraz fazla zayıf olabilir).
 - [ ] **Şampiyon çeşitliliği az:** 24 sezonda yalnızca 3 farklı şampiyon, şampiyon–ikinci farkı ortalama 5,75 puan. Hedef tanımlı değil; gerçek Süper Lig'de de büyük 3–4 kulüp baskın, ama 3 çok az olabilir.

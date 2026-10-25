@@ -68,6 +68,23 @@ function dayContext(world: GameWorld): DayContext {
 /** Kullanıcıya günlük teklif gelme olasılığı. */
 const OFFER_CHANCE = { summer: 0.06, winter: 0.04 };
 
+/** Mevki grubunda ilk 11'e girenlerin sayısı: kaleci 1, defans 4, orta saha 3, forvet 3 (lig geneli ölçümlerle aynı). */
+const GROUP_STARTERS: Record<PositionGroup, number> = { GK: 1, DEF: 4, MID: 3, ATT: 3 };
+
+/**
+ * Kadronun bir mevki grubundaki seviyesi: o gruptaki en iyi oyuncuların ortalama CA'sı. CA ölçeği mevkiye göre farklıdır (başlangıçta kaleci ~115,
+ * defans ~124, orta saha ~125, forvet ~122); alım eşiği tek bir "ilk 11 ortalaması" ise kaleciler eşiğe ulaşamaz, diğer gruplar kolay geçer ve
+ * forvet / defans sürekli yükselirken kaleci durağan kalır (denge raporu: forvet CA +12, kaleci +6 → gol ortalaması 2,7 → 3,0). Grupta oyuncu yoksa `fallback`.
+ */
+export function groupLevel(squad: readonly Player[], group: PositionGroup, fallback: number): number {
+  const cas = squad
+    .filter((p) => groupOf(primaryPosition(p)) === group)
+    .map((p) => p.currentAbility)
+    .sort((a, b) => b - a)
+    .slice(0, GROUP_STARTERS[group]);
+  return cas.length === 0 ? fallback : cas.reduce((a, b) => a + b, 0) / cas.length;
+}
+
 function topElevenAverage(squad: readonly Player[]): number {
   const cas = squad.map((p) => p.currentAbility).sort((a, b) => b - a).slice(0, 11);
   return cas.length === 0 ? 0 : cas.reduce((a, b) => a + b, 0) / cas.length;
@@ -92,7 +109,7 @@ function attemptPurchase(world: GameWorld, buyer: Club, rng: Rng, ctx: DayContex
   if (squad.length >= MAX_SQUAD) return;
 
   const group = neededGroup(rng, squad);
-  const level = topElevenAverage(squad);
+  const level = groupLevel(squad, group, topElevenAverage(squad) - 10);
   const { squadSizes, ranks } = ctx;
 
   const candidates: { player: Player; price: number; score: number }[] = [];

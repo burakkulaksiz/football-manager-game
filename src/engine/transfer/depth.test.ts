@@ -4,7 +4,7 @@ import { totalWages } from '../finance/finance';
 import { clubPlayers, createWorld } from '../generation/worldGenerator';
 import { retirementChance } from '../season/rollover';
 import type { GameWorld, Player } from '../types';
-import { fillAiDepth, MIN_AI_SQUAD } from './ai';
+import { fillAiDepth, groupLevel, MIN_AI_SQUAD } from './ai';
 import { releasePlayer } from './market';
 
 const START = '2026-07-10';
@@ -78,6 +78,21 @@ describe('yapay zekâ kadro tamamlama (fillAiDepth)', () => {
       return clubPlayers(world, 'trabzonspor').map((p) => p.id).sort((a, b) => a - b);
     };
     expect(run()).toEqual(run());
+  });
+});
+
+describe('mevki grubu seviyesi (groupLevel)', () => {
+  const mk = (pos: string, ca: number) => ({ positions: { [pos]: 20 }, currentAbility: ca }) as unknown as Player;
+
+  it('grubun ilk 11 sayısı kadar en iyi oyuncusunun ortalaması: kaleci 1, defans 4, forvet 3', () => {
+    const squad = [mk('GK', 110), mk('GK', 130), mk('DC', 120), mk('DC', 124), mk('DL', 128), mk('DR', 132), mk('DC', 90), mk('ST', 150), mk('ST', 140), mk('AMC', 130), mk('ST', 100)];
+    expect(groupLevel(squad, 'GK', 0)).toBe(130);
+    expect(groupLevel(squad, 'DEF', 0)).toBe((120 + 124 + 128 + 132) / 4);
+    expect(groupLevel(squad, 'ATT', 0)).toBe((150 + 140 + 130) / 3);
+  });
+
+  it('grupta oyuncu yoksa yedek değer döner', () => {
+    expect(groupLevel([mk('ST', 150)], 'GK', 77)).toBe(77);
   });
 });
 

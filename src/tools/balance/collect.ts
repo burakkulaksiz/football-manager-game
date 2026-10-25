@@ -10,6 +10,8 @@ import {
   computeStandings,
   createWorld,
   EUROPE_COMPETITIONS,
+  groupOf,
+  primaryPosition,
   getClub,
   EUROPE_FINAL,
   europeChampion,
@@ -49,6 +51,25 @@ function matchRow(f: Fixture): MatchRow {
 function eliteStrength(world: GameWorld, clubId: string): number {
   const top = clubPlayers(world, clubId).map((p) => p.currentAbility).sort((a, b) => b - a).slice(0, 11);
   return top.reduce((a, b) => a + b, 0) / Math.max(1, top.length);
+}
+
+/** Kulüplerin mevki gruplarında en iyi oyuncuların ortalama CA'sı (lig geneli ortalaması). */
+function groupStrength(world: GameWorld, clubIds: string[]): { gk: number; def: number; mid: number; att: number } {
+  const take = { GK: 1, DEF: 4, MID: 3, ATT: 3 } as const;
+  const sums = { GK: 0, DEF: 0, MID: 0, ATT: 0 };
+  const counts = { GK: 0, DEF: 0, MID: 0, ATT: 0 };
+  for (const id of clubIds) {
+    const byGroup: Record<keyof typeof take, number[]> = { GK: [], DEF: [], MID: [], ATT: [] };
+    for (const p of clubPlayers(world, id)) byGroup[groupOf(primaryPosition(p))].push(p.currentAbility);
+    for (const g of Object.keys(take) as (keyof typeof take)[]) {
+      for (const ca of byGroup[g].sort((a, b) => b - a).slice(0, take[g])) {
+        sums[g] += ca;
+        counts[g]++;
+      }
+    }
+  }
+  const m = (g: keyof typeof take) => (counts[g] === 0 ? NaN : sums[g] / counts[g]);
+  return { gk: m('GK'), def: m('DEF'), mid: m('MID'), att: m('ATT') };
 }
 
 function sumLast12(world: GameWorld, clubId: string, pick: (m: GameWorld['finances'][string]['history'][number]) => number): number {
@@ -153,11 +174,19 @@ function snapshot(world: GameWorld, career: number, strengths: Map<string, numbe
       academy: everyone.filter((p) => p.academy).length,
       total: everyone.length,
     },
+    groups: groupStrength(world, clubs.map((c) => c.id)),
     cohort: {
       size: cohort.length,
       alive: alive.length,
       meanCA: alive.length === 0 ? NaN : alive.reduce((s, p) => s + p.currentAbility, 0) / alive.length,
       meanAge: alive.length === 0 ? NaN : alive.reduce((s, p) => s + ageOn(p.birthDate, world.date), 0) / alive.length,
+      byGroup: (() => {
+        const m = (g: string) => {
+          const list = alive.filter((p) => groupOf(primaryPosition(p)) === g);
+          return list.length === 0 ? NaN : list.reduce((s, p) => s + p.currentAbility, 0) / list.length;
+        };
+        return { gk: m('GK'), def: m('DEF'), mid: m('MID'), att: m('ATT') };
+      })(),
     },
     talent: {
       eliteMeanCA: eliteMeans.reduce((a, b) => a + b, 0) / eliteMeans.length,

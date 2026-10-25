@@ -68,8 +68,10 @@ export interface SeasonSnapshot {
   /** Dünyanın büyüklüğü: Süper Lig A takım büyüklükleri, serbest oyuncu havuzu, altyapı havuzu (sezon sonu). */
   pool: { squadMean: number; squadMin: number; freeAgents: number; academy: number; total: number };
   /** İlk sezon sonunda ligdeki oyuncuların aynı grubu: sonraki sezonlarda (hangi kulüpte olursa olsun) hayatta kalanların ortalaması. */
-  cohort: { size: number; alive: number; meanCA: number; meanAge: number };
+  cohort: { size: number; alive: number; meanCA: number; meanAge: number; byGroup: { gk: number; def: number; mid: number; att: number } };
   /** Süper Lig oyuncuları (A takım). */
+  /** Kulüplerin mevki gruplarına göre en iyi oyuncularının ortalama CA'sı (kaleci 1, defans 4, orta saha 3, forvet 3 oyuncu). */
+  groups: { gk: number; def: number; mid: number; att: number };
   talent: { eliteMeanCA: number; maxCA: number; over150: number; meanAge: number; caByAge: { u22: number; mid: number; o29: number } };
 }
 

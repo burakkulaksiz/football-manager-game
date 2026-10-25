@@ -58,7 +58,8 @@ function season(career: number, year: number, over: Partial<SeasonSnapshot> = {}
     transfers: { count: 10, fee: 1e8, maxFee: 3e7, free: 5, loans: 3, fees: [1e7, 1e7, 1e7, 1e7, 1e7, 1e7, 1e7, 1e7, 1e7, 1e7], cas: [140, 140, 140, 140, 140, 140, 140, 140, 140, 140] },
     europe: [{ comp: 'cl', turkishClubs: 2, turkishKnockout: 1, turkishFinalists: 0, turkishWinner: false }],
     pool: { squadMean: 26, squadMin: 22, freeAgents: 100 + (year - 2026) * 10, academy: 300, total: 2500 },
-    cohort: { size: 100, alive: 95, meanCA: 120 + (year - 2026), meanAge: 26 + (year - 2026) },
+    groups: { gk: 120, def: 125, mid: 130, att: 135 },
+    cohort: { size: 100, alive: 95, meanCA: 120 + (year - 2026), meanAge: 26 + (year - 2026), byGroup: { gk: 120, def: 120, mid: 120, att: 120 } },
     talent: { eliteMeanCA: 120 + (year - 2026), maxCA: 170, over150: 12, meanAge: 26, caByAge: { u22: 100, mid: 130, o29: 120 } },
     ...over,
   };

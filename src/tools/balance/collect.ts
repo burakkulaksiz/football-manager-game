@@ -116,6 +116,9 @@ function snapshot(world: GameWorld, career: number, strengths: Map<string, numbe
   const players = clubs.flatMap((c) => clubPlayers(world, c.id));
   const alive = cohort.map((id) => world.players[id]).filter((p): p is NonNullable<typeof p> => p !== undefined);
   const eliteMeans = clubs.map((c) => eliteStrength(world, c.id));
+  // Kullanıcı kulübü ihmal edildiği için (yenileme / transfer yok) kadro ölçülerine girmez: yapay zekâ kulüplerinin dengesi ölçülür
+  const squadSizes = clubs.filter((c) => c.id !== world.playerClubId).map((c) => clubPlayers(world, c.id).length);
+  const everyone = Object.values(world.players);
   // Yetenek enflasyonu hangi yaş grubundan geliyor: 22 altı / 22–28 / 29+ ortalama CA
   const ageMean = (pick: (age: number) => boolean) => {
     const group = players.filter((p) => pick(ageOn(p.birthDate, world.date)));
@@ -135,6 +138,13 @@ function snapshot(world: GameWorld, career: number, strengths: Map<string, numbe
     topAssists: topAssists(league, 1)[0]?.value ?? 0,
     transfers,
     europe: EUROPE_COMPETITIONS.map((c) => europeSeason(world, c)).filter((e): e is EuropeSeason => e !== null),
+    pool: {
+      squadMean: squadSizes.reduce((a, b) => a + b, 0) / squadSizes.length,
+      squadMin: Math.min(...squadSizes),
+      freeAgents: everyone.filter((p) => !p.clubId && !p.academy).length,
+      academy: everyone.filter((p) => p.academy).length,
+      total: everyone.length,
+    },
     cohort: {
       size: cohort.length,
       alive: alive.length,

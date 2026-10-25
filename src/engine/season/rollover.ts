@@ -25,7 +25,7 @@ import { divisionOf, EXPECTATION_TARGET, expectationForRank } from './expectatio
 /** Yapay zekâ kulübünün kadro üst sınırı (fazlası serbest bırakılır). */
 export const AI_SQUAD_LIMIT = 30;
 /** Yapay zekâ, kadro sırası bunun altındaki oyuncuyla sözleşme yeniler. */
-const AI_RENEW_RANK = 18;
+const AI_RENEW_RANK = 22;
 
 const fullName = (p: Player) => `${p.firstName} ${p.lastName}`;
 
@@ -80,11 +80,18 @@ export function processExpiringContracts(world: GameWorld, rng: Rng): void {
   }
 }
 
-/** Emeklilik olasılığı: 34 yaşından itibaren artar, 38'de kesin; serbest kalmış yaşlılar daha çabuk bırakır. */
+/**
+ * Emeklilik olasılığı: 34 yaşından itibaren artar, 38'de kesin. İşsiz (serbest) oyuncular daha çabuk bırakır:
+ * 31+ yaşta %40 ek; 24–30 yaşta seviyesi düşükse (CA < 100) %25, değilse %10 (yoksa serbest havuz sürekli büyür:
+ * denge raporu, "Oyuncu havuzu" ölçüleri).
+ */
 export function retirementChance(p: Player, age: number): number {
   if (age >= 38) return 1;
   let chance = age >= 34 ? 0.25 + (age - 34) * 0.18 + (p.currentAbility < 90 ? 0.15 : 0) : 0;
-  if (!p.clubId && age >= 31) chance += 0.4;
+  if (!p.clubId) {
+    if (age >= 31) chance += 0.4;
+    else if (age >= 24) chance += p.currentAbility < 100 ? 0.25 : 0.1;
+  }
   return Math.min(1, chance);
 }
 

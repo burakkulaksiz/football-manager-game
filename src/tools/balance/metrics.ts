@@ -76,7 +76,8 @@ function seasonMetrics(seasons: SeasonSnapshot[]): MetricResult[] {
   const g = 'Sezon (lig tablosu)';
   const byPos = (s: SeasonSnapshot, pos: number) => s.clubs.find((c) => c.position === pos)!;
   const champion = seasons.map((s) => byPos(s, 1).points);
-  const last = seasons.map((s) => byPos(s, s.clubs.length).points);
+  // Kullanıcı kulübü ihmal edilip çöktüğü için sık sonuncu bitiyor: sonuncu yalnızca yapay zekâ kulüpleri arasından alınır
+  const last = seasons.map((s) => Math.min(...s.clubs.filter((c) => c.clubId !== s.userClubId).map((c) => c.points)));
   const margin = seasons.map((s) => byPos(s, 1).points - byPos(s, 2).points);
   // Kadro gücü ile final sırası: güçlü kadro üst sıralarda mı bitiriyor (Spearman; −sıra ile)
   const corr = seasons.map((s) => spearman(s.clubs.map((c) => c.strength), s.clubs.map((c) => -c.position)));
@@ -87,7 +88,7 @@ function seasonMetrics(seasons: SeasonSnapshot[]): MetricResult[] {
   const distinct = new Set(seasons.map((s) => s.championId)).size;
   return [
     meanMetric(g, 'champPoints', 'Şampiyonun puanı', 'puan', champion, [72, 95], { tune: 'Takım güç farkları: src/engine/match/engine.ts (güç oranı üsleri); NOTES: şampiyon 72–95' }),
-    meanMetric(g, 'lastPoints', 'Sonuncunun puanı', 'puan', last, [18, 32], { note: 'Referans.' }),
+    meanMetric(g, 'lastPoints', 'Sonuncunun puanı (yapay zekâ kulüpleri)', 'puan', last, [18, 32], { note: 'Referans. Kullanıcı kulübü (ihmal edildiği için sık sonuncu) hariç.' }),
     meanMetric(g, 'titleMargin', 'Şampiyon ile ikinci arası puan farkı', 'puan', margin, null),
     meanMetric(g, 'strengthCorr', 'Kadro gücü ↔ final sırası korelasyonu (Spearman)', 'r', corr.filter((x) => !Number.isNaN(x)), [0.6, 0.92], {
       tune: 'Çok düşükse sonuçlar fazla şansa bağlı (güç farkı etkisi artırılmalı); çok yüksekse lig öngörülebilir (rastgelelik artırılmalı)',
@@ -175,6 +176,29 @@ function talentMetrics(seasons: SeasonSnapshot[], careers: RawData['careers']): 
   ];
 }
 
+function poolMetrics(seasons: SeasonSnapshot[], careers: RawData['careers']): MetricResult[] {
+  const g = 'Oyuncu havuzu (dünya büyüklüğü)';
+  const slopes = (pick: (s: SeasonSnapshot) => number) => careers.map((c) => slope(c.seasons.map(pick))).filter((x) => !Number.isNaN(x));
+  return [
+    meanMetric(g, 'squadMean', 'Süper Lig kulübü A takım büyüklüğü (ortalama)', 'oyuncu', seasons.map((s) => s.pool.squadMean), [23, 29], {
+      tune: 'src/engine/transfer/ai.ts (MIN_AI_SQUAD, fillAiDepth), season/rollover.ts (AI_RENEW_RANK, AI_SQUAD_LIMIT)',
+      note: 'Kadrolar küçülürse yedek oyuncular gider ve ligin ortalama yeteneği yapay yükselir.',
+    }),
+    meanMetric(g, 'squadMin', 'En küçük Süper Lig kadrosu', 'oyuncu', seasons.map((s) => s.pool.squadMin), [20, 99], { note: 'Sınır: MIN_SQUAD_TO_SELL = 20; altına inen kadro maç kadrosu kuramayabilir.' }),
+    meanMetric(g, 'freeAgents', 'Serbest oyuncu havuzu (sezon sonu)', 'oyuncu', seasons.map((s) => s.pool.freeAgents), [0, 350], {
+      tune: 'ai.ts: fillAiDepth (yedek tamamlama), rollover.ts: retirementChance (serbest yaşlılar)',
+      note: 'Sınır. Havuz sürekli büyürse işsiz oyuncular birikiyor demektir.',
+    }),
+    // Havuz sıfırdan başlar; ilk sezonlar geçiş dönemidir. Eğim yalnızca uzun koşularda (≥ 6 sezon) ve son 4 sezondan yargılanır
+    meanMetric(g, 'freeAgentsSlope', 'Serbest oyuncu havuzu eğimi (son 4 sezon)', 'oyuncu / sezon',
+      careers.map((c) => slope(c.seasons.slice(-4).map((s) => s.pool.freeAgents))).filter((x) => !Number.isNaN(x)),
+      careers.every((c) => c.seasons.length >= 6) ? [-20, 25] : null,
+      { note: 'Sınır: havuz doymalı. 6 sezondan kısa koşularda hedefsiz (başlangıçtaki yükseliş geçiş dönemidir; 10 sezonda yaklaşık 250 oyuncuda doyar).' }),
+    meanMetric(g, 'academyPool', 'Altyapı havuzu (sezon sonu)', 'oyuncu', seasons.map((s) => s.pool.academy), null),
+    meanMetric(g, 'worldSlope', 'Dünyadaki toplam oyuncu sayısı eğimi', 'oyuncu / sezon', slopes((s) => s.pool.total), null, { note: 'Süregelen büyüme hem yavaşlık hem bellek demektir.' }),
+  ];
+}
+
 function europeMetrics(seasons: SeasonSnapshot[]): MetricResult[] {
   const g = 'Avrupa (Türk kulüpleri)';
   const out: MetricResult[] = [];
@@ -221,6 +245,7 @@ export function computeMetrics(raw: RawData): MetricResult[] {
     ...seasonMetrics(seasons),
     ...economyMetrics(seasons),
     ...talentMetrics(seasons, raw.careers),
+    ...poolMetrics(seasons, raw.careers),
     ...europeMetrics(seasons),
     ...boardMetrics(raw, seasons),
   ];
@@ -250,6 +275,8 @@ function computeTrends(raw: RawData): Report['trends'] {
     series('caO29', '29+ yaş ort. CA', 'CA', (l) => mean(l.map((s) => s.talent.caByAge.o29))),
     series('age', 'Ortalama yaş', 'yaş', (l) => mean(l.map((s) => s.talent.meanAge))),
     series('balance', 'Kasa medyanı', '€ Mn', (l) => median(l.flatMap((s) => s.clubs.map((c) => c.balance))) / M),
+    series('squad', 'Süper Lig kadro büyüklüğü', 'oyuncu', (l) => mean(l.map((s) => s.pool.squadMean))),
+    series('free', 'Serbest oyuncu havuzu', 'oyuncu', (l) => mean(l.map((s) => s.pool.freeAgents))),
     series('transfers', 'Transfer hacmi', '€ Mn', (l) => mean(l.map((s) => s.transfers.fee)) / M),
   ];
 }

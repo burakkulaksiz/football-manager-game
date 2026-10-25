@@ -6,7 +6,7 @@ import { addDays } from '../date';
 import { clubPlayers, getClub } from '../generation/worldGenerator';
 import { addNews } from '../news';
 import { ageOn, marketValue, primaryPosition, roundNice } from '../player';
-import type { Rng } from '../rng';
+import { Rng } from '../rng';
 import type { Club, GameWorld, Player } from '../types';
 import {
   askingPrice,
@@ -21,12 +21,29 @@ import {
   type PositionGroup,
 } from './market';
 import { isActive, MIN_SQUAD_TO_SELL, triggerReleaseClause } from './offers';
+import { totalWages } from '../finance/finance';
 import { transferWindow } from './window';
 
 /** Kadroda istenen en az oyuncu sayısı (mevki grubuna göre). */
 const GROUP_TARGET: Record<PositionGroup, number> = { GK: 3, DEF: 8, MID: 7, ATT: 6 };
 /** Bu kadro büyüklüğüne ulaşan kulüp oyuncu almaz. */
 export const MAX_SQUAD = 28;
+
+/**
+ * Yapay zekâ kulübünün A takımında olması gereken en az oyuncu sayısı. Alım kuralı yalnızca ilk 11 seviyesine yakın oyuncuları
+ * alıyor; sözleşmesi bitenlerin yedekleri serbest kalınca kadro bunun altına inebilir. Altındaki kulüp serbest oyunculardan
+ * yedek tamamlar (denge raporu: bunsuz kadrolar 28 → 20'ye küçülüyor, serbest oyuncu havuzu şişiyor, ligin ortalama yeteneği yapay yükseliyor).
+ */
+export const MIN_AI_SQUAD = 24;
+/** Kadrosu eksik kulübün transfer döneminde günlük yedek tamamlama olasılığı; yurtdışı kulüplerde yarısı. */
+const DEPTH_CHANCE = 0.35;
+/** Yedek tamamlamanın kendi rastgelelik akışı (mevcut akışı bozmaz). */
+export const DEPTH_SEED_SALT = 0xdee7;
+/** Yedek olarak alınacak oyuncunun, kulübün ilk 11 ortalamasının en fazla bu kadar altında / üstünde olması. */
+const DEPTH_BELOW = 30;
+const DEPTH_ABOVE = 6;
+/** İhtiyaç duyulan mevki grubundaki adaya verilen puan bonusu (CA cinsinden). */
+const DEPTH_GROUP_BONUS = 8;
 
 /** Günlük alım girişimi olasılığı (yaz / devre arası). */
 const BUY_CHANCE = { summer: 0.05, winter: 0.03 };
@@ -169,6 +186,55 @@ function attemptOfferToUser(world: GameWorld, rng: Rng): void {
   });
 }
 
+function dayRng(world: GameWorld): Rng {
+  const day = Number(world.date.slice(0, 4)) * 372 + Number(world.date.slice(5, 7)) * 31 + Number(world.date.slice(8, 10));
+  return new Rng((world.seed ^ DEPTH_SEED_SALT ^ Math.imul(day, 2654435761)) >>> 0);
+}
+
+/**
+ * Kadrosu `MIN_AI_SQUAD`'ın altındaki yapay zekâ kulüpleri serbest oyunculardan (bedelsiz) yedek alır:
+ * kulübün seviyesine uygun ve maaş bütçesine sığan en iyi oyuncu. En çok ihtiyaç duyulan mevki grubu öncelikli sayılır
+ * (puan bonusu); o grupta serbest oyuncu yoksa başka gruptan da alınır (aksi hâlde kadro takılı kalır).
+ */
+export function fillAiDepth(world: GameWorld): void {
+  const squads = new Map<string, Player[]>();
+  const free: Player[] = [];
+  for (const p of Object.values(world.players)) {
+    if (p.academy) continue;
+    if (!p.clubId) free.push(p);
+    else (squads.get(p.clubId) ?? squads.set(p.clubId, []).get(p.clubId)!).push(p);
+  }
+  if (free.length === 0) return;
+  const rng = dayRng(world);
+  for (const club of world.clubs) {
+    if (club.id === world.playerClubId) continue;
+    const squad = squads.get(club.id) ?? [];
+    if (squad.length >= MIN_AI_SQUAD) continue;
+    if (!rng.chance(DEPTH_CHANCE * (club.country !== undefined ? 0.5 : 1))) continue;
+
+    const group = neededGroup(rng, squad);
+    const level = topElevenAverage(squad);
+    const fin = world.finances[club.id]!;
+    const wageRoom = fin.wageBudget - totalWages(squad, club.id);
+    let best: { player: Player; wage: number; score: number } | null = null;
+    for (const p of free) {
+      if (p.clubId) continue;
+      if (ageOn(p.birthDate, world.date) > 34) continue;
+      if (p.currentAbility < level - DEPTH_BELOW || p.currentAbility > level + DEPTH_ABOVE) continue;
+      const wage = wageDemand(world, p, club.id);
+      if (wage > wageRoom) continue;
+      const score = p.currentAbility + (groupOf(primaryPosition(p)) === group ? DEPTH_GROUP_BONUS : 0) + rng.float(0, 4);
+      if (!best || score > best.score) best = { player: p, wage, score };
+    }
+    if (!best) continue;
+    const [minYears, maxYears] = preferredYears(ageOn(best.player.birthDate, world.date));
+    transferPlayer(world, best.player, club.id, 0, { wage: best.wage, years: rng.int(minYears, maxYears), signingBonus: 0 });
+    squad.push(best.player);
+    squads.set(club.id, squad);
+    free.splice(free.indexOf(best.player), 1);
+  }
+}
+
 /** Transfer dönemindeki günlük yapay zekâ hamleleri. */
 export function aiTransferDay(world: GameWorld, rng: Rng): void {
   const window = transferWindow(world.date);
@@ -181,4 +247,5 @@ export function aiTransferDay(world: GameWorld, rng: Rng): void {
     if (rng.chance(chance)) attemptPurchase(world, club, rng, (ctx ??= dayContext(world)));
   }
   if (rng.chance(OFFER_CHANCE[season])) attemptOfferToUser(world, rng);
+  fillAiDepth(world);
 }

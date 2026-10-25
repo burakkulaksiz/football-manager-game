@@ -466,6 +466,15 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
   yapay sürdürülür. Az gözlemde (n < 5) "hedef dışı" yerine "belirsiz" denir. Motor değişince: koşu → rapor → hedef dışı ölçülerin "bak:" ipucu.
 - Bilinen: tam sezon testleri yavaş (FINDINGS.md > Testler).
 
+## Denge düzeltmeleri (denge raporu bulguları)
+- Kadro tamamlama (transfer/ai.ts `fillAiDepth`, `MIN_AI_SQUAD` = 24): kadrosu altına inen yapay zekâ kulübü (yurtdışı dahil, kullanıcı hariç) transfer
+  döneminde serbest oyunculardan, kulübün ilk 11 ortalamasının 30 altı / 6 üstü aralığında, en çok ihtiyaç duyulan mevki grubundan ve maaş bütçesine sığan en iyi
+  oyuncuyu bedelsiz alır; gün başına %35 (yurtdışı %17,5). Kendi rastgelelik akışı vardır (`DEPTH_SEED_SALT` + gün): mevcut akışı değiştirmez. Nedeni: alım kuralı yalnızca
+  ilk 11 seviyesine yakın oyuncuları alıyor, sözleşme yenileme yalnızca sıra < `AI_RENEW_RANK` (22) olanlara; yedekler gidince kadrolar 28 → 20'ye küçülüyor, serbest
+  havuz şişiyor, ligin ortalama CA'sı yapay yükseliyordu (FINDINGS.md > Denge).
+- İşsiz oyuncuların emekliliği (season/rollover.ts `retirementChance`): 31+ yaş +%40; 24–30 yaş CA < 100 → +%25, değilse +%10 (24 altı yok). Serbest havuz ~250'de doyar.
+- Denge raporu bu iki sorunu kalıcı ölçülerle izler ("Oyuncu havuzu": kadro büyüklüğü, serbest havuz, havuz eğimi). Kullanıcı kulübü kadro ölçülerine girmez (ihmal ediliyor).
+
 ## Açık konular / ileride
 - Duran top özellikleri (penaltı, korner) mevkiyle ilgisizse düşük çıkabiliyor — 10. aşamada denge.
 - Beraberlik %25.4 (hedef %27; Süper Lig gerçeği ~%25). Daha fazlası gol ortalamasını düşürüyor.

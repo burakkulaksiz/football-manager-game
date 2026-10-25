@@ -62,16 +62,28 @@ Kaynak: `npm run balance`, 6 kariyer × 4 sezon = 24 sezon (7344 lig maçı), to
 (motor deterministik). Aşağıdakiler küçük örnekle bulunan ilk sinyallerdir; kesinleştirmek için daha çok kariyer / sezonla (ör. 12 × 10) yeniden ölç.
 Maç düzeyindeki ölçülerin tamamı hedef aralıkta: gol 2,74, ev galibiyeti %43,4, beraberlik %25,8, şut, korner, kart, penaltı, gol kralı 25,6.
 
-- [ ] **Yetenek enflasyonu:** ligdeki kulüplerin ilk 11 ortalama CA'sı sezon başına +1,66 (±0,17) artıyor (137 → 142, 4 sezonda); hedef sınırımız ±0,8.
-  - Gözlem: aynı oyuncu grubunu izleyince (ilk sezon sonundaki lig oyuncuları) eğim +0,96 CA/sezon, yaş eğimi +0,51/sezon. Yani enflasyonun kabaca %60'ı
-    mevcut oyuncuların gelişiminden / yaşlanmanın yetersizliğinden (ve emekli olan zayıfların ayıklanmasından), %40'ı kadro değişiminden (genç akışı, transfer) geliyor.
-  - 22 yaş altı oyuncuların ortalama CA'sı 109 → 136 (+9,5/sezon; ligdeki A takımdakiler), 22–28 yaş +2,45, 29+ yaş +2,47/sezon. 29+ yaşta artış beklenmez.
-  - Yapılacak: yaşlanma eğrisini incele (`squad/development.ts`, `growth.ts`), 29+ yaşta CA'nın neden arttığını bul; ayrıca emeklilerin ayıklama etkisini ayır
-    (rapora "emekli olmayanlar" kohortu eklenebilir). Genç akışı: `academy.ts`, yaz terfileri (`season/rollover.ts`).
+- [x] **Yetenek enflasyonu (kadro büyüklüğü ve serbest havuz kaynaklı kısmı düzeltildi):** ilk 11 ortalama CA'sı sezon başına +1,66 (±0,17) artıyordu (sınırımız ±0,8).
+  - Tanı (geçici tanı betiğiyle, 6 sezon): bireysel gelişim makuldü (aynı oyuncular 20–22 yaş +9, 26–28 yaş −2,4, 29–31 yaş −7 CA / 5 sezon). Dünya genelinde yetenek sabitti
+    (yetişkin ortalama CA 131 → 135, ilk 500 oyuncu 165 → 166). Asıl neden kadro bileşimiydi: Süper Lig kadroları 28 → 20 oyuncuya küçülüyordu
+    (yapay zekâ yalnızca sözleşme sırası < 18 olanları yeniliyor, alım kuralı yalnızca ilk 11 seviyesine yakın oyuncuları alıyordu; yedekler serbest kalıp geri alınmıyordu)
+    ve serbest oyuncu havuzu 0 → 519'a şişiyordu. Yedekler gidince ligin ortalama CA'sı yapay yükseliyordu.
+  - Düzeltme (`src/engine`): (1) `transfer/ai.ts` → `fillAiDepth`: kadrosu `MIN_AI_SQUAD` (24) altına inen yapay zekâ kulübü, transfer döneminde serbest oyunculardan
+    kulübün seviyesine ve maaş bütçesine uygun yedek alır (kendi rastgelelik akışı, `DEPTH_SEED_SALT`; mevcut akışı bozmaz); (2) `season/rollover.ts`: yapay zekâ
+    sözleşme yenileme sırası 18 → 22; (3) işsiz oyuncuların emeklilik olasılığı yaşa ve seviyeye göre artırıldı (`retirementChance`).
+  - Sonuç (aynı tohumlar, 6 × 4): ilk 11 CA eğimi +1,66 → +0,65 CA/sezon (sınır içinde); Süper Lig kadro ortalaması 25,4; serbest havuz 10 sezonda ~250'de doyuyor
+    (önceden 519'a sürekli büyüyordu). 3 × 10 sezonluk koşuda ilk 11 CA eğimi +0,78 (sınır içinde).
+  - Raporda artık kalıcı ölçüler var: kadro büyüklüğü, serbest havuz, havuz eğimi, altyapı havuzu, dünya büyüklüğü eğimi ("Oyuncu havuzu").
+  - Kalan: yetenek hâlâ yavaş yükseliyor (ligdeki en yüksek CA 171 → 187, 10 sezonda +2/sezon; 22–28 yaş ortalaması +1,3/sezon). Aşağıdaki fiyat enflasyonu bunu büyütüyor.
 - [ ] **Transfer hacmi hızla büyüyor:** Süper Lig kulüplerini ilgilendiren bonservisli transfer toplamı 181 → 272 → 365 → 477 Mn € (4 sezonda ×2,6), kulüp kasası medyanı sabit (~13 Mn €).
   - Transfer başına ortalama bedel son/ilk sezon oranı 1,49 (sınırımız 0,6–1,8 içinde, ama eğilim yukarı). Enflasyonla ilişkili olabilir (CA yükselince piyasa değeri yükselir).
   - Yapılacak: `transfer/market.ts` (piyasa değeri, bonservis formülü) ve `ai.ts` (yapay zekâ alım sıklığı) incele; kasa büyümediği hâlde hacmin büyümesi tutarsız.
-- [ ] **Sonuncunun puanı düşük:** 16,5 puan (±3,1; referans 18–32). Belirsiz; daha çok sezonla doğrula. Zayıf takımlar çok zayıf kalıyor olabilir.
+- [ ] **Ekonomi uzun vadede bozuluyor (yeni, 3 × 10 sezon):** kulüp kasası medyanı S4'te +20 Mn € iken S7'de 0'a, S10'da −14,9 Mn €'ya iniyor; sezon sonunda kasası eksi olan kulüp oranı %30,7
+  (sınırımız %35). Aynı sürede transfer hacmi 223 → 940 Mn €/sezon, transfer başına ortalama bedel son/ilk sezon oranı 3,83 (sınırımız 1,8; n küçük, "belirsiz").
+  - Olası bağlantı: piyasa değeri CA'ya çok duyarlı olabilir (CA %9 artınca fiyat ×3,8); küçük yetenek kayması büyük fiyat enflasyonu yapar. `transfer/market.ts` (marketValue, askingPrice) ve
+    kulüp bütçe yenilemesi (`season/rollover.ts`, `finance/finance.ts`) incelenmeli. Maaş bütçesi / gelir oranı normal (0,57), yani sorun transfer harcamasında / kasa yenilemesinde.
+  - Not: kadro tamamlama düzeltmesi (24 oyuncu) maaş toplamını biraz artırmış olabilir; ama kasa düşüşü düzeltmeden önceki 4 sezonluk koşuda da başlamıştı (S3'ten S4'e 16,0 → 12,8). Ayrıştırılmadı.
+- [ ] **Sonuncunun puanı düşük (belirsiz):** ilk ölçümde 16,5 (referans 18–32). Kullanıcı kulübü hariç yapay zekâ kulüplerinde 17,5 ±2,0 (düzeltme sonrası, 24 sezon): düşüklüğün bir kısmı
+  ihmal edilen kullanıcı kulübünün sık sonuncu bitmesinden geliyordu. Hâlâ referansın biraz altında; daha çok sezonla doğrula (zayıf takımlar biraz fazla zayıf olabilir).
 - [ ] **Şampiyon çeşitliliği az:** 24 sezonda yalnızca 3 farklı şampiyon, şampiyon–ikinci farkı ortalama 5,75 puan. Hedef tanımlı değil; gerçek Süper Lig'de de büyük 3–4 kulüp baskın, ama 3 çok az olabilir.
   Daha çok sezonla ölç (`BALANCE_SEASONS=10`).
 - [ ] **İhmal edilen kulüp çöküyor (bilgi, hata olmayabilir):** kullanıcı kulübü otomatik oynarken sözleşme yenilemiyor, transfer yapmıyor; 6 kariyerin 6'sında görevden alındı

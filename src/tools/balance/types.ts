@@ -57,9 +57,11 @@ export interface SeasonSnapshot {
   topAssists: number;
   transfers: { count: number; fee: number; maxFee: number; free: number; loans: number };
   europe: EuropeSeason[];
-  /** Süper Lig oyuncuları (A takım). */
+  /** Dünyanın büyüklüğü: Süper Lig A takım büyüklükleri, serbest oyuncu havuzu, altyapı havuzu (sezon sonu). */
+  pool: { squadMean: number; squadMin: number; freeAgents: number; academy: number; total: number };
   /** İlk sezon sonunda ligdeki oyuncuların aynı grubu: sonraki sezonlarda (hangi kulüpte olursa olsun) hayatta kalanların ortalaması. */
   cohort: { size: number; alive: number; meanCA: number; meanAge: number };
+  /** Süper Lig oyuncuları (A takım). */
   talent: { eliteMeanCA: number; maxCA: number; over150: number; meanAge: number; caByAge: { u22: number; mid: number; o29: number } };
 }
 

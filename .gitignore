@@ -7,3 +7,6 @@ scripts/.cache
 
 # Denge raporu çıktıları (npm run balance)
 reports/
+
+# Paralel ajanlar için git worktree klasörleri
+.claude/worktrees/

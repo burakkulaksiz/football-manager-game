@@ -124,6 +124,32 @@ describe('2D saha sahnesi', () => {
     }
   });
 
+  it('ışınlanma yok: şut karesinde kimse tek başına uzaktan koşmaz; duran top dizilişi kareler boyunca bozulmaz', () => {
+    // Şutu çeken, kartı gören, kornerde kafayı vuran top kaleye giderken (diğerleri dururken) yarım saha koşuyordu;
+    // duran topta topu taşıyan değişince diziliş karışıyordu
+    const shots = plays.filter((p) => ['goal', 'save', 'miss', 'blocked', 'penalty'].includes(p.play.kind) && !p.play.subs);
+    expect(shots.some((p) => p.play.card)).toBe(true);
+    expect(shots.some((p) => p.play.fromCorner)).toBe(true);
+    expect(shots.some((p) => p.play.fromPenalty || p.play.fromFreeKick)).toBe(true);
+    for (const { minute, play, state } of shots) {
+      const scene = buildScene(state, play, minute);
+      const reveal = revealIndex(scene);
+      for (let i = 1; i <= reveal; i++) {
+        const before = frameSpots(state, scene[i - 1]!, false);
+        const after = frameSpots(state, scene[i]!, false);
+        // Şutu bloke eden savunmacı, kurtarışa uzanan kaleci ve topa koşan (pası / ortayı alan) oyuncu hariç
+        const runs = [...after]
+          .filter(([id]) => before.has(id) && id !== play.defenderId && id !== play.keeperId && id !== scene[i]!.carrierId)
+          .map(([id, s]) => Math.hypot(s.at.x - before.get(id)!.at.x, s.at.y - before.get(id)!.at.y))
+          .sort((a, b) => b - a);
+        if (scene[i - 1]!.setPiece && scene[i]!.setPiece) expect(runs[0]!).toBeLessThan(3);
+        else if (i === reveal && runs[0]! > 15) expect(runs[1]!).toBeGreaterThan(3);
+      }
+      // Korneri kullanan kafayı vuran olamaz (bayraktan altıpasa ışınlanırdı)
+      if (play.fromCorner) expect(scene.find((f) => f.setPiece)!.setPiece!.takerId).not.toBe(play.playerId);
+    }
+  });
+
   it('penaltıda vurucu dışındaki saha oyuncuları ceza sahası dışında', () => {
     const m = match();
     const shooter = m.home.onPitch.find((id) => m.players[id]!.slot === 'ST')!;

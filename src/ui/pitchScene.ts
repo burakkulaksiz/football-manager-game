@@ -52,6 +52,8 @@ export interface SetPiece {
   side: Side;
   /** Duran topun kullanıldığı yer: diziliş buna göre kurulur ve şut sonrasında da bozulmaz. */
   spot: Point;
+  /** Kullanan: dizilişin dışında, vuruştan sonra da topun başında kalır (diziliş kareden kareye karışmasın). */
+  takerId: number | null;
 }
 
 const other = (side: Side): Side => (side === 'home' ? 'away' : 'home');
@@ -216,9 +218,9 @@ function playFrames(match: MatchState, play: MatchPlay, minute: number): SceneFr
   };
   /** Duran top dizilişi karesi: top yerinde, kullanan başında (yoksa topa en yakın oyuncu). */
   const setUp = (ball: Point, taker: number | null, kind: SetPiece['kind']): SetPiece => {
-    const setPiece: SetPiece = { kind, side, spot: ball };
     const id = taker ?? nearestTeammate(match, side, ball, used);
     if (id !== null) used.add(id);
+    const setPiece: SetPiece = { kind, side, spot: ball, takerId: id };
     frames.push({ ball, carrierId: id, carrierSide: side, placed: [], move: 'none', setPiece });
     return setPiece;
   };
@@ -281,6 +283,8 @@ function playFrames(match: MatchState, play: MatchPlay, minute: number): SceneFr
         // Korner: bayraktan orta, kafayı vuran altıpas önünde
         buildUp(1);
         const flag = at(side, 104.6, origin.y < MID_Y ? 0.6 : PITCH_WIDTH - 0.6);
+        // Kafayı vuran korneri kullanamaz (bayraktan altıpasa ışınlanmasın)
+        if (play.playerId !== null) used.add(play.playerId);
         setPiece = setUp(flag, null, 'corner');
         if (play.playerId !== null) used.delete(play.playerId);
         frames.push({ ball: origin, carrierId: play.playerId, carrierSide: side, placed: [], move: 'pass', setPiece });
@@ -313,17 +317,18 @@ function playFrames(match: MatchState, play: MatchPlay, minute: number): SceneFr
         end.placed.push({ id: play.keeperId, side: opp, at: keeperAt });
       }
       if (play.kind === 'blocked' && play.defenderId != null) end.placed.push({ id: play.defenderId, side: opp, at: final });
-      // Duran topta şutu çeken vurduğu yerde kalır (diziliş onu başka yere koymasın)
-      if (setPiece && play.playerId !== null) end.placed.push({ id: play.playerId, side, at: { x: origin.x + (side === 'home' ? -1.6 : 1.6), y: origin.y } });
+      // Şutu çeken vurduğu yerde kalır (diziliş onu top kaleye giderken tek başına yerine koşturmasın)
+      if (play.playerId !== null) end.placed.push({ id: play.playerId, side, at: { x: origin.x + (side === 'home' ? -1.6 : 1.6), y: origin.y } });
       frames.push(end);
     }
   }
 
-  // Kart: kartı gören son karede topun yanında (sahadan atılsa da o an görünür)
+  // Kart: sahadan atılan, son karede topun yanında görünür; sahadaki kendi yerinde kalır (kart dakikanın önceki
+  // faulünden şuta taşınmış olabilir: top kaleye giderken tek başına yarım saha koşmasın)
   if (play.card) {
     const last = lastFrame();
-    if (!last.placed.some((p) => p.id === play.card!.playerId)) {
-      const cardSide = match.players[play.card.playerId]?.side ?? opp;
+    const cardSide = match.players[play.card.playerId]?.side ?? opp;
+    if (!match[cardSide].onPitch.includes(play.card.playerId) && !last.placed.some((p) => p.id === play.card!.playerId)) {
       last.placed.push({ id: play.card.playerId, side: cardSide, at: { x: last.ball.x + (cardSide === 'home' ? -1.8 : 1.8), y: last.ball.y - 1.4 } });
     }
   }
@@ -547,9 +552,12 @@ export function frameSpots(match: MatchState, frame: SceneFrame, kickoff: boolea
     for (const [id, p] of teamSpots(match, side, frame.ball, kickoff || frame.kickoff === true, frame.carrierSide)) spots.set(id, { side, at: p });
   }
   if (frame.setPiece) {
-    for (const [id, point] of setPieceSpots(match, frame.setPiece, frame.setPiece.spot, frame.carrierId)) {
-      spots.set(id, { side: spots.get(id)?.side ?? frame.setPiece.side, at: point });
+    const sp = frame.setPiece;
+    // Kullanan her karede aynı: topu kim taşırsa taşısın diziliş karışmaz
+    for (const [id, point] of setPieceSpots(match, sp, sp.spot, sp.takerId)) {
+      spots.set(id, { side: spots.get(id)?.side ?? sp.side, at: point });
     }
+    if (sp.takerId !== null) spots.set(sp.takerId, { side: sp.side, at: { x: sp.spot.x + (sp.side === 'home' ? -1.6 : 1.6), y: sp.spot.y } });
   }
   // Değişiklikten önce: girenin yerinde (duran top dizilişi dahil) çıkan oyuncu
   for (const [inId, outId] of frame.standIns ?? []) {

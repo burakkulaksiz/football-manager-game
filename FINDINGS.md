@@ -148,7 +148,15 @@ elle eklediklerim
  top kornere çıkmadan korner kararı çıkıyor.
  penaltılar çok hızlı kullanılıyor penaltı kararı ve kullanılması anlık oluyor.
  maça git tıkladığımda fikstüre mi gidiyor ne oluyor sonra devam yazıyor sonra bir daha maça git yazıyor bu maça git eventinde bir sorun var gibi. 
- maç esnasında bazen herkes sabitken bir oyuncu çok uzaktan başka bir yere geçiş yapıyor.
+ [x] maç esnasında bazen herkes sabitken bir oyuncu çok uzaktan başka bir yere geçiş yapıyor.
+  - Neden (pitchScene.ts, 40 maçlık tarama): şutun sonuç karesinde topu taşıyan kalmadığı için şutu çeken dizilişteki yerine
+    dönüyordu (20–35 m, 0.5 sn; maç başına ~2 kez). Ayrıca kart dakikanın faulünden şuta taşınınca kartı gören topun yanına
+    koşuyordu, kornerde kullanan kafayı vuranla aynı oyuncu olabiliyordu, duran topta dizilişten çıkarılan "kullanan" kareden
+    kareye değiştiği için diziliş karışıyordu (penaltı şutunda ~16 oyuncu yer değiştiriyordu).
+  - Düzeltme: şutu çeken vurduğu yerde kalır; sahadaki kartı gören kendi yerinde kalır (yalnızca atılan topun yanına gelir);
+    korneri kafayı vuran kullanmaz; duran topun kullanıcısı `SetPiece.takerId` ile sabit.
+  - Kanıt: pitchScene.test.ts "ışınlanma yok" testi (eski kodda kırılıyor). Değişiklikte giren / kırmızı kartla çıkan
+    oyuncunun kenara yürümesi bilinçli, değişmedi. Tarayıcıda elle denenmedi.
  oyuncu ve taktik değişikliği tam ekrandan çıkmadan da yapılabilmeli
  maçtan sonra puan durumuna tıklayınca maç şampiyonlar ligi ya da t kupası da olsa süper lig maçlarına gidiyor
  beşkitaş gibi takımların isimlerini siyah yazığımız zaman bazı yerlerde okunurluk düşük oluyor. (maç durumu baskı çubuğunda mesela)

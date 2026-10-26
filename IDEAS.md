@@ -1,6 +1,6 @@
 # Fikir Listesi (IDEAS)
 
-Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrıntılar NOTES.md'de, oynarken bulunan eksikler FINDINGS.md'de.
+Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrıntılar docs/ altında (içindekiler: NOTES.md), oynarken bulunan eksikler FINDINGS.md'de.
 
 ## Maç
 - [x] 2D saha görünümü (top ve oyuncu noktaları)
@@ -137,7 +137,7 @@ Veritabanı gerekirse Postgres; yalnızca kayıt blob'ları için nesne depolama
 Bunlar oyunun içine AI koymak değil, projeyi geliştirirken AI'ı daha verimli kullanma fikirleri. Oyunun içindeki AI içeriği
 (haber metni, basın toplantısı) ayrıca en altta.
 
-- [x] **Otomatik denge ve simülasyon raporu** (`npm run balance`; src/tools/balance/, ayrıntı NOTES.md > Arayüz ve konfor)
+- [x] **Otomatik denge ve simülasyon raporu** (`npm run balance`; src/tools/balance/, ayrıntı docs/ui.md > Arayüz ve konfor)
   - Ne: tek komutla N sezon oynat (`playSeason` zaten var), ardından hedeflerle karşılaştıran bir rapor üret: gol ortalaması, beraberlik oranı
     (NOTES'ta hedef ~%27, şu an %25,4), ev sahibi avantajı, sezon başına transfer hacmi, kulüp bütçeleri, kovulma oranı, Avrupa'da Türk kulüplerinin sonuçları.
   - Neden: denge bugün elle ve dağınık takip ediliyor (NOTES "Açık konular"). Deterministik motor sayesinde sonuçlar tekrarlanabilir;
@@ -157,10 +157,11 @@ Bunlar oyunun içine AI koymak değil, projeyi geliştirirken AI'ı daha verimli
 - [x] **Yavaş testleri düzeltmek** (tam koşu ~3 dk → 84 sn; motor ~%40 hızlandı, sonuç birebir aynı; ayrıntı FINDINGS > Testler)
   - FINDINGS > Testler'e bak. Tam sezon testleri 30 sn sınırını aşıyor; AI ile geliştirme döngüsü hızlı test ister. Ortak sezon simülasyonunu paylaşmak,
     küçük lig ile aynı kuralı sınamak ya da Worker'da paralel koşmak.
-- [ ] **Kısa proje belleği (CLAUDE.md) + konuya göre bölünmüş notlar**
+- [x] **Kısa proje belleği (CLAUDE.md) + konuya göre bölünmüş notlar**
   - Ne: NOTES.md şu an ~800 satır; her oturumda hepsini okumak pahalı ve yarısı tarihsel. Kısa bir `CLAUDE.md` (komutlar, yapı, kurallar, bilinen tuzaklar:
     örn. Windows'ta CRLF, motor yerinde değiştirir, `touch(world)` unutulmamalı) ve konu dosyaları (`docs/transfer.md`, `docs/match-engine.md`…).
   - Neden: AI'ın her seferinde doğru bağlamla başlaması; kurallar "kod okuyarak çıkarılamayan" şeyleri taşır.
+  - Kanıt: CLAUDE.md, docs/ (12 konu dosyası, NOTES.md içeriği birebir taşındı), NOTES.md artık içindekiler.
 - [ ] **Oyun içi AI içeriği (sonraya)**
   - Ne: haber metni, basın toplantısı ve medya, devre arası konuşması, oyuncu kişilikleri modelle üretilebilir; şablon metin çevrimdışı yedek olur.
   - Dikkat: API anahtarı istemciye konamaz (bir sunucu proxy'si gerekir, yani backend'e bağlı); maliyet, gecikme, tekrar eden içerik için önbellek;

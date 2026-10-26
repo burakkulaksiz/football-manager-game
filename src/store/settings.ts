@@ -24,7 +24,7 @@ export interface Settings {
   showPitch: boolean;
   camera: 'full' | 'follow';
   commentary: CommentaryMode;
-  /** Maç sesleri (düdük, gol, tribün); varsayılan kapalı: oyun şimdiye dek sessizdi. */
+  /** Maç sesleri (düdük, gol, tribün); varsayılan açık (ses yalnızca maç ekranında, saat akarken çalar). */
   sound: boolean;
   soundVolume: SoundVolume;
   /* Görünüm */
@@ -50,7 +50,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showPitch: true,
   camera: 'full',
   commentary: 'all',
-  sound: false,
+  sound: true,
   soundVolume: 'medium',
   background: 'grass',
   accent: 'yellow',

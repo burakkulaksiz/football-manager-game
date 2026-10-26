@@ -17,10 +17,10 @@ describe('parseSettings', () => {
     expect(s.autosave).toBe(DEFAULT_SETTINGS.autosave);
   });
 
-  it('ses: eski kayıtta yoksa kapalı; geçerli düzey alınır, geçersizi varsayılana döner', () => {
-    expect(parseSettings({ matchSpeed: 'fast' }).sound).toBe(false);
-    expect(parseSettings({ sound: true, soundVolume: 'high' })).toMatchObject({ sound: true, soundVolume: 'high' });
-    expect(parseSettings({ sound: 1, soundVolume: 90 })).toMatchObject({ sound: false, soundVolume: 'medium' });
+  it('ses: eski kayıtta yoksa açık; kapatılmışsa kapalı kalır; geçersiz değer varsayılana döner', () => {
+    expect(parseSettings({ matchSpeed: 'fast' }).sound).toBe(true);
+    expect(parseSettings({ sound: false, soundVolume: 'high' })).toMatchObject({ sound: false, soundVolume: 'high' });
+    expect(parseSettings({ sound: 1, soundVolume: 90 })).toMatchObject({ sound: true, soundVolume: 'medium' });
   });
 });
 

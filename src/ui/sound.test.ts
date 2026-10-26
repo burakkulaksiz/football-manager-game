@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MatchEvent } from '../engine';
-import { createSoundPlayer, matchSounds, type SoundSettings } from './sound';
+import { createEventCursor, createSoundPlayer, matchSounds, type SoundSettings } from './sound';
 
 const ev = (type: MatchEvent['type']): MatchEvent => ({ minute: 1, extra: 0, type, side: null, text: '' });
 
@@ -16,7 +16,10 @@ function fakeContext() {
   });
   const node = (kind: string) => {
     created.push(kind);
-    return { gain: param(), frequency: param(), Q: param(), type: '', buffer: null, loop: false, connect: (n: unknown) => n, start() {}, stop() {} };
+    return {
+      gain: param(), frequency: param(), Q: param(), threshold: param(), knee: param(), ratio: param(),
+      type: '', buffer: null, loop: false, connect: (n: unknown) => n, start() {}, stop() {},
+    };
   };
   const ctx = {
     state: 'running',
@@ -27,11 +30,12 @@ function fakeContext() {
     createOscillator: () => node('osc'),
     createBiquadFilter: () => node('filter'),
     createBufferSource: () => node('source'),
+    createDynamicsCompressor: () => node('limiter'),
     createBuffer: (_ch: number, length: number) => ({ getChannelData: () => new Float32Array(length) }),
     resume: async () => {},
     suspend: async () => {},
   };
-  return { ctx: ctx as unknown as AudioContext, created };
+  return { ctx: ctx as unknown as AudioContext, created, raw: ctx };
 }
 
 const ON: SoundSettings = { sound: true, soundVolume: 'medium' };
@@ -77,6 +81,61 @@ describe('maç sesleri', () => {
     player.crowd(true, ON);
     expect(sources()).toBe(3);
     expect(made).toBe(1);
+  });
+
+  it('olay akışı: başlama düdüğü, önemli an açılınca gol, Anında Sonuçlandır sessiz, yeni maçta sayaç sıfırlanır', () => {
+    const events: MatchEvent[] = [];
+    const cursor = createEventCursor(0);
+    // Maç başlamadan olay yok
+    expect(cursor.next(events, 0)).toEqual([]);
+    // Maçı Başlat: tek adımda başlama olayı ekranda
+    events.push(ev('kickoff'));
+    expect(cursor.next(events, 1)).toEqual(['whistle']);
+    // Gol adımı: saha sahnesi oynarken sonuç gizli (gösterilen sayı aynı), sonra açılır
+    events.push(ev('miss'), ev('goal'));
+    expect(cursor.next(events, 1)).toEqual([]);
+    expect(cursor.next(events, 3)).toEqual(['chance', 'goal']);
+    // Anında Sonuçlandır: önce gizli kalan an, sonra kalan dakikalar; hiçbiri çalmaz
+    cursor.skipNext();
+    events.push(ev('goal'), ev('yellow'), ev('fulltime'));
+    expect(cursor.next(events, 3)).toEqual([]);
+    expect(cursor.next(events, 6)).toEqual([]);
+    // Yeni maç: olay sayısı düşer, baştan sayılır
+    const next = [ev('kickoff')];
+    expect(cursor.next([], 0)).toEqual([]);
+    expect(cursor.next(next, 1)).toEqual(['whistle']);
+  });
+
+  it('kullanıcı hareketinde bağlam yalnızca ses açıkken kurulur', () => {
+    let made = 0;
+    const player = createSoundPlayer(() => {
+      made++;
+      return fakeContext().ctx;
+    });
+    player.unlock(OFF);
+    expect(made).toBe(0);
+    player.unlock(ON);
+    player.unlock(ON);
+    expect(made).toBe(1);
+  });
+
+  it('Sesi dene: ayar kapalı olsa da çalar; bağlam yoksa, sürdürülemezse ya da askıda kalırsa false', async () => {
+    const fake = fakeContext();
+    expect(await createSoundPlayer(() => fake.ctx).test('medium')).toBe(true);
+    expect(fake.created).toContain('osc');
+    expect(fake.created).toContain('source');
+
+    expect(await createSoundPlayer(() => {
+      throw new Error('AudioContext yok');
+    }).test('medium')).toBe(false);
+
+    const rejecting = fakeContext();
+    rejecting.raw.resume = () => Promise.reject(new Error('izin yok'));
+    expect(await createSoundPlayer(() => rejecting.ctx).test('low')).toBe(false);
+
+    const suspended = fakeContext();
+    suspended.raw.state = 'suspended';
+    expect(await createSoundPlayer(() => suspended.ctx).test('high')).toBe(false);
   });
 
   it('tarayıcı ses bağlamı vermezse hata fırlatmaz', () => {

@@ -24,7 +24,7 @@ import { MatchMaps } from '../components/MatchMaps';
 import { PitchView, type CameraMode } from '../components/PitchView';
 import { useHotkeys } from '../hotkeys';
 import { buildScene, isHighlight, QUIET_MINUTE_MS, revealDelayMs, sceneDurationMs } from '../pitchScene';
-import { matchSounds, sound } from '../sound';
+import { createEventCursor, sound } from '../sound';
 import { MENTALITY_LABELS, POSITION_LABELS, positionGroup, ratingClass } from '../labels';
 
 /**
@@ -117,28 +117,38 @@ function useGoalFlash(total: number): boolean {
   return flash;
 }
 
-/** Maç sesleri: saatin oynattığı ve ekranda açılan yeni olaylarda; tribün uğultusu saat akarken (Anında Sonuçlandır ve Çok hızlı maçta sessiz). */
-function useMatchSound(match: MatchState | null, held: Held | null, running: boolean) {
+/**
+ * Maç sesleri: ekranda açılan yeni olaylarda; tribün uğultusu saat akarken (Anında Sonuçlandır ve Çok hızlı maçta sessiz).
+ * Dönen işlev Anında Sonuçlandır'dan hemen önce çağrılır.
+ */
+function useMatchSound(match: MatchState | null, held: Held | null, running: boolean): () => void {
   const settings = useGameStore((s) => s.settings);
   const s = { sound: settings.sound && settings.matchSpeed !== 'veryFast', soundVolume: settings.soundVolume };
   const shown = match ? shownEvents(match, held).length : 0;
-  const last = useRef(shown);
-  // Saat akarkenki son olay sayısı: devre/maç sonunda saat durduktan sonra açılan an çalar, anında sonuçlandırılan dakikalar çalmaz
-  const clocked = useRef(0);
+  const cursor = useRef<ReturnType<typeof createEventCursor> | null>(null);
+  cursor.current ??= createEventCursor(shown);
   useEffect(() => {
-    if (shown < last.current) clocked.current = 0; // yeni maç
-    if (match && running) clocked.current = match.events.length;
-    const prev = last.current;
-    last.current = shown;
-    const upTo = Math.min(shown, clocked.current);
-    if (match && upTo > prev) for (const id of matchSounds(match.events.slice(prev, upTo))) sound.play(id, s);
-  }, [shown, running, match]); // eslint-disable-line react-hooks/exhaustive-deps
+    for (const id of cursor.current!.next(match?.events ?? [], shown)) sound.play(id, s);
+  }, [shown, match]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Tarayıcının oto-oynatma kuralı: bağlam ilk tıklama / tuşta kurulup sürdürülür
+  useEffect(() => {
+    const unlock = () => sound.unlock(s);
+    window.addEventListener('pointerdown', unlock, true);
+    window.addEventListener('keydown', unlock, true);
+    return () => {
+      window.removeEventListener('pointerdown', unlock, true);
+      window.removeEventListener('keydown', unlock, true);
+    };
+  }, [s.sound, s.soundVolume]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const live = running && (match?.period === 'first' || match?.period === 'second');
   useEffect(() => {
     sound.crowd(live, s);
     return () => sound.crowd(false, s);
   }, [live, s.sound, s.soundVolume]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return () => cursor.current!.skipNext();
 }
 
 function Scoreboard({ match, held }: { match: MatchState; held: Held | null }) {
@@ -466,12 +476,14 @@ function TeamPanel({ match, side }: { match: MatchState; side: Side }) {
   );
 }
 
-function Controls({ match, running, setRunning, showTactics, setShowTactics, extra }: {
+function Controls({ match, running, setRunning, showTactics, setShowTactics, onInstant, extra }: {
   match: MatchState;
   running: boolean;
   setRunning: (r: boolean) => void;
   showTactics: boolean;
   setShowTactics: (v: boolean) => void;
+  /** Anında Sonuçlandır'dan hemen önce (sesler susar). */
+  onInstant: () => void;
   /** Satırın sağına eklenen araçlar (saha kamerası vb.). */
   extra?: React.ReactNode;
 }) {
@@ -517,6 +529,7 @@ function Controls({ match, running, setRunning, showTactics, setShowTactics, ext
         disabled={match.period === 'full'}
         onClick={() => {
           setRunning(false);
+          onInstant();
           instant();
         }}
         title="Kalan dakikalar anında oynanır; değişiklikleri yapay zekâ yapar"
@@ -654,7 +667,7 @@ export function MatchScreen() {
   // Adımdan hemen sonraki ilk çizimde de sonuç gizli kalsın (efekt held'i bir çizim sonra kurar)
   const pending = pendingHold.current;
   const hold = held ?? (pending && showPitch && match && isHighlight(match.lastPlay) ? pending : null);
-  useMatchSound(match, hold, running);
+  const silenceNext = useMatchSound(match, hold, running);
 
   if (!match) {
     return (
@@ -681,6 +694,7 @@ export function MatchScreen() {
         setRunning={setRunning}
         showTactics={showTactics}
         setShowTactics={setShowTactics}
+        onInstant={silenceNext}
         extra={showPitch && <PitchTools camera={camera} setCamera={setCamera} onFullscreen={enterFullscreen} onHide={togglePitch} />}
       />
       {showTactics && match.period !== 'full' && <LiveTactics match={match} />}

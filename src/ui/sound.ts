@@ -28,7 +28,36 @@ export function matchSounds(events: readonly MatchEvent[]): SoundId[] {
   return [...new Set(events.flatMap((e) => EVENT_SOUNDS[e.type] ?? []))];
 }
 
-const VOLUME: Record<SoundVolume, number> = { low: 0.15, medium: 0.35, high: 0.7 };
+/**
+ * Ekranda açılan olaylardan çalınacak sesler: yalnızca yeni açılanlar. Anında Sonuçlandır'ın açtıkları sessiz geçer
+ * (`skipNext`); olay sayısı düşerse (yeni maç) sayaç baştan başlar.
+ */
+export function createEventCursor(initial: number) {
+  let last = initial;
+  let skip = false;
+  return {
+    skipNext(): void {
+      skip = true;
+    },
+    next(events: readonly MatchEvent[], shown: number): SoundId[] {
+      const prev = last;
+      last = shown;
+      if (shown <= prev) return [];
+      if (skip) {
+        skip = false;
+        return [];
+      }
+      return matchSounds(events.slice(prev, shown));
+    },
+  };
+}
+
+/**
+ * Ana ses düzeyi. Süzülmüş gürültü, beyaz gürültünün enerjisinin yalnızca küçük bir kısmını taşır (600 Hz alçak geçiren
+ * ~%3): tribün sesleri bu yüzden kazançla telafi edilir. Orta'da hesapla (ölçülmedi) uğultu ~−25 dB, "uuh" ~−17 dB, gol ~−11 dB
+ * (RMS), düdük ~−12 dB tepe.
+ */
+const VOLUME: Record<SoundVolume, number> = { low: 0.3, medium: 0.6, high: 1 };
 
 /** Düdük: bilyenin titrediği tiz ton; `blasts` kez çalar. */
 function whistle(c: AudioContext, out: AudioNode, t: number, blasts: number, length: number): void {
@@ -77,8 +106,8 @@ const SYNTH: Record<SoundId, (c: AudioContext, out: AudioNode, noise: AudioBuffe
   whistleShort: (c, out, _n, t) => whistle(c, out, t, 1, 0.25),
   whistleHalf: (c, out, _n, t) => whistle(c, out, t, 2, 0.4),
   whistleEnd: (c, out, _n, t) => whistle(c, out, t, 3, 0.4),
-  goal: (c, out, n, t) => roar(c, out, n, t, 900, 1, 0.15, 3.5),
-  chance: (c, out, n, t) => roar(c, out, n, t, 500, 0.5, 0.35, 1.2),
+  goal: (c, out, n, t) => roar(c, out, n, t, 900, 3, 0.15, 3.5),
+  chance: (c, out, n, t) => roar(c, out, n, t, 500, 2, 0.35, 1.2),
 };
 
 const hidden = () => typeof document !== 'undefined' && document.hidden;
@@ -96,7 +125,12 @@ export function createSoundPlayer(makeContext: () => AudioContext) {
       if (!ctx) {
         const c = makeContext();
         master = c.createGain();
-        master.connect(c.destination);
+        // Sınırlayıcı: gol + uğultu + düdük üst üste binince Yüksek'te kırpılmasın (varsayılan −24 dB eşiği sesi ezerdi)
+        const limiter = c.createDynamicsCompressor();
+        limiter.threshold.value = -3;
+        limiter.knee.value = 0;
+        limiter.ratio.value = 20;
+        master.connect(limiter).connect(c.destination);
         noise = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
         const data = noise.getChannelData(0);
         // Math.random: yalnızca ses dokusu, oyunun Rng akışına dokunmaz
@@ -118,6 +152,27 @@ export function createSoundPlayer(makeContext: () => AudioContext) {
   }
 
   return {
+    /** Kullanıcı hareketinde (tıklama / tuş) bağlamı kurar ve sürdürür: sonraki sesleri tarayıcının oto-oynatma kuralı engellemesin. */
+    unlock(s: SoundSettings): void {
+      if (s.sound) context(s);
+    },
+
+    /** "Sesi dene": ayar kapalı olsa da kısa düdük + tribün tepkisi. Tarayıcı ses vermezse false. */
+    async test(volume: SoundVolume): Promise<boolean> {
+      const s = { sound: true, soundVolume: volume };
+      const c = context(s);
+      if (!c) return false;
+      try {
+        await c.resume();
+      } catch {
+        return false;
+      }
+      if (c.state !== 'running') return false;
+      SYNTH.whistleShort(c, master!, noise!, c.currentTime);
+      SYNTH.chance(c, master!, noise!, c.currentTime + 0.35);
+      return true;
+    },
+
     play(id: SoundId, s: SoundSettings): void {
       if (!s.sound || hidden()) return;
       const c = context(s);
@@ -145,10 +200,10 @@ export function createSoundPlayer(makeContext: () => AudioContext) {
       src.loop = true;
       const filter = c.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = 450;
+      filter.frequency.value = 600;
       const gain = c.createGain();
       gain.gain.setValueAtTime(0, c.currentTime);
-      gain.gain.linearRampToValueAtTime(0.25, c.currentTime + 1);
+      gain.gain.linearRampToValueAtTime(1, c.currentTime + 1);
       src.connect(filter).connect(gain).connect(master!);
       src.start();
       crowd = { src, gain };

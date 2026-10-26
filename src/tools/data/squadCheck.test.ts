@@ -28,9 +28,10 @@ describe('veri denetimi', () => {
     expect(checkSquads({ a: squad() }, TODAY)).toEqual([]);
   });
 
-  it('imkânsız yaş ve takvimde olmayan doğum tarihi hata; çok yaşlı uyarı', () => {
-    const t = texts({ a: squad([player({ born: '2014-01-01' }), player({ born: '2001-02-30' }), player({ born: 1980 })]) });
+  it('imkânsız yaş (alt ve üst sınır) ve takvimde olmayan doğum tarihi hata; çok yaşlı uyarı', () => {
+    const t = texts({ a: squad([player({ born: '2014-01-01' }), player({ born: 1970 }), player({ born: '2001-02-30' }), player({ born: 1980 })]) });
     expect(t).toContainEqual(expect.stringMatching(/^error: imkânsız yaş: 12/));
+    expect(t).toContainEqual(expect.stringMatching(/^error: imkânsız yaş: 56 \(doğum 1970-01-01\)/));
     expect(t).toContainEqual(expect.stringMatching(/^error: doğum tarihi takvimde yok/));
     expect(t).toContainEqual(expect.stringMatching(/^warning: yaşı çok büyük: 46/));
   });

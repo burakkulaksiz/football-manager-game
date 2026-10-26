@@ -223,7 +223,8 @@ export function PlayerProfile() {
 
   return (
     <div className="screen">
-      <TransferActions player={player} />
+      {/* İşsiz menajerin kulübü yok: transfer / sözleşme eylemleri gizli */}
+      {!world.unemployed && <TransferActions player={player} />}
       {own && <TalkPanel player={player} />}
       <section className="panel">
         <h2 className="panel-title">Oyuncu Profili</h2>

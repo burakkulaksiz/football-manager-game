@@ -1,12 +1,14 @@
 import { fixtureLabel, getClub, nextFixtureFor, primaryPosition, seasonLabel, tournamentTitle, type GameWorld } from '../../engine';
 import type { ScreenId } from '../../store/gameStore';
 import { nationName, POSITION_NAMES } from '../labels';
-import { screenInfo } from '../screens';
+import { screenInfo, UNEMPLOYED_SCREENS } from '../screens';
 
 /** Lig ekranlarının başlık hapı rengi (Süper Lig kırmızısı). */
 const LEAGUE_COLORS = { primary: '#B3122E', secondary: '#FFFFFF' };
 /** Milli takımlar ekranı: ay yıldız kırmızısı. */
 const NATIONAL_COLORS = { primary: '#E30A17', secondary: '#FFFFFF' };
+/** İşsiz menajer: kulüp rengi yok. */
+const NEUTRAL_COLORS = { primary: '#3A4C6B', secondary: '#FFFFFF' };
 
 export interface PageHeading {
   title: string;
@@ -22,7 +24,12 @@ export function pageHeading(
   viewedClubId: string | null,
   selectedFixtureId: number | null = null,
 ): PageHeading {
-  const ownClub = getClub(world, world.playerClubId);
+  // İşsizken kulüp ekranları açılmaz (GameShell İş Merkezi'ni gösterir): başlık da ona göre
+  if (world.unemployed && !UNEMPLOYED_SCREENS.has(screen)) screen = 'jobs';
+  // İşsizken kulübü yok: nötr renk, alt başlık "İşsiz"
+  const ownClub = world.unemployed
+    ? { id: '', name: 'İşsiz', colors: NEUTRAL_COLORS }
+    : getClub(world, world.playerClubId);
 
   if (screen === 'report') {
     const fixture = world.season.fixtures.find((f) => f.id === selectedFixtureId);

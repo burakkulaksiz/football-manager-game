@@ -15,6 +15,7 @@ export const SCREEN_KEYS: Partial<Record<ScreenId, string>> = {
   academy: 'y',
   club: 'b',
   manager: 'm',
+  jobs: 'j',
   finance: 'f',
   facilities: 'e',
   transfers: 'n',

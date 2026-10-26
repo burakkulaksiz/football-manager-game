@@ -28,6 +28,8 @@ export interface FacilityProject {
   cost: number;
   started: GameDate;
   completes: GameDate;
+  /** Projenin kulübü: menajer kulüpten ayrılınca yazılır (yoksa kullanıcının kulübü). */
+  clubId?: string;
 }
 
 export interface FacilitiesState {
@@ -237,10 +239,12 @@ export function facilitiesDay(world: GameWorld): void {
   const done = world.facilities.projects.filter((p) => p.completes <= world.date);
   if (done.length === 0) return;
   world.facilities.projects = world.facilities.projects.filter((p) => p.completes > world.date);
-  const club = getClub(world, world.playerClubId);
   for (const p of done) {
+    const club = getClub(world, p.clubId ?? world.playerClubId);
     if (p.kind === 'stadium') club.capacity += p.target;
     else world.facilities.levels[club.id]![p.kind] = p.target;
+    // Menajer ayrıldıysa inşaat eski kulübünde tamamlanır; haber yalnızca kendi kulübü için
+    if (club.id !== world.playerClubId) continue;
     addNews(world, {
       category: 'board',
       title: `${FACILITY_NAMES[p.kind]} tamamlandı`,

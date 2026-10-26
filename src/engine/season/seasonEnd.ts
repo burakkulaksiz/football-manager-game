@@ -15,6 +15,7 @@ import type { Rng } from '../rng';
 import type { GameWorld, SeasonAward, SeasonSummary } from '../types';
 import { recordSeasonCareers } from '../squad/career';
 import { sack } from './board';
+import { isUnemployed } from './jobs';
 import { managerSeasonEnd, sackThreshold } from './manager';
 import { divisionOf } from './expectation';
 
@@ -128,7 +129,8 @@ export function endSeason(world: GameWorld, rng: Rng): SeasonSummary {
   world.seasonState = 'ended';
 
   const champion = getClub(world, summary.championId).name;
-  const userName = getClub(world, world.playerClubId).name;
+  const employed = !isUnemployed(world);
+  const userName = employed ? getClub(world, world.playerClubId).name : '';
   addNews(world, {
     category: 'season',
     title: `Sezon sona erdi: ${champion} şampiyon!`,
@@ -136,7 +138,7 @@ export function endSeason(world: GameWorld, rng: Rng): SeasonSummary {
       `${summary.year}/${String((summary.year + 1) % 100).padStart(2, '0')} sezonu tamamlandı. Şampiyon: ${champion}. ` +
       `${summary.cupWinnerName ? `${CUP_NAME}: ${summary.cupWinnerName}. ` : ''}` +
       `${summary.clWinnerName ? `${EUROPE.cl.name}: ${summary.clWinnerName}. ` : ''}${summary.elWinnerName ? `${EUROPE.el.name}: ${summary.elWinnerName}. ` : ''}Küme düşenler: ${summary.relegatedNames.join(', ')}. 1. Lig'den çıkanlar: ${summary.promotedNames.join(', ')}. ` +
-      `${userName} ligi ${userPosition}. sırada bitirdi (hedef ${summary.targetPosition}.) ve €${formatPlain(prizeFor(userPosition, table.length))} sıralama primi kazandı. ` +
+      (employed && userPosition > 0 ? `${userName} ligi ${userPosition}. sırada bitirdi (hedef ${summary.targetPosition}.) ve €${formatPlain(prizeFor(userPosition, table.length))} sıralama primi kazandı. ` : '') +
       `Ödüller: ${summary.awards.map((a) => `${a.title}: ${a.playerName} (${a.clubName}, ${a.value})`).join('; ')}. ` +
       `Yeni sezon 1 Temmuz'da başlıyor; sözleşmesi 30 Haziran'da biten oyuncular kulüpten ayrılacak.`,
     important: true,
@@ -152,6 +154,7 @@ export function endSeason(world: GameWorld, rng: Rng): SeasonSummary {
       clubId: world.playerClubId,
     });
   }
+  if (!employed) return summary; // işsiz menajerin sezonu yok
   if (userPosition === 1) world.manager.titles++;
   // Menajer: itibar (hedefe göre sıra, kupalar) ve kariyer sezonu; görevden alma kararından önce
   managerSeasonEnd(world, userPosition, relegatedIds.includes(world.playerClubId));

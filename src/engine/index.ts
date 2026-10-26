@@ -52,6 +52,7 @@ export * from './season/board';
 export * from './season/manager';
 export * from './season/seasonEnd';
 export * from './season/rollover';
+export * from './season/jobs';
 
 /** Yeni kariyer bu tarihte başlar (yaz transfer dönemi başı). */
 export const SEASON_START_DATE = '2026-07-01';

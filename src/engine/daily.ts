@@ -13,6 +13,7 @@ import { internationalDay } from './league/international';
 import { addNews } from './news';
 import type { Rng } from './rng';
 import { aiTransferDay } from './transfer/ai';
+import { jobsDay } from './season/jobs';
 import { returnLoans } from './transfer/market';
 import { processOffers } from './transfer/offers';
 import { listedOffersDay, listingsOnWindowOpen } from './transfer/listing';
@@ -72,6 +73,7 @@ export function processDay(world: GameWorld, rng: Rng, data: GameData): void {
   internationalDay(world, rng, data);
 
   facilitiesDay(world);
+  jobsDay(world);
   windowNews(world);
   listingsOnWindowOpen(world);
   returnLoans(world);

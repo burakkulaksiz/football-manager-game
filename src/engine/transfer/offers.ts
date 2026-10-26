@@ -42,6 +42,7 @@ const fullName = (p: Player) => `${p.firstName} ${p.lastName}`;
 /** Teklif yapılabilir mi? Yapılamıyorsa sebebi döner. */
 export function offerBlocker(world: GameWorld, player: Player, kind: TransferOffer['kind']): string | null {
   const userId = world.playerClubId;
+  if (world.unemployed) return 'İşsizken transfer yapamazsın.';
   if (!isWindowOpen(world.date)) return 'Transfer dönemi kapalı.';
   if (player.clubId === userId) return 'Oyuncu zaten kulübünde.';
   if (!player.clubId) return 'Oyuncu serbest.';

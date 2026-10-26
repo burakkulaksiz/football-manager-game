@@ -23,6 +23,7 @@ export function NewsAlert() {
       if (item) item.read = true;
     });
     if (n.category === 'offer') setScreen('transfers', { 'transfers.tab': 'offers' });
+    else if (n.category === 'job') setScreen('jobs');
     else setScreen('inbox', { 'inbox.selected': n.id, 'inbox.filter': 'all' });
   };
 

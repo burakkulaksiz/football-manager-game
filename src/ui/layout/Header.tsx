@@ -13,7 +13,7 @@ export function Header() {
   const viewedClubId = useGameStore((s) => s.viewedClubId);
   const selectedFixtureId = useGameStore((s) => s.selectedFixtureId);
   const heading = pageHeading(world, screen, selectedPlayerId, viewedClubId, selectedFixtureId);
-  const club = getClub(world, world.playerClubId);
+  const club = world.unemployed ? null : getClub(world, world.playerClubId);
   const { day, date } = splitDateTR(formatDateTR(world.date));
 
   return (
@@ -33,10 +33,10 @@ export function Header() {
 
       <div className="header-club">
         <div className="header-club-text">
-          <div className="header-club-name">{club.name}</div>
+          <div className="header-club-name">{club ? club.name : 'İşsiz'}</div>
           <div className="header-club-season">{world.manager.name} · Süper Lig {seasonLabel(world.season.year)}</div>
         </div>
-        <ClubBadge club={club} size={34} />
+        {club && <ClubBadge club={club} size={34} />}
       </div>
     </header>
   );

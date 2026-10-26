@@ -60,6 +60,7 @@ export type ScreenId =
   | 'report'
   | 'international'
   | 'manager'
+  | 'jobs'
   | 'facilities';
 
 /** Gezinme geçmişindeki bir sayfa (FM'deki ◀ ▶ okları için). */

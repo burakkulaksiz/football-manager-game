@@ -24,6 +24,7 @@ export const MENU: MenuGroup[] = [
       { id: 'academy', label: 'Altyapı', stage: 10 },
       { id: 'club', label: 'Kulüp Bilgisi', stage: 2 },
       { id: 'manager', label: 'Menajer Kariyeri', stage: 10 },
+      { id: 'jobs', label: 'İş Merkezi', stage: 12 },
       { id: 'finance', label: 'Finans', stage: 7 },
       { id: 'facilities', label: 'Tesisler', stage: 10 },
       { id: 'transfers', label: 'Transfer Merkezi', stage: 7 },
@@ -46,6 +47,11 @@ export const MENU: MenuGroup[] = [
     items: [{ id: 'settings', label: 'Ayarlar', stage: 11 }],
   },
 ];
+
+/** İşsizken açılabilen ekranlar (kulüp ekranları gizlenir; başkası istenirse İş Merkezi açılır). */
+export const UNEMPLOYED_SCREENS: ReadonlySet<ScreenId> = new Set<ScreenId>([
+  'inbox', 'jobs', 'manager', 'fixtures', 'table', 'stats', 'international', 'settings', 'report', 'player',
+]);
 
 export function screenInfo(id: ScreenId): ScreenInfo {
   for (const group of MENU) {

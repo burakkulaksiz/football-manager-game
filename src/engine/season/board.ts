@@ -2,11 +2,12 @@
  * Yönetim: hedef sıra ve güven (0–100).
  * Maç sonuçları ve aylık sıralama değerlendirmesiyle değişir; çok düşerse görevden alınırsın.
  */
-import { getClub, leagueClubs } from '../generation/worldGenerator';
+import { leagueClubs } from '../generation/worldGenerator';
 import { computeStandings } from '../league/standings';
 import { addNews } from '../news';
 import type { Fixture, GameWorld } from '../types';
-import { lossPenaltyFactor, managerSacked, sackThreshold } from './manager';
+import { isUnemployed, leaveClub } from './jobs';
+import { lossPenaltyFactor, sackThreshold } from './manager';
 
 /** Bu güvenin altında (ve en az bu kadar hafta oynandıysa) görevden alınır. */
 export const SACK_CONFIDENCE = 10;
@@ -52,7 +53,7 @@ export function boardAfterMatch(world: GameWorld, fixture: Fixture): void {
 
 /** Ay başı: sıra hedefe göre değerlendirilir, kasa eksideyse güven düşer; mesaj gelir. */
 export function boardMonthly(world: GameWorld): void {
-  if (world.seasonState !== 'running' || world.gameOver) return;
+  if (world.seasonState !== 'running' || world.gameOver || isUnemployed(world)) return;
   const played = roundsPlayed(world);
   const board = world.board;
   if (played >= 5) {
@@ -81,19 +82,12 @@ export function boardMonthly(world: GameWorld): void {
 
 /** Güven dibe vurduysa (ve sezon yeterince ilerlediyse) görevden alma; itibarlı menajere yönetim daha sabırlı. */
 export function checkSacking(world: GameWorld): void {
-  if (world.gameOver || world.board.confidence >= sackThreshold(world, SACK_CONFIDENCE)) return;
+  if (world.gameOver || isUnemployed(world) || world.board.confidence >= sackThreshold(world, SACK_CONFIDENCE)) return;
   if (world.seasonState === 'running' && roundsPlayed(world) < MIN_ROUNDS_BEFORE_SACK) return;
   sack(world, 'Yönetim kurulu, kötü sonuçlar nedeniyle görevine son verdi.');
 }
 
+/** Görevden alma: kariyer bitmez, menajer işsiz kalır (bkz. jobs.ts). */
 export function sack(world: GameWorld, reason: string): void {
-  world.gameOver = { date: world.date, reason };
-  managerSacked(world, userPosition(world));
-  addNews(world, {
-    category: 'board',
-    title: 'Görevine son verildi',
-    body: `${reason} ${getClub(world, world.playerClubId).name} ile yolların ayrıldı.`,
-    important: true,
-    clubId: world.playerClubId,
-  });
+  leaveClub(world, 'sacked', reason);
 }

@@ -6,6 +6,7 @@ import type { Tactics } from './match/tactics';
 import type { InternationalState } from './league/international';
 import type { ManagerBackground, ManagerRecordMatch, ManagerSeason } from './season/manager';
 import type { FacilitiesState } from './finance/facilities';
+import type { JobApplication, JobOffer, Unemployment, Vacancy } from './season/jobs';
 
 export type Position =
   | 'GK'
@@ -347,7 +348,8 @@ export type NewsCategory =
   | 'scouting'
   | 'cup'
   | 'europe'
-  | 'international';
+  | 'international'
+  | 'job';
 
 /* ------------------------------------------------------------------ */
 /* Antrenman                                                           */
@@ -444,6 +446,14 @@ export interface GameWorld {
   facilities: FacilitiesState;
   /** Kapatılan kararlar (ör. sözleşmesinin bitmesine izin verilen oyuncu; bkz. decisions.ts). */
   dismissedDecisions?: string[];
+  /** İşsizse (görevden alındı / istifa etti): `playerClubId` NO_CLUB olur, son kulüp burada (bkz. season/jobs.ts). */
+  unemployed?: Unemployment | null;
+  /** Boş teknik direktörlük koltukları (Türkiye kulüpleri). */
+  vacancies?: Vacancy[];
+  /** Menajere gelen iş teklifleri ve başvuruları. */
+  jobOffers?: JobOffer[];
+  jobApplications?: JobApplication[];
+  nextJobOfferId?: number;
 }
 
 /* ------------------------------------------------------------------ */
@@ -453,8 +463,10 @@ export interface GameWorld {
 /** Kullanıcının menajer kartı (kariyer boyunca, sezonlar arası taşınır). */
 export interface ManagerInfo {
   name: string;
-  /** Göreve başlama tarihi. */
+  /** Göreve başlama tarihi (kariyerin başı; oyuncu kıdemi hesabında da kullanılır). */
   joined: GameDate;
+  /** Şimdiki kulübe geldiği tarih (yoksa kariyerin başından beri aynı kulüp). */
+  clubSince?: GameDate;
   won: number;
   drawn: number;
   lost: number;

@@ -5120,3 +5120,19 @@ kbd {
     padding: 4px 10px 1px;
   }
 }
+
+/* ================= İş Merkezi ================= */
+.jobs-status {
+  margin-bottom: 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.jobs-status.unemployed {
+  color: var(--low);
+}
+
+.mgr-resign {
+  margin-left: 12px;
+  color: var(--low);
+}

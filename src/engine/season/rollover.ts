@@ -24,6 +24,7 @@ import {
   WAGE_BUDGET_SLACK,
 } from '../transfer/market';
 import { divisionOf, EXPECTATION_TARGET, expectationForRank } from './expectation';
+import { isUnemployed } from './jobs';
 
 /** Yapay zekâ kulübünün kadro üst sınırı (fazlası serbest bırakılır). */
 export const AI_SQUAD_LIMIT = 30;
@@ -243,6 +244,7 @@ export function startNewSeason(world: GameWorld, rng: Rng, data: GameData): void
   world.season = generateSeason(rng, leagueClubs(world).map((c) => c.id), year);
   world.seasonState = 'running';
 
+  if (isUnemployed(world)) return; // işsiz menajere yeni sezon hedefi / bütçe haberi yok
   const userClub = getClub(world, world.playerClubId);
   world.board.targetPosition = EXPECTATION_TARGET[userClub.fanExpectation];
   world.board.confidence = Math.max(world.board.confidence, 45);

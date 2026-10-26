@@ -93,9 +93,11 @@ describe('itibarın etkileri', () => {
     world.seasonState = 'ended';
     world.board.confidence = 8;
     checkSacking(world);
-    expect(world.gameOver).toBeNull();
+    expect(world.unemployed ?? null).toBeNull();
     world.manager.reputation = 15;
     checkSacking(world);
-    expect(world.gameOver).not.toBeNull();
+    // Görevden alınan menajer işsiz kalır; kariyer bitmez
+    expect(world.unemployed).toMatchObject({ lastClubId: 'galatasaray', reason: 'sacked' });
+    expect(world.gameOver).toBeNull();
   });
 });

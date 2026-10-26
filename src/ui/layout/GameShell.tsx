@@ -13,6 +13,8 @@ import { InternationalScreen } from '../screens/InternationalScreen';
 import { ManagerScreen } from '../screens/ManagerScreen';
 import { FacilitiesScreen } from '../screens/FacilitiesScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { JobsScreen } from '../screens/JobsScreen';
+import { UNEMPLOYED_SCREENS } from '../screens';
 import { FixturesScreen } from '../screens/FixturesScreen';
 import { InboxScreen } from '../screens/InboxScreen';
 import { MatchReportScreen } from '../screens/MatchReportScreen';
@@ -50,6 +52,7 @@ function ScreenContent({ screen }: { screen: ScreenId }) {
     case 'manager': return <ManagerScreen />;
     case 'facilities': return <FacilitiesScreen />;
     case 'settings': return <SettingsScreen />;
+    case 'jobs': return <JobsScreen />;
     default: return <PlaceholderScreen screen={screen} />;
   }
 }
@@ -61,6 +64,7 @@ export function GameShell() {
   const fixtureId = useGameStore((s) => s.selectedFixtureId);
   const unsaved = useGameStore(hasUnsavedProgress);
   const warnUnsaved = useGameStore((s) => s.settings.warnUnsaved);
+  const unemployed = useGameStore((s) => s.world?.unemployed != null);
   const historyIndex = useGameStore((s) => s.historyIndex);
   const [helpOpen, setHelpOpen] = useState(false);
   useGlobalHotkeys(() => setHelpOpen(true));
@@ -95,7 +99,8 @@ export function GameShell() {
           ref={mainRef}
           onScroll={(e) => scrolls.current.set(scrollKey, e.currentTarget.scrollTop)}
         >
-          <ScreenContent screen={screen} />
+          {/* İşsizken kulüp ekranları açılmaz: İş Merkezi */}
+          <ScreenContent screen={unemployed && !UNEMPLOYED_SCREENS.has(screen) ? 'jobs' : screen} />
         </main>
       </div>
       <GameOverOverlay />

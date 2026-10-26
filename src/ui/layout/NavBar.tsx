@@ -1,11 +1,12 @@
-import { getClub, nextFixtureFor, type GameWorld } from '../../engine';
+import { daysBetween, getClub, nextFixtureFor, UNEMPLOYMENT_LIMIT_DAYS, type GameWorld } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { formatDayMonth } from '../labels';
 
 /** Gezinme çubuğundaki durum metni. */
 function statusText(world: GameWorld): string {
   const next = nextFixtureFor(world, world.playerClubId);
-  if (world.gameOver) return 'Görevine son verildi';
+  if (world.gameOver) return 'Kariyerin sona erdi';
+  if (world.unemployed) return `İşsizsin · ${Math.max(0, UNEMPLOYMENT_LIMIT_DAYS - daysBetween(world.unemployed.since, world.date))} gün içinde iş bulmalısın`;
   if (!next) return world.seasonState === 'ended' ? 'Sezon arası · yeni sezon 1 Temmuz' : 'Sezon tamamlandı';
   const home = next.homeId === world.playerClubId;
   const opponent = getClub(world, home ? next.awayId : next.homeId);

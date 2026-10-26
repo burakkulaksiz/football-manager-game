@@ -158,6 +158,7 @@ function attemptPurchase(world: GameWorld, buyer: Club, rng: Rng, ctx: DayContex
 
 /** Yapay zekâ kulüplerinden kullanıcının bir oyuncusuna teklif. */
 function attemptOfferToUser(world: GameWorld, rng: Rng): void {
+  if (world.unemployed) return; // işsiz menajerin oyuncusu yok
   const userId = world.playerClubId;
   const userRep = getClub(world, userId).reputation;
   const userSquad = clubPlayers(world, userId);

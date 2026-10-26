@@ -1,16 +1,26 @@
 import { useState } from 'react';
-import { getClub, nextFixtureFor, shortFixtureLabel, unreadCount } from '../../engine';
+import { daysBetween, getClub, nextFixtureFor, shortFixtureLabel, UNEMPLOYMENT_LIMIT_DAYS, unreadCount } from '../../engine';
 import { hasUnsavedProgress, useGameStore, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { QuitDialog, SaveDialog } from '../components/SaveDialogs';
 import { SCREEN_KEYS, useHotkeys } from '../hotkeys';
 import { formatDayMonth } from '../labels';
-import { MENU } from '../screens';
+import { MENU, UNEMPLOYED_SCREENS } from '../screens';
 import { actionableOffers } from '../screens/TransferScreen';
 
 /** Sol menünün altındaki yeşil kart: sıradaki maç. */
 function NextMatchCard() {
   const world = useWorld();
+  if (world.unemployed) {
+    const left = Math.max(0, UNEMPLOYMENT_LIMIT_DAYS - daysBetween(world.unemployed.since, world.date));
+    return (
+      <div className="next-card">
+        <div className="next-card-title">İşsiz</div>
+        <div className="next-card-names">{(world.jobOffers ?? []).length} teklif</div>
+        <div className="next-card-date">{left} gün içinde iş bul</div>
+      </div>
+    );
+  }
   const next = nextFixtureFor(world, world.playerClubId);
   if (!next) {
     return (
@@ -65,7 +75,7 @@ export function Sidebar() {
         {MENU.map((group) => (
           <div key={group.title} className="menu-group">
             <div className="menu-group-title">{group.title}</div>
-            {group.items.map((item) => (
+            {group.items.filter((item) => !world.unemployed || UNEMPLOYED_SCREENS.has(item.id)).map((item) => (
               <button
                 key={item.id}
                 className={`menu-item${isActive(item.id) ? ' active' : ''}`}

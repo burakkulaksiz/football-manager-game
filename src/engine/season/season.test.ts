@@ -11,6 +11,7 @@ import { contractDemand } from '../transfer/agents';
 import { makeResult, playUntil } from '../testing';
 import type { Fixture, GameWorld } from '../types';
 import { boardAfterMatch, MIN_ROUNDS_BEFORE_SACK } from './board';
+import { NO_CLUB } from './jobs';
 import { divisionOf } from './expectation';
 import { prizeFor } from './seasonEnd';
 
@@ -122,20 +123,25 @@ describe('yönetim', () => {
     const world = createWorld(gameData, 9, 'fenerbahce', START);
     const ours = world.season.fixtures.filter((f) => f.homeId === 'fenerbahce' || f.awayId === 'fenerbahce');
     const start = world.board.confidence;
-    for (let i = 0; i < MIN_ROUNDS_BEFORE_SACK + 10 && !world.gameOver; i++) {
+    for (let i = 0; i < MIN_ROUNDS_BEFORE_SACK + 10 && !world.unemployed; i++) {
       const f = ours[i]!;
       const home = f.homeId === 'fenerbahce';
       f.result = makeResult(home ? 0 : 3, home ? 3 : 0);
       boardAfterMatch(world, f);
       if (i === 0) expect(world.board.confidence).toBeLessThan(start);
-      if (i < MIN_ROUNDS_BEFORE_SACK - 1) expect(world.gameOver).toBeNull();
+      if (i < MIN_ROUNDS_BEFORE_SACK - 1) expect(world.unemployed ?? null).toBeNull();
     }
-    expect(world.gameOver).not.toBeNull();
+    // Görevden alınan menajer işsiz kalır (kariyer bitmez), kulübü yapay zekâya geçer
+    expect(world.unemployed).toMatchObject({ lastClubId: 'fenerbahce', reason: 'sacked' });
+    expect(world.playerClubId).toBe(NO_CLUB);
+    expect(world.gameOver).toBeNull();
+    expect(world.vacancies?.some((v) => v.clubId === 'fenerbahce')).toBe(true);
     expect(world.manager.won + world.manager.drawn).toBe(0);
     expect(world.manager.lost).toBeGreaterThanOrEqual(MIN_ROUNDS_BEFORE_SACK);
-    // Kovulduktan sonra oyun ilerlemez
+    expect(world.manager.seasons?.at(-1)).toMatchObject({ clubId: 'fenerbahce', sacked: true });
+    // Kovulduktan sonra oyun işsiz olarak ilerler
     const date = world.date;
-    expect(advance(world, gameData).kind).toBe('moved');
-    expect(world.date).toBe(date);
+    advance(world, gameData);
+    expect(world.date > date).toBe(true);
   });
 });

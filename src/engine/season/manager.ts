@@ -39,6 +39,8 @@ export interface ManagerSeason {
   reputation?: number;
   /** Bu sezon görevden alındı. */
   sacked?: true;
+  /** Sezon ortasında ayrıldı: istifa ya da başka kulübe geçiş. */
+  left?: 'resigned' | 'moved';
 }
 
 /** Rekor maç (en farklı galibiyet / yenilgi). */
@@ -115,9 +117,11 @@ export function recordReputationMonth(world: GameWorld): void {
 /** Bu sezon kulübümüzün tüm maçlarından galibiyet / beraberlik / yenilgi ve goller (penaltılarla biten beraberlik sayılır). */
 function seasonRecord(world: GameWorld): Required<Pick<ManagerSeason, 'won' | 'drawn' | 'lost' | 'goalsFor' | 'goalsAgainst'>> {
   const user = world.playerClubId;
+  // Sezon ortasında gelindiyse önceki maçlar başkasının
+  const since = world.manager.clubSince ?? '';
   const out = { won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0 };
   for (const f of world.season.fixtures) {
-    if (!f.result || (f.homeId !== user && f.awayId !== user)) continue;
+    if (!f.result || (f.homeId !== user && f.awayId !== user) || f.date < since) continue;
     const own = f.homeId === user ? f.result.homeGoals : f.result.awayGoals;
     const opp = f.homeId === user ? f.result.awayGoals : f.result.homeGoals;
     out.goalsFor += own;
@@ -169,11 +173,23 @@ export function managerSeasonEnd(world: GameWorld, position: number, relegated: 
 
 /** Görevden alınma: itibar −8; sezon ortasındaysa o ana kadarki sezon kariyere yazılır. */
 export function managerSacked(world: GameWorld, position: number): void {
-  adjust(world, -8);
+  managerLeft(world, position, 'sacked');
+}
+
+/**
+ * Kulüpten ayrılış: görevden alınma (itibar −8), istifa (−3) ya da başka kulübe geçiş (itibar değişmez).
+ * O ana kadarki sezon kariyere yazılır (sezon sonunda zaten yazıldıysa işaretlenir).
+ */
+export function managerLeft(world: GameWorld, position: number, how: 'sacked' | 'resigned' | 'moved'): void {
+  adjust(world, how === 'sacked' ? -8 : how === 'resigned' ? -3 : 0);
+  const mark = (s: ManagerSeason) => {
+    if (how === 'sacked') s.sacked = true;
+    else s.left = how;
+  };
   const seasons = (world.manager.seasons ??= []);
   const current = seasons.find((s) => s.year === world.season.year && s.clubId === world.playerClubId);
   if (current) {
-    current.sacked = true;
+    mark(current);
     current.reputation = managerReputation(world);
   } else {
     seasons.push({
@@ -185,8 +201,8 @@ export function managerSacked(world: GameWorld, position: number): void {
       ...seasonRecord(world),
       trophies: [],
       reputation: managerReputation(world),
-      sacked: true,
     });
+    mark(seasons[seasons.length - 1]!);
   }
   recordReputationMonth(world);
 }

@@ -332,6 +332,7 @@ export const NEWS_CATEGORY_LABELS: Record<import('../engine').NewsCategory, stri
   scouting: 'Gözlemci',
   cup: 'Kupa',
   europe: 'Avrupa',
+  job: 'İş',
   international: 'Milli Takım',
 };
 

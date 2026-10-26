@@ -5,11 +5,13 @@ import {
   managerReputation,
   MANAGER_BACKGROUNDS,
   reputationLabel,
+  resignJob,
   seasonLabel,
   type ManagerSeason,
   type Trophy,
 } from '../../engine';
-import { useWorld } from '../../store/gameStore';
+import { useGameStore, useWorld } from '../../store/gameStore';
+import { Modal } from '../components/Modal';
 import { ClubBadge } from '../components/ClubBadge';
 import { formatDateShort, MONTHS_SHORT } from '../labels';
 
@@ -93,7 +95,17 @@ export function ManagerScreen() {
   const played = m.won + m.drawn + m.lost;
   const seasons = [...(m.seasons ?? [])].reverse();
   const trophies = (m.seasons ?? []).flatMap((s) => s.trophies.map((t) => ({ t, year: s.year, club: s.clubName })));
-  const club = getClub(world, world.playerClubId);
+  const club = world.unemployed ? null : getClub(world, world.playerClubId);
+  const worldAction = useGameStore((s) => s.worldAction);
+  const showNotice = useGameStore((s) => s.showNotice);
+  const setScreen = useGameStore((s) => s.setScreen);
+  const [confirmResign, setConfirmResign] = useState(false);
+  const resign = () => {
+    const error = worldAction((w) => resignJob(w));
+    setConfirmResign(false);
+    if (error) showNotice(error, 'error');
+    else setScreen('jobs');
+  };
   const background = m.background ? MANAGER_BACKGROUNDS[m.background] : null;
 
   return (
@@ -115,7 +127,10 @@ export function ManagerScreen() {
             <div className="kv"><span className="kv-label">Geçmişi</span><span className="kv-value">{background?.label ?? '—'}</span></div>
             <div className="kv">
               <span className="kv-label">Kulübü</span>
-              <span className="kv-value club-cell"><ClubBadge club={club} size={16} /> {club.name}</span>
+              <span className="kv-value club-cell">
+                {club ? <><ClubBadge club={club} size={16} /> {club.name}</> : <span className="muted">İşsiz</span>}
+                {club && !world.gameOver && <button className="link-btn mgr-resign" onClick={() => setConfirmResign(true)}>İstifa et</button>}
+              </span>
             </div>
             <div className="kv"><span className="kv-label">Göreve başlama</span><span className="kv-value">{formatDateTR(m.joined)}</span></div>
             <div className="kv"><span className="kv-label">Maç</span><span className="kv-value">{played} ({m.won} G, {m.drawn} B, {m.lost} M)</span></div>
@@ -193,7 +208,12 @@ export function ManagerScreen() {
               {seasons.map((s) => (
                 <tr key={`${s.year}-${s.clubId}`}>
                   <td className="strong">{seasonLabel(s.year)}</td>
-                  <td>{s.clubName}{s.sacked && <span className="tag tag-warn">Görevden alındı</span>}</td>
+                  <td>
+                    {s.clubName}
+                    {s.sacked && <span className="tag tag-warn">Görevden alındı</span>}
+                    {s.left === 'resigned' && <span className="tag">İstifa</span>}
+                    {s.left === 'moved' && <span className="tag">Ayrıldı</span>}
+                  </td>
                   <td className={`num${s.position <= s.target ? ' pos' : ' neg'}`}>{s.position}.</td>
                   <td className="num">{s.target}.</td>
                   <td className="num">{recordText(s)}</td>
@@ -206,6 +226,24 @@ export function ManagerScreen() {
           </table>
         )}
       </section>
+
+      {confirmResign && club && (
+        <Modal
+          title="İstifa"
+          onClose={() => setConfirmResign(false)}
+          footer={
+            <>
+              <button className="btn" onClick={() => setConfirmResign(false)}>Vazgeç</button>
+              <button className="btn-continue" onClick={resign}>İstifa Et <span className="btn-continue-arrow">›</span></button>
+            </>
+          }
+        >
+          <p>
+            {club.name}'dan istifa edeceksin. İtibarın 3 puan düşer ve işsiz kalırsın; kulübünü yapay zekâ yönetir. İş Merkezi'nden boş kulüplere
+            başvurabilirsin. 365 gün içinde iş bulamazsan kariyerin sona erer.
+          </p>
+        </Modal>
+      )}
     </div>
   );
 }

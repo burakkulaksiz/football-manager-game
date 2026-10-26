@@ -98,10 +98,11 @@ function PositionChart() {
             tableHead="Hafta"
             tooltipExtra={(i) => {
               const leader = leaderAt(i);
-              const mine = history.points.get(world.playerClubId)![i]!;
+              // İşsizken kendi kulübü yok: yalnızca lider
+              const mine = history.points.get(world.playerClubId)?.[i];
               return (
                 <div className="viz-tooltip-note">
-                  {getClub(world, world.playerClubId).shortName}: {mine} puan
+                  {mine !== undefined && <>{getClub(world, world.playerClubId).shortName}: {mine} puan</>}
                   {leader && leader !== world.playerClubId && <> · Lider {getClub(world, leader).shortName}: {history.points.get(leader)![i]} puan</>}
                 </div>
               );

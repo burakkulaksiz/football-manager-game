@@ -2,23 +2,23 @@ import { createPortal } from 'react-dom';
 import { formatDateTR, getClub, seasonLabel } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
 
-/** Görevden alınınca kariyer biter: özet ve çıkış seçenekleri (kapatılamaz). */
+/** Kariyer biter (uzun süre işsiz kalınca; eski kayıtlarda görevden alınınca): özet ve çıkış seçenekleri (kapatılamaz). */
 export function GameOverOverlay() {
   const world = useWorld();
   const quitToMenu = useGameStore((s) => s.quitToMenu);
   const openLoadGame = useGameStore((s) => s.openLoadGame);
   const over = world.gameOver;
   if (!over) return null;
-  const club = getClub(world, world.playerClubId);
+  const club = getClub(world, world.unemployed?.lastClubId ?? world.playerClubId);
   const seasons = world.history.filter((s) => s.userClubId === club.id);
 
   return createPortal(
     <div className="modal-backdrop">
-      <div className="modal panel gameover" role="alertdialog" aria-modal="true" aria-label="Görevine son verildi">
-        <h2 className="panel-title">Görevine son verildi</h2>
+      <div className="modal panel gameover" role="alertdialog" aria-modal="true" aria-label="Kariyerin sona erdi">
+        <h2 className="panel-title">Kariyerin sona erdi</h2>
         <div className="panel-body">
           <p className="gameover-reason">{over.reason}</p>
-          <div className="kv"><span className="kv-label">Kulüp</span><span className="kv-value">{club.name}</span></div>
+          <div className="kv"><span className="kv-label">Son kulüp</span><span className="kv-value">{club.name}</span></div>
           <div className="kv"><span className="kv-label">Tarih</span><span className="kv-value">{formatDateTR(over.date)}</span></div>
           {seasons.map((s) => (
             <div key={s.year} className="kv">

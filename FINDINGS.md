@@ -1,7 +1,7 @@
 # Bulgular
 
 Oynarken fark edilen eksikler ve düzeltilecekler. Çözülenler `[x]` ile işaretlenir; "Kanıt" satırı neye dayanıldığını gösterir.
-Fikirler (yeni özellikler) için IDEAS.md'ye bak; ayrıntılar NOTES.md'de.
+Fikirler (yeni özellikler) için IDEAS.md'ye bak; ayrıntılar docs/ altında (içindekiler: NOTES.md).
 
 Son gözden geçirme: 2026-10-25 (kod ve git geçmişi okunarak; tarayıcıda elle denenmedi). Otomatik denge bulguları en altta.
 

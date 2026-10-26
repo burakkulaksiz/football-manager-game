@@ -1,6 +1,6 @@
 /**
  * Ham sezon verisinden denge ölçüleri. Hedef aralıkları üç kaynaktan gelir:
- *  - engine.test.ts ve NOTES.md'deki ölçülmüş / kabul edilmiş hedefler,
+ *  - engine.test.ts ve docs/ notlarındaki (NOTES.md içindekiler) ölçülmüş / kabul edilmiş hedefler,
  *  - "referans": gerçek Süper Lig'in yaklaşık değerleri (kesin değil, yön göstermek için),
  *  - "sınır": uzun vadeli kaymayı yakalamak için kendi koyduğumuz koruma sınırları.
  * Hedef tutmayan bir ölçünün `tune` alanı nereye bakılacağını söyler.

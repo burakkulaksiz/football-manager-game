@@ -49,7 +49,7 @@ Bağımlılık yönü tek taraflıdır: `ui → store → engine` ve `store → 
 `GameData` nesnesi olarak dışarıdan alır. Bu, motoru testlerde, denge raporunda (ve ileride sunucuda ya da Worker'da) doğrudan
 çalıştırabilmeyi sağlar.
 
-Dosya dosya ayrıntılı harita ve her sistemin kuralları **[NOTES.md](NOTES.md)** içinde.
+Dosya dosya ayrıntılı harita ve her sistemin kuralları konuya göre **[docs/](docs/)** altında (içindekiler: [NOTES.md](NOTES.md)).
 
 ### Motor kuralları (değiştirirken bilmen gerekenler)
 
@@ -106,7 +106,7 @@ Hedefler ve nedenleri `src/tools/balance/metrics.ts` içindedir. Aynı tohumla k
 
 | Dosya | İçerik |
 |---|---|
-| [NOTES.md](NOTES.md) | Mimari harita, sistemlerin kuralları, ölçülmüş denge değerleri, açık konular |
+| [NOTES.md](NOTES.md) | `docs/` içindekiler: konuya göre mimari harita, sistemlerin kuralları, ölçülmüş denge değerleri, açık konular |
 | [IDEAS.md](IDEAS.md) | Fikir ve yol haritası; yapılanlar `[x]` ile işaretli (mimari / backend / AI ile geliştirme fikirleri dahil) |
 | [FINDINGS.md](FINDINGS.md) | Oynarken bulunan eksikler ve otomatik denge bulguları, kanıt satırlarıyla |
 | [FM_Agent_Prompt.md](FM_Agent_Prompt.md) | Projenin özgün kapsam ve istek metni |
@@ -114,8 +114,8 @@ Hedefler ve nedenleri `src/tools/balance/metrics.ts` içindedir. Aynı tohumla k
 
 ## Katkı akışı
 
-1. Değişiklikten önce ilgili bölümü NOTES.md'den oku; motor kurallarına (yukarıda) uy.
+1. Değişiklikten önce ilgili `docs/` dosyasını oku (hangisi: NOTES.md); motor kurallarına (yukarıda) uy.
 2. `npm run typecheck` ve ilgili testler yeşil olmalı; yeni kural için test ekle.
 3. Denge etkileyen değişiklikten sonra `npm run balance` ile raporu karşılaştır.
-4. Yapılan işi IDEAS.md / FINDINGS.md'de işaretle, kalıcı kuralları NOTES.md'ye yaz.
+4. Yapılan işi IDEAS.md / FINDINGS.md'de işaretle, kalıcı kuralları ilgili `docs/` dosyasına yaz.
 5. Commit mesajları Türkçe ve özet + gerekçe biçimindedir (bkz. `git log`).

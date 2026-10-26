@@ -145,7 +145,13 @@ Maç düzeyindeki ölçülerin tamamı hedef aralıkta: gol 2,74, ev galibiyeti 
 
 ## Elle eklenenler (oynarken)
 
-- [ ] Pozisyon gol olmadan, ekranda gol olduğu yazıyor.
+- [x] Pozisyon gol olmadan, ekranda gol olduğu yazıyor.
+  - Neden: PitchView sonucu (`revealed`: GOL bandı, parlama, file, etiket, kart) `sampleScene`'in `index`'ine göre açıyordu;
+    bu, gidilen (hedef) kare. Bant, şut çekildiği an, top ağa varmadan çıkıyordu (yavaş hızda ~0.75 sn önce). Skor ve
+    anlatım ise varışta açılıyor (revealDelayMs). Gol olmayan pozisyonda "gol" metni üreten başka yol bulunmadı: anlatımdaki
+    "GOL!" yalnızca motorun golünde, bant ve etiket yalnızca `kind === 'goal'`'da.
+  - Düzeltme: `reachedIndex` (pitchMotion.ts) topun vardığı kareyi verir; PitchView sonucu ona göre açar.
+  - Kanıt: pitchMotion.test.ts "varılan kare" testi (yazıldı, koşulmadı: doğrulanmadı). Tarayıcıda elle denenmedi.
 - [ ] Top kornere çıkmadan korner kararı çıkıyor.
 - [x] Penaltılar çok hızlı kullanılıyor: penaltı kararı ve kullanılması anlık oluyor.
   - Neden: pitchScene.ts'de faulden sonra tek kurulum karesi (700 ms, ortak 'none' süresi) ve hemen şut (520 ms) vardı;

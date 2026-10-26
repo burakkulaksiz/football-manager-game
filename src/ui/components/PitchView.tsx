@@ -17,7 +17,7 @@ import {
   type CameraTransform,
   type PitchViewBox,
 } from '../pitch';
-import { ballTrack, dominance, sampleScene, type Spots } from '../pitchMotion';
+import { ballTrack, dominance, reachedIndex, sampleScene, type Spots } from '../pitchMotion';
 import { bannerKind, buildScene, frameSpots, frameStartsMs, isHighlight, playLabel, revealIndex, SCENE_HOLD_MS } from '../pitchScene';
 
 /** Forma/şort sınırı: noktanın yukarıdan %69'u (yarıçap 1.3, merkezin 0.5 altı). */
@@ -237,10 +237,12 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
   const view = useMemo(() => makeView(available > 0 ? stretchFor(available, maxHeight) : 1), [available, maxHeight]);
   const stageWidth = available > 0 ? Math.min(available, Math.round((maxHeight * view.w) / view.h)) : 0;
 
-  // Gösterilen kare (adlar, kartlar, etiketler): animasyon döngüsü kare değişince günceller
-  const [shown, setShown] = useState({ scene, index: 0 });
+  // Gösterilen kare (adlar, kartlar, etiketler): animasyon döngüsü kare değişince günceller.
+  // Sonuç (gol bandı, etiket, kart) top sonuç karesine varınca açıklanır: skor ve anlatımla aynı an
+  const [shown, setShown] = useState({ scene, index: 0, reached: -1 });
   const index = shown.scene === scene ? shown.index : 0;
-  const revealed = scene.length > 0 && index >= reveal;
+  const reached = shown.scene === scene ? shown.reached : -1;
+  const revealed = scene.length > 0 && reached >= reveal;
   const frame = scene[Math.min(index, scene.length - 1)];
   const previous = index > 0 ? scene[index - 1] : undefined;
 
@@ -268,6 +270,7 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
     const end = (starts.at(-1) ?? 0) + SCENE_HOLD_MS;
     let raf = 0;
     let lastIndex = -1;
+    let lastReached = -2;
     let lastTime = performance.now();
     const tick = (now: number) => {
       const t = (now - begin) * speed;
@@ -275,9 +278,11 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
       if (reduce && !sample.leadIn) {
         sample = { ...sample, players: spots[sample.index]!, ball: scene[sample.index]!.ball, height: 0 };
       }
-      if (sample.index !== lastIndex) {
+      const arrived = reachedIndex(sample);
+      if (sample.index !== lastIndex || arrived !== lastReached) {
         lastIndex = sample.index;
-        setShown({ scene, index: sample.index });
+        lastReached = arrived;
+        setShown({ scene, index: sample.index, reached: arrived });
       }
       const target = scene[sample.index]!;
       // Yakın kamera: topu (sevinçte golcüyü) izler; santra ve başlama dizilişinde tam saha
@@ -431,7 +436,7 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
           />
         )}
         {/* Gol anında saha bir an parlar */}
-        {banner === 'goal' && index === reveal && <div key={`flash-${match.minute}`} className="pitch-flash" />}
+        {banner === 'goal' && reached === reveal && <div key={`flash-${match.minute}`} className="pitch-flash" />}
       </div>
       {label && play && !bannerText && play.kind !== 'goal' && (
         <div

@@ -107,6 +107,14 @@ export function sampleScene(scene: readonly SceneFrame[], spots: readonly Spots[
   return { index: i, u, leadIn: false, players, ball: ball.at, height: ball.height };
 }
 
+/**
+ * Topun vardığı son kare (girişte −1). `index` gidilen karedir: sonuç (gol bandı, etiket) ona bakarsa top daha yoldayken,
+ * şut çekildiği an açıklanır; skor ve anlatım da varışta açıklanır (revealDelayMs).
+ */
+export function reachedIndex(sample: MotionSample): number {
+  return sample.u >= 1 && !sample.leadIn ? sample.index : sample.index - 1;
+}
+
 /** Baskı çubuğu için bakılan son dakika sayısı. */
 export const DOMINANCE_WINDOW = 10;
 

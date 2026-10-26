@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ballPath, dominance, easeInOut, sampleScene, type Spots } from './pitchMotion';
+import { ballPath, dominance, easeInOut, reachedIndex, sampleScene, type Spots } from './pitchMotion';
 import { frameStartsMs, LEAD_IN_MS, type SceneFrame } from './pitchScene';
 
 const frame = (x: number, y: number, extra: Partial<SceneFrame> = {}): SceneFrame => ({
@@ -52,6 +52,14 @@ describe('sahne örnekleme', () => {
     expect(end.index).toBe(2);
     expect(end.players.get(2)!.at).toEqual({ x: 70, y: 40 });
     expect(end.ball).toEqual({ x: 60, y: 40 });
+  });
+
+  it('varılan kare: top yoldayken bir önceki kare (sonuç şut çekilince değil, top varınca açıklanır)', () => {
+    expect(reachedIndex(sampleScene(scene, spots, LEAD_IN_MS / 2, undefined, starts))).toBe(-1);
+    expect(reachedIndex(sampleScene(scene, spots, starts[1]! - 1, undefined, starts))).toBe(0);
+    expect(reachedIndex(sampleScene(scene, spots, starts[1]!, undefined, starts))).toBe(1);
+    expect(reachedIndex(sampleScene(scene, spots, starts[2]! - 1, undefined, starts))).toBe(1);
+    expect(reachedIndex(sampleScene(scene, spots, starts[2]! + 5000, undefined, starts))).toBe(2);
   });
 });
 

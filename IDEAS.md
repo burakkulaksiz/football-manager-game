@@ -122,7 +122,11 @@ Aşağıdaki sıralama, önce sunucusuz kazançları, sonra sunucu gerektirenler
     istemciler yalnızca komut gönderip durum alır; bu, store ve motor giriş noktalarının baştan düşünülmesi demek.
   - Not: önce Worker ayrımı ve monorepo yapılırsa bu yol açılır; tek başına bu fikir şimdilik en büyük ve en riskli olanı.
   - Boyut: çok büyük.
-- [ ] **Gerçek veri hattı (kadro güncellemesi)**
+- [ ] **Gerçek veri hattı (kadro güncellemesi)** — kısmen
+  - [x] Doğrulama ve değişiklik raporu: `npm run data:check` (hata/uyarı, hata varsa çıkış 1), `npm run data:diff` (reports/data/).
+    Kanıt: `src/tools/data/squadCheck.test.ts`, `squadDiff.test.ts`; ilk denetim 38 kadro / 1140 oyuncu, hata 0 (NOTES > Gerçek kadrolar).
+  - [ ] Zamanlanmış iş: adımlar NOTES'ta tanımlı, etkinleştirilmedi — karar bekliyor (aşağıdaki "Dikkat").
+  - [ ] API ile dağıtım: yapılmadı — veri lisansı netleşmeden kapsam dışı.
   - Ne: `scripts/transfermarkt.mjs` zaten kadro verisini çekiyor. Bunu zamanlanmış bir işe çevirip doğrulama (eksik oyuncu, yanlış mevki, tutarsız değer)
     ve değişiklik raporu eklemek; istenirse sunucu güncel `data/` paketini API ile verir, oyun açılışta günceller.
   - Dikkat: kaynak sitenin kullanım koşulları ve çekme sıklığı; verinin lisansı. Oyunun içinde dağıtmadan önce bunlar netleşmeli.
@@ -147,7 +151,8 @@ Bunlar oyunun içine AI koymak değil, projeyi geliştirirken AI'ı daha verimli
     AI raporu okuyup parametre değişikliği önerebilir, sonra aynı tohumlarla yeniden ölçer.
   - Dikkat: yavaş (testlerdeki gibi dakikalar sürer); Worker ya da ayrı bir betik olarak çalışmalı, test takımına girmemeli.
   - Boyut: küçük–orta. Backend gerektirmez; en çok değer katan ilk adım.
-- [ ] **Gerçek veri doğrulama ve temizleme**
+- [ ] **Gerçek veri doğrulama ve temizleme** — kısmen: tarama ve rapor `npm run data:check` ile yapıldı (yukarıdaki veri hattı);
+  otomatik düzeltme önerisi ve güç–piyasa değeri tutarlılığı yok.
   - Ne: Transfermarkt çıktısındaki hataları (eksik oyuncu, ters mevki, imkânsız yaş/değer, yinelenen kayıt) bir ajanın tarayıp raporlaması;
     `data/README.md` kurallarına göre otomatik düzeltme önerisi.
 - [ ] **Ekran görüntüsü testleri (görsel doğrulama)**

@@ -675,6 +675,22 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
   (KL +1,4, STP +0,6, bek +0,45, orta saha +0,2, 10 numara +0,3, kanat/forvet −0,25 — piyasa değeri hücumcuyu pahalı gösterir)
   ve 12,5 çevresinde ×0,72 sıkıştırma (TM'de büyük-küçük farkı oyunun ölçeğinden geniş). Sonuç (~4600 maç): 2,70 gol,
   %43,7 ev, %26,7 beraberlik, gol kralı ort. 25,1 (en çok 30).
+- Veri hattı (ağ isteği yok; scripts/data.mjs, mantık src/tools/data/ testli):
+  - `npm run data:check`: önce oyunun açılış doğrulaması (validateGameData; yapı hataları), geçerse kadro denetimi (squadCheck.ts):
+    hata = takvimde olmayan doğum, 15 altı / 50 üstü yaş, piyasa değeri ≤ 0 ya da > 300 M €, sözleşme bitişinden sonra / doğumdan önce
+    katılış, aynı kadroda yinelenen oyuncu (ad + doğum yılı); uyarı = 41 üstü yaş, güçten düşük potansiyel, sezon başından önce bitmiş
+    sözleşme, kaleci + oyuncu mevkisi birlikte, başka kadroda da olan oyuncu, kadro < 20 ya da > 40, asıl mevkiye göre kaleci < 2 /
+    defans < 5 / orta saha < 5 / hücum < 3, dosyası olmayan Türkiye kulübü. Hata varsa çıkış kodu 1.
+    İlk koşu (2026-10-27, 38 kadro, 1140 oyuncu): hata 0, uyarı 0. 118 oyuncunun piyasa değeri yok (çekici bilerek 150 bin € sayıyor;
+    genelde altyapıdan yeni çıkanlar), uyarı yapılmadı: her kulüpte çıkıp gerçek uyarıları gömüyordu.
+  - `npm run data:diff [-- <sürüm>]`: git'teki sürüm (varsayılan HEAD) ile çalışma kopyası arasında gelen / giden / kulüp değiştiren /
+    değeri, asıl mevkisi, gücü, uyruğu ya da sözleşmesi değişen oyuncular (ad + doğum yılıyla eşleşir) → reports/data/diff-latest.md.
+  - Güç ile piyasa değeri tutarlılığı denetlenmiyor: abilityFromValue çekici betikte ve betik içe aktarılınca çekime başlıyor.
+  - Zamanlanmış iş (tanımlı, ETKİN DEĞİL; karar Burak'ın: Transfermarkt kullanım koşulları, çekme sıklığı ve veri lisansı netleşmeden
+    çalıştırılmaz). Haftada bir, elle ya da GitHub Actions / Görev Zamanlayıcı ile, ayrı dalda:
+    `git switch -c veri/<tarih>` → `node scripts/transfermarkt.mjs` → `npm run data:check` (hata varsa dur) → `npm run data:diff`
+    (rapor PR açıklamasına) → data/squads commit → PR, elle gözden geçirilip birleştirilir. Elle düzeltilmiş kadrolar çekimde ezilir:
+    fark raporunda "Bilgisi değişen" bölümüne bakılır.
 - Kupa: Süper Lig + itibarı en yüksek 8 1. Lig kulübü (CUP_LOWER_CLUBS; 26 kulüp, 6 bay — eskisi gibi).
   fillAcademies gerçek kadrodan U19'a inenleri sayar (U19 yine 7–9). Gerçek A takımlar 25–38 kişi (yapay zekâ yeni sezonda 30'a indirir).
 - Lig 2026/27'ye güncellendi: Çorum FK, Amed SK, Erzurumspor çıktı; Antalyaspor, Kayserispor, Karagümrük 1. Lig'e

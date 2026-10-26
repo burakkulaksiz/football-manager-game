@@ -55,7 +55,8 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
 - [x] Gerçek kadrolar (`data/squads/`; Transfermarkt 2026/27, gerçek Süper Lig ve 1. Lig)
 
 ## Kulüp ve menajer
-- [ ] Başka kulüplerden iş teklifi, istifa, işsiz kalıp yeni iş arama
+- [x] Başka kulüplerden iş teklifi, istifa, işsiz kalıp yeni iş arama (İş Merkezi; boş koltuklar, başvuru, teklif, 365 gün işsizlikte kariyer sonu)
+  - Kanıt: `season/jobs.test.ts` (işsiz sezon geçişi, başvuru/teklif, kulüp değiştirme), `saves.test.ts` (işsizken kayıt, kariyer kimliği sabit). Eski sürümde görevden alınmış kayıtlar "kariyer bitti" olarak kalır.
 - [x] Menajer itibarı ve kariyer geçmişi ekranı (geçmiş seçimi, transfer ve yönetime etkisi)
 - [x] Tesis yatırımı (stadyum, antrenman tesisi, altyapı, sağlık merkezi; yönetimden talep, inşaat süresi, bakım)
 - [ ] Taraftar memnuniyeti

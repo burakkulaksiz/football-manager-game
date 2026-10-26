@@ -1,11 +1,11 @@
 // Node'da IndexedDB yok; sahte bir uygulama (bellek içi) Dexie'den önce yüklenmeli.
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { advance, createWorld, startUserMatch, stepMatch, type GameWorld, type MatchState } from '../engine';
+import { advance, createWorld, leaveClub, startUserMatch, stepMatch, takeJob, type GameWorld, type MatchState } from '../engine';
 import { makeResult } from '../engine/testing';
 import { gameData } from '../gameData';
 import { db } from './db';
-import { autosave, careerIdOf, deleteSave, listSaves, loadGame, loadSavedMatch, saveGame } from './saves';
+import { autosave, careerIdOf, defaultSaveName, deleteSave, listSaves, loadGame, loadSavedMatch, saveGame } from './saves';
 
 const START = '2026-07-01';
 
@@ -71,6 +71,22 @@ describe('kayıt sistemi', () => {
     expect(autos).toHaveLength(2);
     const auto = autos.find((s) => s.careerId === careerIdOf(a))!;
     expect(auto.gameDate).toBe(a.date);
+  });
+
+  it('işsizken kaydedilir; kulüp değişse de kariyer kimliği ve otomatik kayıt slotu aynı kalır', async () => {
+    const world = createWorld(gameData, 6, 'kasimpasa', START);
+    const career = careerIdOf(world);
+    leaveClub(world, 'resigned', 'Deneme.');
+    expect(careerIdOf(world)).toBe(career);
+    const id = await saveGame(world, defaultSaveName(world));
+    expect((await listSaves())[0]).toMatchObject({ id, clubId: 'kasimpasa', clubName: 'İşsiz' });
+    expect(await loadGame(id)).toEqual(world);
+
+    takeJob(world, 'rizespor');
+    expect(careerIdOf(world)).toBe(career);
+    await autosave(world);
+    await autosave(world);
+    expect((await listSaves()).filter((s) => s.isAutosave)).toHaveLength(1);
   });
 
   it('maç ortasında alınan kayıt maçı kaldığı yerden yükler', async () => {

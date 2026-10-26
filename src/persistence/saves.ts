@@ -9,15 +9,21 @@ import { db, type SaveSlot } from './db';
 /** Kayıt biçimi = dünya biçimi sürümü (bkz. engine/migrate.ts). */
 export const SAVE_FORMAT_VERSION = CURRENT_WORLD_VERSION;
 
-/** Kariyer kimliği: aynı tohum ve kulüple başlamış oyun. */
+/** Kariyer kimliği: aynı tohum ve kulüple başlamış oyun (kulüp değişse ya da işsiz kalınsa da aynı kalır). */
 export function careerIdOf(world: GameWorld): string {
-  return `${world.seed}-${world.playerClubId}`;
+  // Kulüpten ayrılış o sezonu kariyere yazar: ilk kariyer sezonunun kulübü başlangıç kulübüdür
+  return `${world.seed}-${world.manager?.seasons?.[0]?.clubId ?? world.playerClubId}`;
+}
+
+/** Kayıtta görünen kulüp adı: işsizken "İşsiz". */
+function clubNameOf(world: GameWorld): string {
+  return world.unemployed ? 'İşsiz' : getClub(world, world.playerClubId).name;
 }
 
 /** Varsayılan kayıt adı: "Galatasaray — 15.08.2026" */
 export function defaultSaveName(world: GameWorld): string {
   const [y, m, d] = world.date.split('-');
-  return `${getClub(world, world.playerClubId).name} — ${d}.${m}.${y}`;
+  return `${clubNameOf(world)} — ${d}.${m}.${y}`;
 }
 
 /** Kayıt listesinde maçın durumu: "Galatasaray 1-0 Fenerbahçe · 34'" (başlamadıysa "maç başlamadan"). */
@@ -33,8 +39,8 @@ function meta(world: GameWorld, name: string, isAutosave: boolean, liveMatch: Ma
   return {
     name,
     careerId: careerIdOf(world),
-    clubId: world.playerClubId,
-    clubName: getClub(world, world.playerClubId).name,
+    clubId: world.unemployed?.lastClubId ?? world.playerClubId,
+    clubName: clubNameOf(world),
     gameDate: world.date,
     season: world.season.year,
     isAutosave,

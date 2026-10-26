@@ -152,7 +152,14 @@ Maç düzeyindeki ölçülerin tamamı hedef aralıkta: gol 2,74, ev galibiyeti 
     "GOL!" yalnızca motorun golünde, bant ve etiket yalnızca `kind === 'goal'`'da.
   - Düzeltme: `reachedIndex` (pitchMotion.ts) topun vardığı kareyi verir; PitchView sonucu ona göre açar.
   - Kanıt: pitchMotion.test.ts "varılan kare" testi (yazıldı, koşulmadı: doğrulanmadı). Tarayıcıda elle denenmedi.
-- [ ] Top kornere çıkmadan korner kararı çıkıyor.
+- [x] Top kornere çıkmadan korner kararı çıkıyor.
+  - Neden: pitchScene.ts'de top son pastan doğrudan köşe bayrağına gidiyordu (çizgiyi geçtiği kare yoktu) ve "Korner"
+    etiketi kurulum karesine yola çıkıldığı an, top saha içindeyken açılıyordu (bkz. gol maddesi: hedef kareye bakılıyordu).
+  - Düzeltme: kurulumdan önce topun kale çizgisini geçip dışarı çıktığı kare eklendi (kornerle gelen şutta da); korner
+    anında sonuç (etiket, anlatım) bu karede, top dışarıya varınca açıklanır, sonra bayrakta kurulum. Kart / sakatlık
+    yerleşimi son kareye değil sonuç karesine bağlandı.
+  - Kanıt: pitchScene.test.ts "korner kararı top çizgiyi geçince" testi ve güncellenen ilk test (yazıldı, koşulmadı:
+    doğrulanmadı). Tarayıcıda elle denenmedi.
 - [x] Penaltılar çok hızlı kullanılıyor: penaltı kararı ve kullanılması anlık oluyor.
   - Neden: pitchScene.ts'de faulden sonra tek kurulum karesi (700 ms, ortak 'none' süresi) ve hemen şut (520 ms) vardı;
     karar ile vuruş arası ~0.7 sn.

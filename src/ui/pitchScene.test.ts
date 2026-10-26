@@ -46,10 +46,14 @@ describe('2D saha sahnesi', () => {
       const reveal = revealIndex(scene);
       expect(reveal).toBeGreaterThanOrEqual(0);
       expect(reveal).toBeLessThanOrEqual(MAX_PLAY_FRAMES - 1);
-      expect(scene[reveal]!.ball).toEqual(ballSpot(play, minute));
-      // Gol dışında sonuç son karedir; golde ardından 3 sevinç karesi
-      expect(scene.length - 1 - reveal).toBe(play.kind === 'goal' ? 3 : 0);
-      for (const f of scene.slice(0, reveal)) {
+      // Kornerde sonuç top dışarı çıkınca, ardından bayrakta kurulum (motorun anının yeri)
+      const corner = play.kind === 'corner';
+      expect(scene[corner ? reveal + 1 : reveal]!.ball).toEqual(ballSpot(play, minute));
+      if (corner) expect(Math.abs(scene[reveal]!.ball.x - PITCH_LENGTH / 2)).toBeGreaterThan(PITCH_LENGTH / 2);
+      // Gol ve korner dışında sonuç son karedir; golde ardından 3 sevinç karesi, kornerde kurulum
+      expect(scene.length - 1 - reveal).toBe(play.kind === 'goal' ? 3 : corner ? 1 : 0);
+      // Kornerle gelen şutta da top önce dışarı çıkar (kurulumdan önceki kare)
+      for (const f of scene.slice(0, reveal).filter((_, i) => scene[i + 1]?.setPiece?.kind !== 'corner')) {
         expect(f.ball.x).toBeGreaterThanOrEqual(0);
         expect(f.ball.x).toBeLessThanOrEqual(PITCH_LENGTH);
         expect(f.ball.y).toBeGreaterThanOrEqual(0);
@@ -195,6 +199,19 @@ describe('2D saha sahnesi', () => {
     expect(home.filter((p) => inBox(p.at)).length).toBeGreaterThanOrEqual(4);
     expect(away.filter((p) => inBox(p.at)).length).toBeGreaterThanOrEqual(7);
     expect(home.filter((p) => p.at.x < PITCH_LENGTH / 2 + 10).length).toBeGreaterThanOrEqual(3); // kaleci + 2 geride
+  });
+
+  it('korner kararı top çizgiyi geçince: top dışarı → karar (sonuç) → bayrakta kurulum; kornerle gelen şutta da', () => {
+    const corners = plays.filter((p) => p.play.kind === 'corner' || p.play.fromCorner);
+    expect(corners.some((p) => p.play.kind === 'corner')).toBe(true);
+    expect(corners.some((p) => p.play.fromCorner)).toBe(true);
+    for (const { minute, play, state } of corners) {
+      const scene = buildScene(state, play, minute);
+      const setup = scene.findIndex((f) => f.setPiece?.kind === 'corner');
+      const out = scene[setup - 1]!.ball;
+      expect(out.x < 0 || out.x > PITCH_LENGTH).toBe(true);
+      if (play.kind === 'corner') expect(revealIndex(scene)).toBe(setup - 1);
+    }
   });
 
   it('serbest vuruş: topa 9.15 m uzaklıkta 4 kişilik baraj, kullanan topun başında', () => {

@@ -190,6 +190,8 @@ function playFrames(match: MatchState, play: MatchPlay, minute: number): SceneFr
     frames.push({ ball: target, carrierId: id, carrierSide: side, placed: [], move: frames.length === 0 ? 'none' : move });
   };
   const lastFrame = () => frames[frames.length - 1]!;
+  /** Sonucun açıklandığı kare: işaretlenmişse o (korner: top dışarıda), yoksa son kare. */
+  const resultFrame = () => frames.find((f) => f.result) ?? lastFrame();
   /**
    * Topu alan oyuncu bir süre topla ilerler (yaklaşık yarı yarıya): hücum yönünde `min`–`max` metre, hafif yana kayarak;
    * en fazla `limit` metreye kadar (ceza sahasına girmeden).
@@ -223,6 +225,10 @@ function playFrames(match: MatchState, play: MatchPlay, minute: number): SceneFr
     const setPiece: SetPiece = { kind, side, spot: ball, takerId: id };
     frames.push({ ball, carrierId: id, carrierSide: side, placed: [], move: 'none', setPiece });
     return setPiece;
+  };
+  /** Top savunmadan seker, kale çizgisini geçip dışarı çıkar: korner kurulumu topun dışarıda olduğu görüldükten sonra. */
+  const ballOut = (y: number) => {
+    frames.push({ ball: at(side, PITCH_LENGTH + 1.5, y), carrierId: null, carrierSide: side, placed: [], move: 'pass' });
   };
 
   switch (play.kind) {
@@ -259,7 +265,9 @@ function playFrames(match: MatchState, play: MatchPlay, minute: number): SceneFr
       buildUp(1);
       passTo(at(side, 70 + h(3) * 8, final.y < MID_Y ? 12 : PITCH_WIDTH - 12));
       passTo(at(side, 92 + h(4) * 6, final.y < MID_Y ? 6 : PITCH_WIDTH - 6));
-      // Top kornere gitti: kullanacak oyuncu bayrağa, ceza sahası dolar
+      // Korner kararı top çizgiyi geçince (sonuç bu karede); sonra kullanacak oyuncu bayrağa, ceza sahası dolar
+      ballOut(final.y < MID_Y ? 8 + h(15) * 10 : PITCH_WIDTH - 8 - h(15) * 10);
+      lastFrame().result = true;
       setUp(final, null, 'corner');
       break;
     }
@@ -286,6 +294,7 @@ function playFrames(match: MatchState, play: MatchPlay, minute: number): SceneFr
       } else if (play.fromCorner) {
         // Korner: bayraktan orta, kafayı vuran altıpas önünde
         buildUp(1);
+        ballOut(origin.y < MID_Y ? 8 + h(15) * 10 : PITCH_WIDTH - 8 - h(15) * 10);
         const flag = at(side, 104.6, origin.y < MID_Y ? 0.6 : PITCH_WIDTH - 0.6);
         // Kafayı vuran korneri kullanamaz (bayraktan altıpasa ışınlanmasın)
         if (play.playerId !== null) used.add(play.playerId);
@@ -327,18 +336,18 @@ function playFrames(match: MatchState, play: MatchPlay, minute: number): SceneFr
     }
   }
 
-  // Kart: sahadan atılan, son karede topun yanında görünür; sahadaki kendi yerinde kalır (kart dakikanın önceki
+  // Kart: sahadan atılan, sonuç karesinde topun yanında görünür; sahadaki kendi yerinde kalır (kart dakikanın önceki
   // faulünden şuta taşınmış olabilir: top kaleye giderken tek başına yarım saha koşmasın)
   if (play.card) {
-    const last = lastFrame();
+    const last = resultFrame();
     const cardSide = match.players[play.card.playerId]?.side ?? opp;
     if (!match[cardSide].onPitch.includes(play.card.playerId) && !last.placed.some((p) => p.id === play.card!.playerId)) {
       last.placed.push({ id: play.card.playerId, side: cardSide, at: { x: last.ball.x + (cardSide === 'home' ? -1.8 : 1.8), y: last.ball.y - 1.4 } });
     }
   }
-  // Sakatlık: son karede oyuncu yerde (değişiklikle çıkmış olsa da o an görünür)
+  // Sakatlık: sonuç karesinde oyuncu yerde (değişiklikle çıkmış olsa da o an görünür)
   if (play.injuredId !== undefined) {
-    const last = lastFrame();
+    const last = resultFrame();
     last.injuredId = play.injuredId;
     const injuredSide = match.players[play.injuredId]?.side ?? side;
     if (!match[injuredSide].onPitch.includes(play.injuredId) && !last.placed.some((p) => p.id === play.injuredId)) {
@@ -347,7 +356,7 @@ function playFrames(match: MatchState, play: MatchPlay, minute: number): SceneFr
   }
   const core = frames.slice(-MAX_PLAY_FRAMES);
   core[0]!.move = 'none';
-  core[core.length - 1]!.result = true;
+  if (!core.some((f) => f.result)) core[core.length - 1]!.result = true;
   shapeBallPaths(core, play, minute);
   return core;
 }

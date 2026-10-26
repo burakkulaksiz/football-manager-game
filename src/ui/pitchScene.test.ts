@@ -8,6 +8,7 @@ import {
   buildScene,
   frameDurationMs,
   frameSpots,
+  frameStartsMs,
   isHighlight,
   LEAD_IN_MS,
   MAX_PLAY_FRAMES,
@@ -162,6 +163,21 @@ describe('2D saha sahnesi', () => {
       const inBox = at.x > PITCH_LENGTH - 16.5 && Math.abs(at.y - PITCH_WIDTH / 2) < 20.16;
       expect(inBox).toBe(false);
     }
+  });
+
+  it('penaltı anlık değil: karardan vuruşa en az 2 sn (kurulum, vurucu geri çekilip bekler), maç hızıyla ölçeklenir', () => {
+    const m = match();
+    const shooter = m.home.onPitch.find((id) => m.players[id]!.slot === 'ST')!;
+    const play: MatchPlay = { side: 'home', kind: 'save', playerId: shooter, fromPenalty: true };
+    const scene = buildScene(m, play, 30);
+    const starts = frameStartsMs(scene);
+    const setup = scene.findIndex((f) => f.setPiece?.kind === 'penalty');
+    const shot = scene.findIndex((f) => f.move === 'shot');
+    // Karar: faul karesine varış; vuruş: şut karesine yola çıkış
+    expect(starts[shot - 1]! - starts[setup - 1]!).toBeGreaterThanOrEqual(2000);
+    // Vurucu şuttan önce toptan birkaç metre geride
+    const runUp = frameSpots(m, scene[shot - 1]!, false).get(shooter)!.at;
+    expect(Math.hypot(runUp.x - scene[shot - 1]!.ball.x, runUp.y - scene[shot - 1]!.ball.y)).toBeGreaterThan(3);
   });
 
   const inBox = (p: { x: number; y: number }) => p.x > PITCH_LENGTH - 16.5 && Math.abs(p.y - PITCH_WIDTH / 2) < 20.16;

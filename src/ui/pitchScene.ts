@@ -274,6 +274,10 @@ function playFrames(match: MatchState, play: MatchPlay, minute: number): SceneFr
         fouledHere();
         // Penaltı noktası: vurucu topun başında, diğerleri ceza sahası dışında
         setPiece = setUp(origin, play.playerId, 'penalty');
+        // Vurucu topu yerleştirip geri çekilir ve düdüğü bekler (karar ile vuruş art arda gelmesin)
+        if (setPiece.takerId !== null) {
+          frames.push({ ...lastFrame(), placed: [{ id: setPiece.takerId, side, at: at(side, progress(side, origin) - 4, origin.y) }] });
+        }
       } else if (play.fromFreeKick) {
         buildUp(1);
         passTo(origin);
@@ -458,10 +462,13 @@ export const LEAD_IN_MS = 400;
 
 /** Topun bu kareye gelme süresi, hareketine göre: şut hızlı, orta / uzun pas / top sürme daha uzun. */
 const MOVE_MS: Record<FrameMove, number> = { none: 700, pass: 750, lob: 950, cross: 1000, dribble: 950, shot: 520 };
+/** Penaltıda kurulum (oyuncular ceza sahasından çıkar, top noktaya konur) ve vurucunun geri çekilip beklemesi (ms). */
+export const PENALTY_SETUP_MS = 1300;
 
 /** Önceki kareden bu kareye geçiş süresi (ms). */
 export function frameDurationMs(frame: SceneFrame): number {
   if (frame.subs) return SCENE_FRAME_MS;
+  if (frame.setPiece?.kind === 'penalty' && frame.move === 'none') return PENALTY_SETUP_MS;
   // Gol sevinci koşusu ve santra dizilişi yürüyerek
   if (frame.focusId !== undefined || frame.kickoff) return 900;
   return MOVE_MS[frame.move];

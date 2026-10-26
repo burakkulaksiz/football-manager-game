@@ -147,7 +147,13 @@ Maç düzeyindeki ölçülerin tamamı hedef aralıkta: gol 2,74, ev galibiyeti 
 
 - [ ] Pozisyon gol olmadan, ekranda gol olduğu yazıyor.
 - [ ] Top kornere çıkmadan korner kararı çıkıyor.
-- [ ] Penaltılar çok hızlı kullanılıyor: penaltı kararı ve kullanılması anlık oluyor.
+- [x] Penaltılar çok hızlı kullanılıyor: penaltı kararı ve kullanılması anlık oluyor.
+  - Neden: pitchScene.ts'de faulden sonra tek kurulum karesi (700 ms, ortak 'none' süresi) ve hemen şut (520 ms) vardı;
+    karar ile vuruş arası ~0.7 sn.
+  - Düzeltme: kurulumdan sonra vurucunun topu yerleştirip 4 m geri çekildiği bekleme karesi eklendi; penaltının iki
+    kurulum karesi `PENALTY_SETUP_MS` (1.3 sn) sürer. Karardan vuruşa ~2.6 sn; süreler sahne zamanıyla birlikte maç hızına
+    göre ölçeklenir, anında bitirme sahne kullanmadığı için etkilenmez.
+  - Kanıt: pitchScene.test.ts "penaltı anlık değil" testi (yazıldı, koşulmadı: doğrulanmadı). Tarayıcıda elle denenmedi.
 - [ ] "Maça git"e tıkladığımda fikstüre mi gidiyor, ne oluyor; sonra "Devam" yazıyor, sonra bir daha "Maça git" yazıyor. Bu "Maça git" olayında bir sorun var gibi.
 - [x] Maç esnasında bazen herkes sabitken bir oyuncu çok uzaktan başka bir yere geçiş yapıyor.
   - Neden (pitchScene.ts, 40 maçlık tarama): şutun sonuç karesinde topu taşıyan kalmadığı için şutu çeken dizilişteki yerine

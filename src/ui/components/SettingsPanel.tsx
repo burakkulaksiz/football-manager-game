@@ -1,8 +1,10 @@
+import { useState, type ReactNode } from 'react';
 import type { NewsCategory } from '../../engine';
 import { useGameStore } from '../../store/gameStore';
 import { DEFAULT_SETTINGS, type Settings } from '../../store/settings';
 import { accentColors, ACCENT_COLORS } from '../appearance';
 import { NEWS_CATEGORY_LABELS } from '../labels';
+import { sound } from '../sound';
 import { ShortcutList } from './ShortcutList';
 
 interface Option<T> {
@@ -12,11 +14,13 @@ interface Option<T> {
 }
 
 /** Bir ayar satırı: etiket, segmentli seçim ve seçilenin açıklaması. */
-function Choice<K extends keyof Settings>({ label, field, options, hint }: {
+function Choice<K extends keyof Settings>({ label, field, options, hint, extra }: {
   label: string;
   field: K;
   options: readonly Option<Settings[K]>[];
   hint?: string;
+  /** Seçimin yanında ek düğme (ör. Sesi dene). */
+  extra?: ReactNode;
 }) {
   const value = useGameStore((s) => s.settings[field]);
   const update = useGameStore((s) => s.updateSettings);
@@ -35,8 +39,21 @@ function Choice<K extends keyof Settings>({ label, field, options, hint }: {
           </button>
         ))}
       </div>
+      {extra}
       {(current?.hint ?? hint) && <div className="setting-hint">{current?.hint ?? hint}</div>}
     </div>
+  );
+}
+
+/** Ses zincirini maç beklemeden dener (tıklama kullanıcı hareketi: tarayıcı sese izin verir); ayar kapalı olsa da çalar. */
+function SoundTest() {
+  const volume = useGameStore((s) => s.settings.soundVolume);
+  const [failed, setFailed] = useState(false);
+  return (
+    <>
+      <button className="btn btn-small" onClick={() => void sound.test(volume).then((ok) => setFailed(!ok))}>Sesi dene</button>
+      {failed && <div className="setting-hint neg">Ses çalınamadı: tarayıcı izin vermedi ya da ses desteklenmiyor.</div>}
+    </>
   );
 }
 
@@ -191,6 +208,22 @@ export function SettingsPanel() {
             options={[
               { value: 'all', label: 'Tümü', hint: 'Bütün olaylar ve renkli anlatım.' },
               { value: 'key', label: 'Önemli olaylar', hint: 'Goller, şutlar, kartlar, sakatlık ve değişiklikler; faul, korner ve renkli anlatım gizli.' },
+            ]}
+          />
+          <Choice
+            label="Ses"
+            field="sound"
+            options={ON_OFF}
+            extra={<SoundTest />}
+            hint="Maçta düdük, gol sevinci ve tribün uğultusu (maçta V ile açıp kapatabilirsin). Çok hızlı maçta ve Anında Sonuçlandır'da ses çalmaz. Sesi dene, ayar kapalıyken de çalar."
+          />
+          <Choice
+            label="Ses Düzeyi"
+            field="soundVolume"
+            options={[
+              { value: 'low', label: 'Kısık' },
+              { value: 'medium', label: 'Orta' },
+              { value: 'high', label: 'Yüksek' },
             ]}
           />
         </div>

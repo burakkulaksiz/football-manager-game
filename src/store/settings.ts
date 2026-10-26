@@ -12,6 +12,7 @@ export type Accent = 'yellow' | 'club' | 'blue' | 'green' | 'orange' | 'pink';
 export type UiScale = 'small' | 'normal' | 'large' | 'xlarge';
 export type NoticeLength = 'short' | 'normal' | 'long';
 export type QuitConfirm = 'always' | 'unsaved';
+export type SoundVolume = 'low' | 'medium' | 'high';
 
 export interface Settings {
   /* Oyun */
@@ -23,6 +24,9 @@ export interface Settings {
   showPitch: boolean;
   camera: 'full' | 'follow';
   commentary: CommentaryMode;
+  /** Maç sesleri (düdük, gol, tribün); varsayılan açık (ses yalnızca maç ekranında, saat akarken çalar). */
+  sound: boolean;
+  soundVolume: SoundVolume;
   /* Görünüm */
   background: Background;
   accent: Accent;
@@ -46,6 +50,8 @@ export const DEFAULT_SETTINGS: Settings = {
   showPitch: true,
   camera: 'full',
   commentary: 'all',
+  sound: true,
+  soundVolume: 'medium',
   background: 'grass',
   accent: 'yellow',
   scale: 'normal',
@@ -86,6 +92,8 @@ export function parseSettings(raw: unknown): Settings {
   pick('showPitch', [true, false]);
   pick('camera', ['full', 'follow']);
   pick('commentary', ['all', 'key']);
+  pick('sound', [true, false]);
+  pick('soundVolume', ['low', 'medium', 'high']);
   pick('background', ['grass', 'plain', 'navy']);
   pick('accent', ['yellow', 'club', 'blue', 'green', 'orange', 'pink']);
   pick('scale', ['small', 'normal', 'large', 'xlarge']);

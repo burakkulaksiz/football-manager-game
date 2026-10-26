@@ -13,8 +13,8 @@ describe('klavye kısayolları', () => {
     for (const group of MENU) for (const item of group.items) expect(SCREEN_KEYS[item.id], item.label).toBeDefined();
   });
 
-  it('ekran tuşları genel kısayollarla (Ctrl+S, Boşluk, +/-) çakışmaz', () => {
-    for (const k of Object.values(SCREEN_KEYS)) expect([' ', '+', '-', '=', '?']).not.toContain(k);
+  it('ekran tuşları genel ve maç kısayollarıyla (Ctrl+S, Boşluk, +/-, V) çakışmaz', () => {
+    for (const k of Object.values(SCREEN_KEYS)) expect([' ', '+', '-', '=', '?', 'v']).not.toContain(k);
   });
 
   it('yardım listesi her ekran tuşunu içerir', () => {

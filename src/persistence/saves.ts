@@ -5,19 +5,26 @@
 import { CURRENT_WORLD_VERSION, displayMinute, formatMinute, getClub, migrateWorld, type GameWorld, type MatchState } from '../engine';
 import { gameData } from '../gameData';
 import { db, type SaveSlot } from './db';
+import { exportFileName, exportSave, parseSaveExport } from './exchange';
 
 /** Kayıt biçimi = dünya biçimi sürümü (bkz. engine/migrate.ts). */
 export const SAVE_FORMAT_VERSION = CURRENT_WORLD_VERSION;
 
-/** Kariyer kimliği: aynı tohum ve kulüple başlamış oyun. */
+/** Kariyer kimliği: aynı tohum ve kulüple başlamış oyun (kulüp değişse ya da işsiz kalınsa da aynı kalır). */
 export function careerIdOf(world: GameWorld): string {
-  return `${world.seed}-${world.playerClubId}`;
+  // Kulüpten ayrılış o sezonu kariyere yazar: ilk kariyer sezonunun kulübü başlangıç kulübüdür
+  return `${world.seed}-${world.manager?.seasons?.[0]?.clubId ?? world.playerClubId}`;
+}
+
+/** Kayıtta görünen kulüp adı: işsizken "İşsiz". */
+function clubNameOf(world: GameWorld): string {
+  return world.unemployed ? 'İşsiz' : getClub(world, world.playerClubId).name;
 }
 
 /** Varsayılan kayıt adı: "Galatasaray — 15.08.2026" */
 export function defaultSaveName(world: GameWorld): string {
   const [y, m, d] = world.date.split('-');
-  return `${getClub(world, world.playerClubId).name} — ${d}.${m}.${y}`;
+  return `${clubNameOf(world)} — ${d}.${m}.${y}`;
 }
 
 /** Kayıt listesinde maçın durumu: "Galatasaray 1-0 Fenerbahçe · 34'" (başlamadıysa "maç başlamadan"). */
@@ -33,8 +40,8 @@ function meta(world: GameWorld, name: string, isAutosave: boolean, liveMatch: Ma
   return {
     name,
     careerId: careerIdOf(world),
-    clubId: world.playerClubId,
-    clubName: getClub(world, world.playerClubId).name,
+    clubId: world.unemployed?.lastClubId ?? world.playerClubId,
+    clubName: clubNameOf(world),
     gameDate: world.date,
     season: world.season.year,
     isAutosave,
@@ -107,10 +114,46 @@ export async function loadGame(id: number): Promise<GameWorld> {
   if (slot.formatVersion > SAVE_FORMAT_VERSION) {
     throw new Error(`Bu kayıt daha yeni bir oyun sürümüne ait (biçim ${slot.formatVersion}); açılamıyor.`);
   }
-  // Eski kayıtlar yeni biçime dönüştürülür (finans, transfer alanları eklenir).
-  const world = slot.formatVersion < SAVE_FORMAT_VERSION ? migrateWorld(data.world, slot.formatVersion, gameData) : data.world;
+  return readWorld(data.world, slot.formatVersion);
+}
+
+/** Kayıttaki dünya: eskiyse yeni biçime dönüştürülür (finans, transfer alanları eklenir), sonra denetlenir. */
+function readWorld(stored: GameWorld, formatVersion: number): GameWorld {
+  const world = formatVersion < SAVE_FORMAT_VERSION ? migrateWorld(stored, formatVersion, gameData) : stored;
   if (!world || !world.players || !world.season || !world.tactics || !world.finances) throw new Error('Kayıt dosyası bozuk.');
   return world;
+}
+
+/** Slotu .json yedek olarak: dosya adı ve içeriği (indirme arayüzde). */
+export async function exportSlot(id: number): Promise<{ fileName: string; text: string }> {
+  const slot = await db.saves.get(id);
+  const data = await db.saveData.get(id);
+  if (!slot || !data) throw new Error('Kayıt bulunamadı.');
+  return { fileName: exportFileName(slot), text: exportSave(slot, data) };
+}
+
+/**
+ * .json yedeği yeni bir slot olarak ekler (hiçbir kaydın üzerine yazmaz; aynı adlı kayıt varsa ada "(içe aktarıldı)" eklenir).
+ * Dünya önce yüklemedeki gibi dönüştürülüp denetlenir, güncel biçimde yazılır; bozuksa hiçbir şey yazılmaz.
+ * Otomatik kayıt değildir: kariyerin otomatik kayıt slotu (careerIdOf) değişmez.
+ */
+export async function importSave(text: string): Promise<number> {
+  const imported = parseSaveExport(text, SAVE_FORMAT_VERSION);
+  let world: GameWorld;
+  try {
+    world = readWorld(imported.world, imported.formatVersion);
+    defaultSaveName(world); // kulübü dünyada olmayan dosya burada elenir
+  } catch {
+    throw new Error('Kayıt dosyası bozuk: oyun verisi okunamadı.');
+  }
+  const taken = (await listSaves()).some((s) => s.name === imported.name);
+  try {
+    return await saveGame(world, taken ? `${imported.name} (içe aktarıldı)` : imported.name, undefined, imported.liveMatch);
+  } catch (e) {
+    // Çok derin iç içe veri kopyalanırken (structuredClone) yığın taşar; kayıt yazılmamıştır
+    if (e instanceof RangeError) throw new Error('Kayıt dosyası bozuk: oyun verisi çok derin iç içe.');
+    throw e;
+  }
 }
 
 export async function deleteSave(id: number): Promise<void> {

@@ -16,6 +16,12 @@ describe('parseSettings', () => {
     expect(s.mutedNews).toEqual(['finance']);
     expect(s.autosave).toBe(DEFAULT_SETTINGS.autosave);
   });
+
+  it('ses: eski kayıtta yoksa açık; kapatılmışsa kapalı kalır; geçersiz değer varsayılana döner', () => {
+    expect(parseSettings({ matchSpeed: 'fast' }).sound).toBe(true);
+    expect(parseSettings({ sound: false, soundVolume: 'high' })).toMatchObject({ sound: false, soundVolume: 'high' });
+    expect(parseSettings({ sound: 1, soundVolume: 90 })).toMatchObject({ sound: true, soundVolume: 'medium' });
+  });
 });
 
 describe('autosaveDue', () => {

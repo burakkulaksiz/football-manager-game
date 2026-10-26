@@ -24,6 +24,7 @@ import { MatchMaps } from '../components/MatchMaps';
 import { PitchView, type CameraMode } from '../components/PitchView';
 import { useHotkeys } from '../hotkeys';
 import { buildScene, isHighlight, QUIET_MINUTE_MS, revealDelayMs, sceneDurationMs } from '../pitchScene';
+import { createEventCursor, sound } from '../sound';
 import { MENTALITY_LABELS, POSITION_LABELS, positionGroup, ratingClass } from '../labels';
 
 /**
@@ -114,6 +115,40 @@ function useGoalFlash(total: number): boolean {
     return () => clearTimeout(timer);
   }, [total]);
   return flash;
+}
+
+/**
+ * Maç sesleri: ekranda açılan yeni olaylarda; tribün uğultusu saat akarken (Anında Sonuçlandır ve Çok hızlı maçta sessiz).
+ * Dönen işlev Anında Sonuçlandır'dan hemen önce çağrılır.
+ */
+function useMatchSound(match: MatchState | null, held: Held | null, running: boolean): () => void {
+  const settings = useGameStore((s) => s.settings);
+  const s = { sound: settings.sound && settings.matchSpeed !== 'veryFast', soundVolume: settings.soundVolume };
+  const shown = match ? shownEvents(match, held).length : 0;
+  const cursor = useRef<ReturnType<typeof createEventCursor> | null>(null);
+  cursor.current ??= createEventCursor(shown);
+  useEffect(() => {
+    for (const id of cursor.current!.next(match?.events ?? [], shown)) sound.play(id, s);
+  }, [shown, match]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Tarayıcının oto-oynatma kuralı: bağlam ilk tıklama / tuşta kurulup sürdürülür
+  useEffect(() => {
+    const unlock = () => sound.unlock(s);
+    window.addEventListener('pointerdown', unlock, true);
+    window.addEventListener('keydown', unlock, true);
+    return () => {
+      window.removeEventListener('pointerdown', unlock, true);
+      window.removeEventListener('keydown', unlock, true);
+    };
+  }, [s.sound, s.soundVolume]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const live = running && (match?.period === 'first' || match?.period === 'second');
+  useEffect(() => {
+    sound.crowd(live, s);
+    return () => sound.crowd(false, s);
+  }, [live, s.sound, s.soundVolume]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return () => cursor.current!.skipNext();
 }
 
 function Scoreboard({ match, held }: { match: MatchState; held: Held | null }) {
@@ -441,12 +476,14 @@ function TeamPanel({ match, side }: { match: MatchState; side: Side }) {
   );
 }
 
-function Controls({ match, running, setRunning, showTactics, setShowTactics, extra }: {
+function Controls({ match, running, setRunning, showTactics, setShowTactics, onInstant, extra }: {
   match: MatchState;
   running: boolean;
   setRunning: (r: boolean) => void;
   showTactics: boolean;
   setShowTactics: (v: boolean) => void;
+  /** Anında Sonuçlandır'dan hemen önce (sesler susar). */
+  onInstant: () => void;
   /** Satırın sağına eklenen araçlar (saha kamerası vb.). */
   extra?: React.ReactNode;
 }) {
@@ -492,6 +529,7 @@ function Controls({ match, running, setRunning, showTactics, setShowTactics, ext
         disabled={match.period === 'full'}
         onClick={() => {
           setRunning(false);
+          onInstant();
           instant();
         }}
         title="Kalan dakikalar anında oynanır; değişiklikleri yapay zekâ yapar"
@@ -554,6 +592,7 @@ export function MatchScreen() {
   const updateSettings = useGameStore((s) => s.updateSettings);
   const showNotice = useGameStore((s) => s.showNotice);
   const matchSpeed = useGameStore((s) => s.settings.matchSpeed);
+  const soundOn = useGameStore((s) => s.settings.sound);
 
   // Başlama ve devre arası bir adımla geçilir (Kontroller'deki "Başlat" ile aynı)
   const toggleRun = () => {
@@ -566,13 +605,18 @@ export function MatchScreen() {
     setRunning(true);
   };
 
-  // Klavye: Boşluk başlat / duraklat (maç bitince Maçı Bitir), +/- maç hızı
+  // Klavye: Boşluk başlat / duraklat (maç bitince Maçı Bitir), +/- maç hızı, V ses
   useHotkeys((e) => {
     if (!match || e.ctrlKey || e.altKey || e.metaKey) return false;
     if (e.key === ' ') {
       if (e.repeat) return true;
       if (match.period === 'full') finishMatch();
       else toggleRun();
+      return true;
+    }
+    if (e.key === 'v' || e.key === 'V') {
+      updateSettings({ sound: !soundOn });
+      showNotice(`Ses: ${soundOn ? 'kapalı' : 'açık'}`);
       return true;
     }
     const delta = e.key === '+' || e.key === '=' ? 1 : e.key === '-' ? -1 : 0;
@@ -620,6 +664,11 @@ export function MatchScreen() {
     };
   }, [match, showPitch]);
 
+  // Adımdan hemen sonraki ilk çizimde de sonuç gizli kalsın (efekt held'i bir çizim sonra kurar)
+  const pending = pendingHold.current;
+  const hold = held ?? (pending && showPitch && match && isHighlight(match.lastPlay) ? pending : null);
+  const silenceNext = useMatchSound(match, hold, running);
+
   if (!match) {
     return (
       <section className="panel">
@@ -628,10 +677,6 @@ export function MatchScreen() {
       </section>
     );
   }
-
-  // Adımdan hemen sonraki ilk çizimde de sonuç gizli kalsın (efekt held'i bir çizim sonra kurar)
-  const pending = pendingHold.current;
-  const hold = held ?? (pending && showPitch && isHighlight(match.lastPlay) ? pending : null);
 
   const motm =
     match.period === 'full'
@@ -649,6 +694,7 @@ export function MatchScreen() {
         setRunning={setRunning}
         showTactics={showTactics}
         setShowTactics={setShowTactics}
+        onInstant={silenceNext}
         extra={showPitch && <PitchTools camera={camera} setCamera={setCamera} onFullscreen={enterFullscreen} onHide={togglePitch} />}
       />
       {showTactics && match.period !== 'full' && <LiveTactics match={match} />}

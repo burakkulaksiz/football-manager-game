@@ -24,7 +24,9 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
         çim desenine güneş/gölge.
   - [x] **Sadece önemli anlar modu:** FM'deki gibi sakin dakikaları atlayıp atak, şut ve duran topları sahada göstermek.
   - [x] **Performans:** oyuncuları HTML katmanında (GPU'da hareket eden) çizmek; yavaş makinede bile akıcı geçiş.
-- [ ] Ses (kodla üretilen + gerçek kayıtlar; düdük, gol, uğultu, açma/kapama)
+- [ ] Ses (kodla üretilen + gerçek kayıtlar; düdük, gol, uğultu, açma/kapama) — kısmen
+  - [x] Kodla üretilen: düdük (başlama, devre, maç sonu, kart/penaltı), gol sevinci, kaçan pozisyonda "uuh", maç akarken tribün uğultusu; Ayarlar > Maç: Ses açık/kapalı (varsayılan kapalı) ve düzey, maçta V. Kanıt: `ui/sound.test.ts`, `store/settings.test.ts`.
+  - [ ] Gerçek kayıtlar: yapılmadı (ses dosyası yok); `ui/sound.ts` SYNTH'teki ses kayıtla değiştirilebilir.
 - [x] Maç ortasında kayıt (maçın o anki durumu kayda girer; yüklenince maç kaldığı dakikadan devam eder)
 - [ ] Devre arası konuşması (moral etkisi)
 - [x] Duran top talimatları (kornerci, hedef adam; korner ön/arka direk/kısa, serbest vuruş kaleye/orta)
@@ -55,7 +57,8 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
 - [x] Gerçek kadrolar (`data/squads/`; Transfermarkt 2026/27, gerçek Süper Lig ve 1. Lig)
 
 ## Kulüp ve menajer
-- [ ] Başka kulüplerden iş teklifi, istifa, işsiz kalıp yeni iş arama
+- [x] Başka kulüplerden iş teklifi, istifa, işsiz kalıp yeni iş arama (İş Merkezi; boş koltuklar, başvuru, teklif, 365 gün işsizlikte kariyer sonu)
+  - Kanıt: `season/jobs.test.ts` (işsiz sezon geçişi, başvuru/teklif, kulüp değiştirme), `saves.test.ts` (işsizken kayıt, kariyer kimliği sabit). Eski sürümde görevden alınmış kayıtlar "kariyer bitti" olarak kalır.
 - [x] Menajer itibarı ve kariyer geçmişi ekranı (geçmiş seçimi, transfer ve yönetime etkisi)
 - [x] Tesis yatırımı (stadyum, antrenman tesisi, altyapı, sağlık merkezi; yönetimden talep, inşaat süresi, bakım)
 - [ ] Taraftar memnuniyeti
@@ -69,7 +72,8 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
 - [ ] Mobil / dar ekran uyumu
 
 ## Teknik
-- [ ] Kayıt dosyasını dışa/içe aktarma (.json yedek)
+- [x] Kayıt dosyasını dışa/içe aktarma (.json yedek) (Kayıt Yükle ekranı: satırda Dışa Aktar, altta İçe Aktar; yeni slot, üzerine yazmaz)
+  - Kanıt: `persistence/exchange.test.ts` (zarf, bozuk/yanlış/gelecek sürüm dosya), `saves.test.ts` > kayıt dışa / içe aktarma (gidiş-dönüş, maç ortası, eski biçim, otomatik kayıt).
 - [ ] PWA: internetsiz, uygulama gibi açılan sürüm
 - [ ] Hata günlüğü ve yedek otomatik kayıt slotları
 
@@ -119,7 +123,11 @@ Aşağıdaki sıralama, önce sunucusuz kazançları, sonra sunucu gerektirenler
     istemciler yalnızca komut gönderip durum alır; bu, store ve motor giriş noktalarının baştan düşünülmesi demek.
   - Not: önce Worker ayrımı ve monorepo yapılırsa bu yol açılır; tek başına bu fikir şimdilik en büyük ve en riskli olanı.
   - Boyut: çok büyük.
-- [ ] **Gerçek veri hattı (kadro güncellemesi)**
+- [ ] **Gerçek veri hattı (kadro güncellemesi)** — kısmen
+  - [x] Doğrulama ve değişiklik raporu: `npm run data:check` (hata/uyarı, hata varsa çıkış 1), `npm run data:diff` (reports/data/).
+    Kanıt: `src/tools/data/squadCheck.test.ts`, `squadDiff.test.ts`; ilk denetim 38 kadro / 1140 oyuncu, hata 0 (docs/data-and-saves.md > Gerçek kadrolar).
+  - [ ] Zamanlanmış iş: adımlar docs/data-and-saves.md'de tanımlı, etkinleştirilmedi — karar bekliyor (aşağıdaki "Dikkat").
+  - [ ] API ile dağıtım: yapılmadı — veri lisansı netleşmeden kapsam dışı.
   - Ne: `scripts/transfermarkt.mjs` zaten kadro verisini çekiyor. Bunu zamanlanmış bir işe çevirip doğrulama (eksik oyuncu, yanlış mevki, tutarsız değer)
     ve değişiklik raporu eklemek; istenirse sunucu güncel `data/` paketini API ile verir, oyun açılışta günceller.
   - Dikkat: kaynak sitenin kullanım koşulları ve çekme sıklığı; verinin lisansı. Oyunun içinde dağıtmadan önce bunlar netleşmeli.
@@ -144,7 +152,8 @@ Bunlar oyunun içine AI koymak değil, projeyi geliştirirken AI'ı daha verimli
     AI raporu okuyup parametre değişikliği önerebilir, sonra aynı tohumlarla yeniden ölçer.
   - Dikkat: yavaş (testlerdeki gibi dakikalar sürer); Worker ya da ayrı bir betik olarak çalışmalı, test takımına girmemeli.
   - Boyut: küçük–orta. Backend gerektirmez; en çok değer katan ilk adım.
-- [ ] **Gerçek veri doğrulama ve temizleme**
+- [ ] **Gerçek veri doğrulama ve temizleme** — kısmen: tarama ve rapor `npm run data:check` ile yapıldı (yukarıdaki veri hattı);
+  otomatik düzeltme önerisi ve güç–piyasa değeri tutarlılığı yok.
   - Ne: Transfermarkt çıktısındaki hataları (eksik oyuncu, ters mevki, imkânsız yaş/değer, yinelenen kayıt) bir ajanın tarayıp raporlaması;
     `data/README.md` kurallarına göre otomatik düzeltme önerisi.
 - [ ] **Ekran görüntüsü testleri (görsel doğrulama)**

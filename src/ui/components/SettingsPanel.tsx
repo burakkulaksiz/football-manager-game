@@ -193,6 +193,21 @@ export function SettingsPanel() {
               { value: 'key', label: 'Önemli olaylar', hint: 'Goller, şutlar, kartlar, sakatlık ve değişiklikler; faul, korner ve renkli anlatım gizli.' },
             ]}
           />
+          <Choice
+            label="Ses"
+            field="sound"
+            options={ON_OFF}
+            hint="Maçta düdük, gol sevinci ve tribün uğultusu (maçta V ile açıp kapatabilirsin). Çok hızlı maçta ve Anında Sonuçlandır'da ses çalmaz."
+          />
+          <Choice
+            label="Ses Düzeyi"
+            field="soundVolume"
+            options={[
+              { value: 'low', label: 'Kısık' },
+              { value: 'medium', label: 'Orta' },
+              { value: 'high', label: 'Yüksek' },
+            ]}
+          />
         </div>
       </section>
 

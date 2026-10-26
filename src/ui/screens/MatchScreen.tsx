@@ -24,6 +24,7 @@ import { MatchMaps } from '../components/MatchMaps';
 import { PitchView, type CameraMode } from '../components/PitchView';
 import { useHotkeys } from '../hotkeys';
 import { buildScene, isHighlight, QUIET_MINUTE_MS, revealDelayMs, sceneDurationMs } from '../pitchScene';
+import { matchSounds, sound } from '../sound';
 import { MENTALITY_LABELS, POSITION_LABELS, positionGroup, ratingClass } from '../labels';
 
 /**
@@ -114,6 +115,30 @@ function useGoalFlash(total: number): boolean {
     return () => clearTimeout(timer);
   }, [total]);
   return flash;
+}
+
+/** Maç sesleri: saatin oynattığı ve ekranda açılan yeni olaylarda; tribün uğultusu saat akarken (Anında Sonuçlandır ve Çok hızlı maçta sessiz). */
+function useMatchSound(match: MatchState | null, held: Held | null, running: boolean) {
+  const settings = useGameStore((s) => s.settings);
+  const s = { sound: settings.sound && settings.matchSpeed !== 'veryFast', soundVolume: settings.soundVolume };
+  const shown = match ? shownEvents(match, held).length : 0;
+  const last = useRef(shown);
+  // Saat akarkenki son olay sayısı: devre/maç sonunda saat durduktan sonra açılan an çalar, anında sonuçlandırılan dakikalar çalmaz
+  const clocked = useRef(0);
+  useEffect(() => {
+    if (shown < last.current) clocked.current = 0; // yeni maç
+    if (match && running) clocked.current = match.events.length;
+    const prev = last.current;
+    last.current = shown;
+    const upTo = Math.min(shown, clocked.current);
+    if (match && upTo > prev) for (const id of matchSounds(match.events.slice(prev, upTo))) sound.play(id, s);
+  }, [shown, running, match]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const live = running && (match?.period === 'first' || match?.period === 'second');
+  useEffect(() => {
+    sound.crowd(live, s);
+    return () => sound.crowd(false, s);
+  }, [live, s.sound, s.soundVolume]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 function Scoreboard({ match, held }: { match: MatchState; held: Held | null }) {
@@ -554,6 +579,7 @@ export function MatchScreen() {
   const updateSettings = useGameStore((s) => s.updateSettings);
   const showNotice = useGameStore((s) => s.showNotice);
   const matchSpeed = useGameStore((s) => s.settings.matchSpeed);
+  const soundOn = useGameStore((s) => s.settings.sound);
 
   // Başlama ve devre arası bir adımla geçilir (Kontroller'deki "Başlat" ile aynı)
   const toggleRun = () => {
@@ -566,13 +592,18 @@ export function MatchScreen() {
     setRunning(true);
   };
 
-  // Klavye: Boşluk başlat / duraklat (maç bitince Maçı Bitir), +/- maç hızı
+  // Klavye: Boşluk başlat / duraklat (maç bitince Maçı Bitir), +/- maç hızı, V ses
   useHotkeys((e) => {
     if (!match || e.ctrlKey || e.altKey || e.metaKey) return false;
     if (e.key === ' ') {
       if (e.repeat) return true;
       if (match.period === 'full') finishMatch();
       else toggleRun();
+      return true;
+    }
+    if (e.key === 'v' || e.key === 'V') {
+      updateSettings({ sound: !soundOn });
+      showNotice(`Ses: ${soundOn ? 'kapalı' : 'açık'}`);
       return true;
     }
     const delta = e.key === '+' || e.key === '=' ? 1 : e.key === '-' ? -1 : 0;
@@ -620,6 +651,11 @@ export function MatchScreen() {
     };
   }, [match, showPitch]);
 
+  // Adımdan hemen sonraki ilk çizimde de sonuç gizli kalsın (efekt held'i bir çizim sonra kurar)
+  const pending = pendingHold.current;
+  const hold = held ?? (pending && showPitch && match && isHighlight(match.lastPlay) ? pending : null);
+  useMatchSound(match, hold, running);
+
   if (!match) {
     return (
       <section className="panel">
@@ -628,10 +664,6 @@ export function MatchScreen() {
       </section>
     );
   }
-
-  // Adımdan hemen sonraki ilk çizimde de sonuç gizli kalsın (efekt held'i bir çizim sonra kurar)
-  const pending = pendingHold.current;
-  const hold = held ?? (pending && showPitch && isHighlight(match.lastPlay) ? pending : null);
 
   const motm =
     match.period === 'full'

@@ -134,6 +134,7 @@ export function shortcutGroups(screenLabel: (id: ScreenId) => string): ShortcutG
         { keys: ['Boşluk'], text: 'Maçı başlat / duraklat / devam ettir; maç bitince Maçı Bitir' },
         { keys: ['+'], text: 'Maç hızını artır' },
         { keys: ['-'], text: 'Maç hızını azalt' },
+        { keys: ['V'], text: 'Sesi aç / kapat' },
       ],
     },
     {

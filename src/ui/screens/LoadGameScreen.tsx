@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { seasonLabel } from '../../engine';
 import { gameData } from '../../gameData';
 import type { SaveSlot } from '../../persistence/db';
-import { deleteSave, listSaves } from '../../persistence/saves';
+import { MAX_IMPORT_BYTES } from '../../persistence/exchange';
+import { deleteSave, exportSlot, importSave, listSaves } from '../../persistence/saves';
 import { useGameStore } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { Modal } from '../components/Modal';
@@ -17,6 +18,7 @@ export function LoadGameScreen() {
   const [selected, setSelected] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<SaveSlot | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(() => {
     listSaves()
@@ -33,6 +35,35 @@ export function LoadGameScreen() {
     await deleteSave(slot.id);
     setConfirmDelete(null);
     refresh();
+  };
+
+  /** Slotu .json dosyası olarak indirir. */
+  const exportFile = async (slot: SaveSlot) => {
+    try {
+      const { fileName, text } = await exportSlot(slot.id);
+      const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      // İndirme başlamadan bağlantı geçersiz kalmasın
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  /** Seçilen .json yedeği yeni slot olarak ekler; hatada sebep listenin üstünde görünür. */
+  const importFile = async (file: File) => {
+    setError(null);
+    try {
+      if (file.size > MAX_IMPORT_BYTES) throw new Error('Dosya çok büyük; bir oyun kaydı olamaz.');
+      const id = await importSave(await file.text());
+      refresh();
+      setSelected(id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
   };
 
   const clubOf = (id: string) => gameData.clubs.find((c) => c.id === id);
@@ -89,6 +120,16 @@ export function LoadGameScreen() {
                       <td className="right">
                         <button
                           className="btn btn-small"
+                          title="Kaydı .json dosyası olarak indir (yedek ya da başka tarayıcıya taşımak için)"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void exportFile(s);
+                          }}
+                        >
+                          Dışa Aktar
+                        </button>{' '}
+                        <button
+                          className="btn btn-small"
                           onClick={(e) => {
                             e.stopPropagation();
                             setConfirmDelete(s);
@@ -106,6 +147,20 @@ export function LoadGameScreen() {
         </section>
         <div className="button-row">
           <button className="btn" onClick={quitToMenu}>‹ Ana Menü</button>
+          <button className="btn" onClick={() => fileInput.current?.click()} title="Dışa aktarılmış .json kaydını yeni slot olarak ekle">
+            İçe Aktar
+          </button>
+          <input
+            ref={fileInput}
+            type="file"
+            accept=".json,application/json"
+            hidden
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = ''; // aynı dosya yeniden seçilebilsin
+              if (file) void importFile(file);
+            }}
+          />
           <button className="btn-continue" disabled={selected === null} onClick={() => selected !== null && void loadSave(selected)}>
             Yükle <span className="btn-continue-arrow">›</span>
           </button>

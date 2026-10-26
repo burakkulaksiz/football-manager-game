@@ -72,7 +72,8 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
 - [ ] Mobil / dar ekran uyumu
 
 ## Teknik
-- [ ] Kayıt dosyasını dışa/içe aktarma (.json yedek)
+- [x] Kayıt dosyasını dışa/içe aktarma (.json yedek) (Kayıt Yükle ekranı: satırda Dışa Aktar, altta İçe Aktar; yeni slot, üzerine yazmaz)
+  - Kanıt: `persistence/exchange.test.ts` (zarf, bozuk/yanlış/gelecek sürüm dosya), `saves.test.ts` > kayıt dışa / içe aktarma (gidiş-dönüş, maç ortası, eski biçim, otomatik kayıt).
 - [ ] PWA: internetsiz, uygulama gibi açılan sürüm
 - [ ] Hata günlüğü ve yedek otomatik kayıt slotları
 

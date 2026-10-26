@@ -5,7 +5,7 @@ import { advance, createWorld, leaveClub, startUserMatch, stepMatch, takeJob, ty
 import { makeResult } from '../engine/testing';
 import { gameData } from '../gameData';
 import { db } from './db';
-import { autosave, careerIdOf, defaultSaveName, deleteSave, listSaves, loadGame, loadSavedMatch, saveGame } from './saves';
+import { autosave, careerIdOf, defaultSaveName, deleteSave, exportSlot, importSave, SAVE_FORMAT_VERSION, listSaves, loadGame, loadSavedMatch, saveGame } from './saves';
 
 const START = '2026-07-01';
 
@@ -252,5 +252,65 @@ describe('kayıt sistemi', () => {
     playRounds(original, 3);
     playRounds(loaded, 3);
     expect(loaded.season.fixtures).toEqual(original.season.fixtures);
+  });
+});
+
+describe('kayıt dışa / içe aktarma', () => {
+  it('dışa aktarılan maç ortası kayıt yeni slot olarak içe aktarılır; dünya ve canlı maç aynen, kaynak slot değişmez', async () => {
+    const world = createWorld(gameData, 31, 'galatasaray', START);
+    const match = midMatch(world, 25);
+    const id = await saveGame(world, 'Yedek', undefined, match);
+    const { fileName, text } = await exportSlot(id);
+    expect(fileName).toBe(`Yedek (${world.date}).json`);
+
+    const copy = await importSave(text);
+    expect(copy).not.toBe(id);
+    const slots = await listSaves();
+    expect(slots).toHaveLength(2);
+    // Aynı adlı kayıt varken üzerine yazılmaz, ad ayrışır
+    expect(slots.find((s) => s.id === copy)).toMatchObject({ name: 'Yedek (içe aktarıldı)', careerId: careerIdOf(world), isAutosave: false });
+    expect(slots.find((s) => s.id === id)!.name).toBe('Yedek');
+    expect(await loadGame(copy)).toEqual(world);
+    expect(await loadSavedMatch(copy, world)).toEqual(match);
+  });
+
+  it('içe aktarılan kayıt kariyerin otomatik kayıt slotunu çoğaltmaz', async () => {
+    const world = createWorld(gameData, 32, 'besiktas', START);
+    await autosave(world);
+    const { text } = await exportSlot((await listSaves())[0]!.id);
+    await deleteSave((await listSaves())[0]!.id);
+    const copy = await importSave(text);
+    expect((await listSaves()).find((s) => s.id === copy)!.isAutosave).toBe(false);
+    await autosave(world);
+    await autosave(world);
+    expect((await listSaves()).filter((s) => s.isAutosave)).toHaveLength(1);
+  });
+
+  it('eski biçimdeki (8) dosya içe aktarılırken dönüştürülür ve güncel biçimde yazılır', async () => {
+    const world = createWorld(gameData, 33, 'kasimpasa', START);
+    const old = structuredClone(world);
+    for (const t of Object.values(old.tactics)) delete (t as { viceCaptainId?: number | null }).viceCaptainId;
+    const id = await saveGame(world, 'Biçim 8');
+    await db.saveData.put({ id, world: old });
+    await db.saves.update(id, { formatVersion: 8 });
+    const { text } = await exportSlot(id);
+    expect(JSON.parse(text).formatVersion).toBe(8);
+
+    const copy = await importSave(text);
+    expect((await listSaves()).find((s) => s.id === copy)!.formatVersion).toBe(SAVE_FORMAT_VERSION);
+    expect((await loadGame(copy)).tactics.kasimpasa!.viceCaptainId).toBeNull();
+  });
+
+  it('bozuk dosya kayıt eklemez; mevcut kayıtlar bozulmaz', async () => {
+    const world = createWorld(gameData, 34, 'trabzonspor', START);
+    const id = await saveGame(world, 'Sağlam');
+    const { text } = await exportSlot(id);
+    const broken = JSON.parse(text);
+    broken.data.world.playerClubId = 'olmayan-kulup';
+    broken.data.world.tactics = null;
+    await expect(importSave(JSON.stringify(broken))).rejects.toThrow(/Kayıt dosyası bozuk/);
+    await expect(importSave('bu bir kayıt değil')).rejects.toThrow(/geçerli bir JSON/);
+    expect(await listSaves()).toHaveLength(1);
+    expect(await loadGame(id)).toEqual(world);
   });
 });

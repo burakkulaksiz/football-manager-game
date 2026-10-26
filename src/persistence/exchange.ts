@@ -50,8 +50,9 @@ const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object
  * Dosya metninden zarf; geçersizse kullanıcıya gösterilecek Türkçe mesajla hata fırlatır.
  * `currentVersion`: oyunun biçim sürümü (daha yeni sürümün dosyası açılmaz).
  */
-export function parseSaveExport(text: string, currentVersion: number): ImportedSave {
-  if (text.length > MAX_IMPORT_BYTES) throw new Error('Dosya çok büyük; bir oyun kaydı olamaz.');
+export function parseSaveExport(text: string, currentVersion: number, maxLength: number = MAX_IMPORT_BYTES): ImportedSave {
+  // Karakter sayısı UTF-8 bayt sayısını geçmez: arayüz dosyayı okumadan baytla (file.size) eler, burası okunmuş metnin üst sınırı
+  if (text.length > maxLength) throw new Error('Dosya çok büyük; bir oyun kaydı olamaz.');
   let raw: unknown;
   try {
     raw = JSON.parse(text);

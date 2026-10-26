@@ -305,10 +305,14 @@ describe('kayıt dışa / içe aktarma', () => {
     const world = createWorld(gameData, 34, 'trabzonspor', START);
     const id = await saveGame(world, 'Sağlam');
     const { text } = await exportSlot(id);
-    const broken = JSON.parse(text);
-    broken.data.world.playerClubId = 'olmayan-kulup';
-    broken.data.world.tactics = null;
-    await expect(importSave(JSON.stringify(broken))).rejects.toThrow(/Kayıt dosyası bozuk/);
+    const broken = (change: (world: Record<string, unknown>) => void) => {
+      const envelope = JSON.parse(text);
+      change(envelope.data.world);
+      return JSON.stringify(envelope);
+    };
+    await expect(importSave(broken((w) => (w.tactics = null)))).rejects.toThrow(/Kayıt dosyası bozuk/);
+    // Yalnızca kulüp bilinmiyor: dünya denetimi geçer, kulüp denetimi eler
+    await expect(importSave(broken((w) => (w.playerClubId = 'olmayan-kulup')))).rejects.toThrow(/Kayıt dosyası bozuk/);
     await expect(importSave('bu bir kayıt değil')).rejects.toThrow(/geçerli bir JSON/);
     expect(await listSaves()).toHaveLength(1);
     expect(await loadGame(id)).toEqual(world);

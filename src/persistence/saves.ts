@@ -147,7 +147,13 @@ export async function importSave(text: string): Promise<number> {
     throw new Error('Kayıt dosyası bozuk: oyun verisi okunamadı.');
   }
   const taken = (await listSaves()).some((s) => s.name === imported.name);
-  return saveGame(world, taken ? `${imported.name} (içe aktarıldı)` : imported.name, undefined, imported.liveMatch);
+  try {
+    return await saveGame(world, taken ? `${imported.name} (içe aktarıldı)` : imported.name, undefined, imported.liveMatch);
+  } catch (e) {
+    // Çok derin iç içe veri kopyalanırken (structuredClone) yığın taşar; kayıt yazılmamıştır
+    if (e instanceof RangeError) throw new Error('Kayıt dosyası bozuk: oyun verisi çok derin iç içe.');
+    throw e;
+  }
 }
 
 export async function deleteSave(id: number): Promise<void> {

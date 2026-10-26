@@ -31,6 +31,12 @@ describe('kayıt dışa / içe aktarma (zarf)', () => {
     expect(back).toEqual({ name: slot.name, formatVersion: VERSION, world, liveMatch });
   });
 
+  it('sınırı aşan dosya okunmadan reddedilir', () => {
+    const text = exportSave(slot, { id: 4, world });
+    expect(() => parseSaveExport(text, VERSION, text.length - 1)).toThrow(/Dosya çok büyük/);
+    expect(parseSaveExport(text, VERSION, text.length).name).toBe(slot.name);
+  });
+
   it('canlı maçsız kayıtta maç null', () => {
     expect(parseSaveExport(exportSave(slot, { id: 4, world }), VERSION).liveMatch).toBeNull();
   });

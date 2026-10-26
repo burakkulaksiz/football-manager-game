@@ -106,6 +106,7 @@ Hedefler ve nedenleri `src/tools/balance/metrics.ts` içindedir. Aynı tohumla k
 
 | Dosya | İçerik |
 |---|---|
+| [CLAUDE.md](CLAUDE.md) | Kısa proje belleği: komutlar, klasör haritası, kurallar ve bilinen tuzaklar, hangi konu için hangi docs/ dosyası |
 | [NOTES.md](NOTES.md) | `docs/` içindekiler: konuya göre mimari harita, sistemlerin kuralları, ölçülmüş denge değerleri, açık konular |
 | [IDEAS.md](IDEAS.md) | Fikir ve yol haritası; yapılanlar `[x]` ile işaretli (mimari / backend / AI ile geliştirme fikirleri dahil) |
 | [FINDINGS.md](FINDINGS.md) | Oynarken bulunan eksikler ve otomatik denge bulguları, kanıt satırlarıyla |

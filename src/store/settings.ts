@@ -13,6 +13,7 @@ export type UiScale = 'small' | 'normal' | 'large' | 'xlarge';
 export type NoticeLength = 'short' | 'normal' | 'long';
 export type QuitConfirm = 'always' | 'unsaved';
 export type SoundVolume = 'low' | 'medium' | 'high';
+export type MenuSound = 'off' | 'events' | 'all';
 
 export interface Settings {
   /* Oyun */
@@ -24,9 +25,11 @@ export interface Settings {
   showPitch: boolean;
   camera: 'full' | 'follow';
   commentary: CommentaryMode;
-  /** Maç sesleri (düdük, gol, tribün); varsayılan açık (ses yalnızca maç ekranında, saat akarken çalar). */
+  /** Bütün sesler (maç: düdük, gol, tribün; maç dışı: aşağıdaki `menuSound`); varsayılan açık. */
   sound: boolean;
   soundVolume: SoundVolume;
+  /** Maç dışı sesler: kapalı, önemli olaylar (haber, imza, kupa, iş teklifi, kovulma) ya da bunlar + düğme tıklaması. */
+  menuSound: MenuSound;
   /* Görünüm */
   background: Background;
   accent: Accent;
@@ -52,6 +55,7 @@ export const DEFAULT_SETTINGS: Settings = {
   commentary: 'all',
   sound: true,
   soundVolume: 'medium',
+  menuSound: 'events',
   background: 'grass',
   accent: 'yellow',
   scale: 'normal',
@@ -94,6 +98,7 @@ export function parseSettings(raw: unknown): Settings {
   pick('commentary', ['all', 'key']);
   pick('sound', [true, false]);
   pick('soundVolume', ['low', 'medium', 'high']);
+  pick('menuSound', ['off', 'events', 'all']);
   pick('background', ['grass', 'plain', 'navy']);
   pick('accent', ['yellow', 'club', 'blue', 'green', 'orange', 'pink']);
   pick('scale', ['small', 'normal', 'large', 'xlarge']);

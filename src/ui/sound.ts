@@ -1,31 +1,88 @@
 /**
- * Maç sesleri: Web Audio ile kodla üretilir (ses dosyası yok). Yalnızca sunum: motoru, Rng'yi ve sonucu etkilemez.
- * Gerçek kayıt eklenecekse SYNTH'teki bir sesin yerine çözümlenmiş AudioBuffer çalınır; çağıranlar değişmez.
+ * Oyun sesleri: public/sounds/ altındaki gerçek kayıtlar (kaynaklar KAYNAKLAR.md), Web Audio ile çalınır. Yalnızca sunum:
+ * motoru, Rng'yi ve sonucu etkilemez. Dosya yüklenemezse o ses sessizce atlanır.
  */
-import type { MatchEvent } from '../engine';
+import type { GameWorld, MatchEvent, NewsCategory } from '../engine';
 import type { Settings, SoundVolume } from '../store/settings';
 
-export type SoundId = 'whistle' | 'whistleShort' | 'whistleHalf' | 'whistleEnd' | 'goal' | 'chance';
-export type SoundSettings = Pick<Settings, 'sound' | 'soundVolume'>;
+export type SoundId =
+  | 'whistle' | 'whistleShort' | 'whistleHalf' | 'whistleEnd'
+  | 'goal' | 'goalAway' | 'chance' | 'red'
+  | 'click' | 'notify' | 'offer' | 'sign' | 'trophy' | 'sacked';
+export type SoundSettings = Pick<Settings, 'sound' | 'soundVolume' | 'menuSound'>;
+
+/**
+ * Kayıtlar. Çözülünce tepe değeri 1'e normalize edilir; `gain` sesler arası göreli düzey. `duration` (sn) uzun kaydı keser
+ * (sonu sönümlenir). Düzeyler dalga biçimine bakılarak seçildi, kulakla ölçülmedi.
+ */
+const FILES = {
+  whistleLong: { file: 'whistle-long.mp3', gain: 0.4 },
+  whistleShort: { file: 'whistle-short.mp3', gain: 0.4 },
+  whistleEnd: { file: 'whistle-end.mp3', gain: 0.4 },
+  cheer: { file: 'crowd-goal.mp3', gain: 1, duration: 9 },
+  ahh: { file: 'crowd-ahh.mp3', gain: 0.75 },
+  boo: { file: 'crowd-boo.mp3', gain: 0.6, duration: 4 },
+  ambience: { file: 'crowd-ambience.mp3', gain: 0.22 },
+  click: { file: 'click.mp3', gain: 0.12 },
+  notify: { file: 'notify.mp3', gain: 0.3 },
+  offer: { file: 'offer.mp3', gain: 0.35 },
+  sign: { file: 'sign.mp3', gain: 0.5 },
+  fanfare: { file: 'fanfare.mp3', gain: 0.45 },
+} satisfies Record<string, { file: string; gain: number; duration?: number }>;
+type FileKey = keyof typeof FILES;
+
+/** Bir ses: katmanlar [kayıt, gecikme sn, kazanç çarpanı]; `gap`: aynı ses bu kadar saniyeden sık başlamaz. */
+const SOUNDS: Record<SoundId, { layers: [FileKey, number, number][]; gap: number }> = {
+  whistle: { layers: [['whistleLong', 0, 1]], gap: 0.5 },
+  whistleShort: { layers: [['whistleShort', 0, 1]], gap: 0.5 },
+  whistleHalf: { layers: [['whistleShort', 0, 1], ['whistleShort', 0.7, 1]], gap: 2 },
+  whistleEnd: { layers: [['whistleEnd', 0, 1]], gap: 3 },
+  goal: { layers: [['cheer', 0, 1]], gap: 3 },
+  // Deplasman golü: ev sahibi tribünü iç çeker, uzaktan küçük bir sevinç
+  goalAway: { layers: [['ahh', 0, 1], ['cheer', 0.15, 0.25]], gap: 3 },
+  chance: { layers: [['ahh', 0, 1]], gap: 1.2 },
+  red: { layers: [['whistleShort', 0, 1], ['boo', 0.4, 1]], gap: 2 },
+  click: { layers: [['click', 0, 1]], gap: 0.05 },
+  notify: { layers: [['notify', 0, 1]], gap: 0.5 },
+  offer: { layers: [['offer', 0, 1]], gap: 1 },
+  sign: { layers: [['sign', 0, 1]], gap: 1 },
+  trophy: { layers: [['fanfare', 0, 1], ['cheer', 0.5, 0.6]], gap: 3 },
+  sacked: { layers: [['boo', 0, 1]], gap: 3 },
+};
+
+/** Maç dışı sesler: Ayarlar > Maç Dışı Sesler ile açılır; tıklama yalnızca "Tıklamalar dahil"de. */
+const MENU_SOUNDS = new Set<SoundId>(['click', 'notify', 'offer', 'sign', 'trophy', 'sacked']);
+
+/** Ayara göre bu ses çalınır mı. */
+export function soundAllowed(id: SoundId, s: SoundSettings): boolean {
+  if (!s.sound) return false;
+  if (id === 'click') return s.menuSound === 'all';
+  return !MENU_SOUNDS.has(id) || s.menuSound !== 'off';
+}
 
 const EVENT_SOUNDS: Partial<Record<MatchEvent['type'], SoundId>> = {
   kickoff: 'whistle',
   secondhalf: 'whistle',
   halftime: 'whistleHalf',
   fulltime: 'whistleEnd',
-  goal: 'goal',
   save: 'chance',
   miss: 'chance',
   blocked: 'chance',
   penaltyMiss: 'chance',
-  penalty: 'whistleShort',
+  penalty: 'whistle',
+  foul: 'whistleShort',
   yellow: 'whistleShort',
-  red: 'whistleShort',
+  red: 'red',
 };
 
-/** Yeni gösterilen olaylardan çalınacak sesler (aynı ses bir kez). */
+/** Aynı adımda tek düdük ve tek tribün tepkisi: en önemlisi (ör. gol varsa "ah" çalmaz). */
+const WHISTLES: SoundId[] = ['whistleEnd', 'whistleHalf', 'whistle', 'whistleShort'];
+const CROWD: SoundId[] = ['goal', 'goalAway', 'red', 'chance'];
+
+/** Yeni gösterilen olaylardan çalınacak sesler: ev sahibi golünde tribün coşar, deplasman golünde iç çeker. */
 export function matchSounds(events: readonly MatchEvent[]): SoundId[] {
-  return [...new Set(events.flatMap((e) => EVENT_SOUNDS[e.type] ?? []))];
+  const ids = new Set(events.flatMap((e) => (e.type === 'goal' ? (e.side === 'away' ? 'goalAway' : 'goal') : EVENT_SOUNDS[e.type] ?? [])));
+  return [WHISTLES.find((id) => ids.has(id)), CROWD.find((id) => ids.has(id))].filter((id): id is SoundId => id !== undefined);
 }
 
 /**
@@ -52,89 +109,108 @@ export function createEventCursor(initial: number) {
   };
 }
 
+/** Kariyer olaylarını yakalamak için dünyanın özeti (iki durum arasındaki fark ses seçer). */
+export interface CareerMark {
+  seed: number;
+  nextNewsId: number;
+  trophies: number;
+  sacked: boolean;
+  gameOver: boolean;
+  offers: number;
+}
+
+export function careerMark(w: GameWorld): CareerMark {
+  const m = w.manager;
+  return {
+    seed: w.seed,
+    nextNewsId: w.nextNewsId,
+    trophies: m.titles + (m.cups ?? 0) + (m.europeTitles ?? 0),
+    sacked: w.unemployed?.reason === 'sacked',
+    gameOver: w.gameOver !== null,
+    offers: w.jobOffers?.length ?? 0,
+  };
+}
+
 /**
- * Ana ses düzeyi. Süzülmüş gürültü, beyaz gürültünün enerjisinin yalnızca küçük bir kısmını taşır (600 Hz alçak geçiren
- * ~%3): tribün sesleri bu yüzden kazançla telafi edilir. Orta'da hesapla (ölçülmedi) uğultu ~−25 dB, "uuh" ~−17 dB, gol ~−11 dB
- * (RMS), düdük ~−12 dB tepe.
+ * Önceki özetten bu yana olan en büyük kariyer olayının sesi: kovulma / kariyer sonu, kupa, iş teklifi, kulübümüze transfer,
+ * yoksa Devam'ı durduran (önemli, susturulmamış) haber. Başka kariyere geçilince (tohum farklı, haber sayacı geride) sessiz.
  */
+export function careerSound(prev: CareerMark | null, w: GameWorld, muted: readonly NewsCategory[]): SoundId | null {
+  const next = careerMark(w);
+  if (!prev || prev.seed !== next.seed || next.nextNewsId < prev.nextNewsId) return null;
+  if ((next.sacked && !prev.sacked) || (next.gameOver && !prev.gameOver)) return 'sacked';
+  if (next.trophies > prev.trophies) return 'trophy';
+  if (next.offers > prev.offers) return 'offer';
+  const fresh = w.news.filter((n) => n.id >= prev.nextNewsId);
+  if (fresh.some((n) => (n.category === 'transfer' || n.category === 'loan') && n.clubId === w.playerClubId)) return 'sign';
+  return fresh.some((n) => n.important && !muted.includes(n.category)) ? 'notify' : null;
+}
+
+/** Aynı anda en çok bu kadar ses (hızlı maçta üst üste binme sınırı; uğultu sayılmaz). */
+export const MAX_VOICES = 6;
+
+/** Yeni ses başlasın mı: aynı ses `gap` saniyeden sık değil ve ses sınırı dolmamış. */
+export function admitSound(lastStart: number | undefined, now: number, gap: number, active: number): boolean {
+  return active < MAX_VOICES && (lastStart === undefined || now - lastStart >= gap);
+}
+
+/** Ana ses düzeyi (sınırlayıcıdan önce). */
 const VOLUME: Record<SoundVolume, number> = { low: 0.3, medium: 0.6, high: 1 };
-
-/** Düdük: bilyenin titrediği tiz ton; `blasts` kez çalar. */
-function whistle(c: AudioContext, out: AudioNode, t: number, blasts: number, length: number): void {
-  for (let i = 0; i < blasts; i++) {
-    const start = t + i * (length + 0.12);
-    const osc = c.createOscillator();
-    osc.frequency.value = 2900;
-    const trill = c.createOscillator();
-    trill.frequency.value = 28;
-    const depth = c.createGain();
-    depth.gain.value = 180;
-    trill.connect(depth).connect(osc.frequency);
-    const env = c.createGain();
-    env.gain.setValueAtTime(0, start);
-    env.gain.linearRampToValueAtTime(0.4, start + 0.02);
-    env.gain.setValueAtTime(0.4, start + length - 0.05);
-    env.gain.linearRampToValueAtTime(0, start + length);
-    osc.connect(env).connect(out);
-    for (const o of [osc, trill]) {
-      o.start(start);
-      o.stop(start + length);
-    }
-  }
-}
-
-/** Tribün tepkisi: süzülmüş gürültünün yükselip sönmesi (gol sevinci, "uuh"). */
-function roar(c: AudioContext, out: AudioNode, noise: AudioBuffer, t: number, freq: number, peak: number, attack: number, decay: number): void {
-  const src = c.createBufferSource();
-  src.buffer = noise;
-  src.loop = true;
-  const filter = c.createBiquadFilter();
-  filter.type = 'bandpass';
-  filter.frequency.value = freq;
-  filter.Q.value = 0.8;
-  const env = c.createGain();
-  env.gain.setValueAtTime(0.0001, t);
-  env.gain.exponentialRampToValueAtTime(peak, t + attack);
-  env.gain.exponentialRampToValueAtTime(0.0001, t + attack + decay);
-  src.connect(filter).connect(env).connect(out);
-  src.start(t);
-  src.stop(t + attack + decay);
-}
-
-const SYNTH: Record<SoundId, (c: AudioContext, out: AudioNode, noise: AudioBuffer, t: number) => void> = {
-  whistle: (c, out, _n, t) => whistle(c, out, t, 1, 0.6),
-  whistleShort: (c, out, _n, t) => whistle(c, out, t, 1, 0.25),
-  whistleHalf: (c, out, _n, t) => whistle(c, out, t, 2, 0.4),
-  whistleEnd: (c, out, _n, t) => whistle(c, out, t, 3, 0.4),
-  goal: (c, out, n, t) => roar(c, out, n, t, 900, 3, 0.15, 3.5),
-  chance: (c, out, n, t) => roar(c, out, n, t, 500, 2, 0.35, 1.2),
-};
+/** Kesilen kaydın sonundaki sönüm (sn): tık sesi olmasın. */
+const FADE = 0.4;
 
 const hidden = () => typeof document !== 'undefined' && document.hidden;
 
-/** Ses çalar. `makeContext` testte sahte bağlamla değiştirilir. */
-export function createSoundPlayer(makeContext: () => AudioContext) {
+const fetchSound = async (file: string): Promise<ArrayBuffer> => {
+  const res = await fetch(`${import.meta.env.BASE_URL}sounds/${file}`);
+  if (!res.ok) throw new Error(`${file}: ${res.status}`);
+  return res.arrayBuffer();
+};
+
+/** Ses çalar. `makeContext` ve `load` testte sahteleriyle değiştirilir. */
+export function createSoundPlayer(makeContext: () => AudioContext, load: (file: string) => Promise<ArrayBuffer> = fetchSound) {
   let ctx: AudioContext | null = null;
   let master: GainNode | null = null;
-  let noise: AudioBuffer | null = null;
+  let loading: Promise<void> | null = null;
+  const buffers = new Map<FileKey, { buffer: AudioBuffer; norm: number }>();
+  const lastStart = new Map<SoundId, number>();
+  let active = 0;
   let crowd: { src: AudioBufferSourceNode; gain: GainNode } | null = null;
+  let wantCrowd = false;
 
-  /** İlk seste kurulur (maç kullanıcı tıklayınca başlar); askıdaysa sürdürülür. Tarayıcı izin vermezse sessiz kalınır. */
-  function context(s: SoundSettings): AudioContext | null {
+  /** Bütün kayıtları bir kez indirip çözer; inmeyen / çözülemeyen kayıt atlanır. */
+  function loadAll(c: AudioContext): Promise<void> {
+    loading ??= Promise.all(
+      (Object.keys(FILES) as FileKey[]).map(async (key) => {
+        try {
+          const buffer = await c.decodeAudioData(await load(FILES[key].file));
+          let peak = 0;
+          for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+            for (const v of buffer.getChannelData(ch)) peak = Math.max(peak, Math.abs(v));
+          }
+          if (peak > 0) buffers.set(key, { buffer, norm: 1 / peak });
+        } catch {
+          // ses yoksa oyun sessiz sürer
+        }
+      }),
+    ).then(() => {
+      if (wantCrowd) startCrowd();
+    });
+    return loading;
+  }
+
+  /** İlk seste kurulur (kullanıcı hareketinde); askıdaysa sürdürülür. Tarayıcı izin vermezse sessiz kalınır. */
+  function context(s: Pick<SoundSettings, 'soundVolume'>): AudioContext | null {
     try {
       if (!ctx) {
         const c = makeContext();
         master = c.createGain();
-        // Sınırlayıcı: gol + uğultu + düdük üst üste binince Yüksek'te kırpılmasın (varsayılan −24 dB eşiği sesi ezerdi)
+        // Sınırlayıcı: gol + uğultu + düdük üst üste binince Yüksek'te kırpılmasın
         const limiter = c.createDynamicsCompressor();
         limiter.threshold.value = -3;
         limiter.knee.value = 0;
         limiter.ratio.value = 20;
         master.connect(limiter).connect(c.destination);
-        noise = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
-        const data = noise.getChannelData(0);
-        // Math.random: yalnızca ses dokusu, oyunun Rng akışına dokunmaz
-        for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
         // Sekme arka plandayken sus
         if (typeof document !== 'undefined') {
           document.addEventListener('visibilitychange', () => {
@@ -142,6 +218,7 @@ export function createSoundPlayer(makeContext: () => AudioContext) {
           });
         }
         ctx = c;
+        void loadAll(c);
       }
       if (ctx.state === 'suspended') ctx.resume().catch(() => {});
       master!.gain.value = VOLUME[s.soundVolume];
@@ -151,37 +228,82 @@ export function createSoundPlayer(makeContext: () => AudioContext) {
     }
   }
 
+  /** Kaydı `when` anında çalar; kayıt yüklenmediyse hiçbir şey yapmaz. */
+  function voice(c: AudioContext, key: FileKey, when: number, mul: number, loop = false): { src: AudioBufferSourceNode; gain: GainNode } | null {
+    const b = buffers.get(key);
+    if (!b) return null;
+    const def: { gain: number; duration?: number } = FILES[key];
+    const src = c.createBufferSource();
+    src.buffer = b.buffer;
+    const gain = c.createGain();
+    const level = def.gain * b.norm * mul;
+    src.connect(gain).connect(master!);
+    if (loop) {
+      // mp3 kodlayıcının baştaki / sondaki boşluğu döngüde boşluk yapmasın
+      src.loop = true;
+      src.loopStart = 0.1;
+      src.loopEnd = b.buffer.duration - 0.1;
+      gain.gain.setValueAtTime(0, when);
+      gain.gain.linearRampToValueAtTime(level, when + 1.5);
+      src.start(when, 0.1);
+      return { src, gain };
+    }
+    const length = Math.min(def.duration ?? Infinity, b.buffer.duration);
+    gain.gain.setValueAtTime(level, when);
+    if (def.duration !== undefined) {
+      gain.gain.setValueAtTime(level, when + length - FADE);
+      gain.gain.linearRampToValueAtTime(0, when + length);
+    }
+    active++;
+    src.onended = () => active--;
+    src.start(when, 0, length);
+    return { src, gain };
+  }
+
+  function startCrowd(): void {
+    if (crowd || !ctx || hidden()) return;
+    crowd = voice(ctx, 'ambience', ctx.currentTime, 1, true);
+  }
+
+  function emit(c: AudioContext, id: SoundId): void {
+    const def = SOUNDS[id];
+    if (!admitSound(lastStart.get(id), c.currentTime, def.gap, active)) return;
+    lastStart.set(id, c.currentTime);
+    for (const [key, delay, mul] of def.layers) voice(c, key, c.currentTime + delay, mul);
+  }
+
   return {
-    /** Kullanıcı hareketinde (tıklama / tuş) bağlamı kurar ve sürdürür: sonraki sesleri tarayıcının oto-oynatma kuralı engellemesin. */
+    /** Kullanıcı hareketinde (tıklama / tuş) bağlamı kurar, kayıtları yükler: sonraki sesleri oto-oynatma kuralı engellemesin. */
     unlock(s: SoundSettings): void {
       if (s.sound) context(s);
     },
 
-    /** "Sesi dene": ayar kapalı olsa da kısa düdük + tribün tepkisi. Tarayıcı ses vermezse false. */
+    /** "Sesi dene": ayar kapalı olsa da düdük + tribün "ah"ı. Tarayıcı ses vermezse ya da kayıtlar yüklenemezse false. */
     async test(volume: SoundVolume): Promise<boolean> {
-      const s = { sound: true, soundVolume: volume };
-      const c = context(s);
+      const c = context({ soundVolume: volume });
       if (!c) return false;
       try {
         await c.resume();
+        await loadAll(c);
       } catch {
         return false;
       }
-      if (c.state !== 'running') return false;
-      SYNTH.whistleShort(c, master!, noise!, c.currentTime);
-      SYNTH.chance(c, master!, noise!, c.currentTime + 0.35);
+      if (c.state !== 'running' || !buffers.has('whistleShort')) return false;
+      voice(c, 'whistleShort', c.currentTime, 1);
+      voice(c, 'ahh', c.currentTime + 0.5, 1);
       return true;
     },
 
     play(id: SoundId, s: SoundSettings): void {
-      if (!s.sound || hidden()) return;
+      if (!soundAllowed(id, s) || hidden()) return;
       const c = context(s);
-      if (c) SYNTH[id](c, master!, noise!, c.currentTime);
+      if (c) emit(c, id);
     },
 
-    /** Tribün uğultusu: maç akarken düşük seviyede döngü. */
+    /** Stadyum ambiyansı: maç akarken hafif döngü. Kayıt henüz yüklenmediyse yüklenince başlar. */
     crowd(on: boolean, s: SoundSettings): void {
-      if (!on || !s.sound) {
+      wantCrowd = on && s.sound;
+      if (!wantCrowd) {
         if (crowd && ctx) {
           const t = ctx.currentTime;
           crowd.gain.gain.cancelScheduledValues(t);
@@ -192,21 +314,7 @@ export function createSoundPlayer(makeContext: () => AudioContext) {
         crowd = null;
         return;
       }
-      if (crowd || hidden()) return;
-      const c = context(s);
-      if (!c) return;
-      const src = c.createBufferSource();
-      src.buffer = noise;
-      src.loop = true;
-      const filter = c.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.value = 600;
-      const gain = c.createGain();
-      gain.gain.setValueAtTime(0, c.currentTime);
-      gain.gain.linearRampToValueAtTime(1, c.currentTime + 1);
-      src.connect(filter).connect(gain).connect(master!);
-      src.start();
-      crowd = { src, gain };
+      if (context(s)) startCrowd();
     },
   };
 }

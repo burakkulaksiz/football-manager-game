@@ -29,6 +29,22 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
   yapay sürdürülür. Az gözlemde (n < 5) "hedef dışı" yerine "belirsiz" denir. Motor değişince: koşu → rapor → hedef dışı ölçülerin "bak:" ipucu.
 - Bilinen: tam sezon testleri yavaş (FINDINGS.md > Testler).
 
+## Ses (ui/sound.ts, kayıtlar public/sounds/, kaynaklar public/sounds/KAYNAKLAR.md)
+- Gerçek kayıtlar (freesound önizlemeleri, mp3). Motor sese dokunmaz; ses yalnızca ui katmanında. Hangi olayda hangi ses
+  (`matchSounds`, `careerSound`), ayar süzgeci (`soundAllowed`) ve çakışma kuralı (`admitSound`) saf, `sound.test.ts`'te.
+- Ayarlar: Ses (ana anahtar; maçta V), Ses Düzeyi (ana kazanç + sınırlayıcı), Maç Dışı Sesler (Kapalı / Önemli olaylar /
+  + Tıklamalar; varsayılan Önemli olaylar). Çok hızlı maçta ve Anında Sonuçlandır'da maç sesi yok.
+- Maç: başlama / 2. yarı / penaltı uzun düdük, faul / sarı kısa düdük, devre iki kısa, maç sonu kısa-kısa-uzun; ev sahibi
+  golü tribün coşkusu, deplasman golü "ah" + uzak sevinç; kaçan / kurtarılan / bloklanan şut "ah"; kırmızı düdük + yuha;
+  saat akarken stadyum uğultusu döngüsü (kayıt yüklenmeden istenirse yüklenince başlar). Aynı adımda tek düdük ve tek
+  tribün tepkisi (en önemlisi), aynı ses `gap` saniyeden sık başlamaz, aynı anda en çok MAX_VOICES (6) ses.
+- Maç dışı (App.useSounds): dünya her değiştiğinde önceki `CareerMark` ile kıyas; en büyük olay çalar: kovulma / kariyer
+  sonu (yuha) > kupa sayacı arttı (fanfar + tribün) > yeni iş teklifi > kulübümüze transfer / kiralık (imza) > susturulmamış
+  önemli haber (bildirim). Başka kariyere geçişte (tohum farklı / haber sayacı geride) ve ilk bakışta sessiz.
+- Yükleme: ses bağlamı ilk tıklama / tuşta kurulur (oto-oynatma kuralı), kayıtlar o an bir kez indirilip çözülür ve tepe
+  değeri 1'e normalize edilir; FILES'taki `gain` göreli düzey, `duration` uzun kaydı keser (son 0,4 sn sönüm). İnmeyen /
+  çözülemeyen kayıt sessizce atlanır; Sesi dene o zaman uyarı gösterir. Düzeyler kulakla değil dalga biçimine bakılarak seçildi.
+
 ## Kararlar, bildirimler, gezinme durumu (kullanıcı istekleri)
 - Karar bekleyen konular (engine/decisions.ts pendingDecisions): oyuncumuza gelen teklif (pending), verdiğimiz teklife karşı
   teklif (countered), kabul edilen teklifte sözleşme görüşmesi (accepted), oyuncu görüşme talebi, yazın (Temmuz–Ağustos) U19 yaş

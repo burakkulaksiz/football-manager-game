@@ -24,9 +24,10 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
         çim desenine güneş/gölge.
   - [x] **Sadece önemli anlar modu:** FM'deki gibi sakin dakikaları atlayıp atak, şut ve duran topları sahada göstermek.
   - [x] **Performans:** oyuncuları HTML katmanında (GPU'da hareket eden) çizmek; yavaş makinede bile akıcı geçiş.
-- [ ] Ses (kodla üretilen + gerçek kayıtlar; düdük, gol, uğultu, açma/kapama) — kısmen
+- [x] Ses (kodla üretilen + gerçek kayıtlar; düdük, gol, uğultu, açma/kapama)
   - [x] Kodla üretilen: düdük (başlama, devre, maç sonu, kart/penaltı), gol sevinci, kaçan pozisyonda "uuh", maç akarken tribün uğultusu; Ayarlar > Maç: Ses açık/kapalı (varsayılan kapalı) ve düzey, maçta V. Kanıt: `ui/sound.test.ts`, `store/settings.test.ts`.
-  - [ ] Gerçek kayıtlar: yapılmadı (ses dosyası yok); `ui/sound.ts` SYNTH'teki ses kayıtla değiştirilebilir.
+  - [x] Gerçek kayıtlar: kodla üretilen seslerin yerini aldı (public/sounds/, freesound; kaynaklar KAYNAKLAR.md). Faul düdüğü, deplasman golü, kırmızı kartta yuha, stadyum ambiyansı döngüsü; çakışma sınırı. Kanıt: `ui/sound.test.ts`.
+  - [x] Maç dışı sesler: Devam'ı durduran haber, kulübe transfer (imza), kupa / şampiyonluk (fanfar), iş teklifi, kovulma; isteğe bağlı düğme tıklaması; Ayarlar > Maç Dışı Sesler. Kanıt: `ui/sound.test.ts` (maç dışı sesler), `store/settings.test.ts`.
 - [x] Maç ortasında kayıt (maçın o anki durumu kayda girer; yüklenince maç kaldığı dakikadan devam eder)
 - [ ] Devre arası konuşması (moral etkisi)
 - [x] Duran top talimatları (kornerci, hedef adam; korner ön/arka direk/kısa, serbest vuruş kaleye/orta)

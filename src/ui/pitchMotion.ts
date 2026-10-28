@@ -5,9 +5,10 @@
  */
 import type { MatchState, Side } from '../engine';
 import type { Point } from './pitch';
-import { frameStartsMs, type SceneFrame } from './pitchScene';
+import { frameStartsMs, MAX_GLIDE_SPEED, type SceneFrame } from './pitchScene';
 
-export type Spots = Map<number, { side: Side; at: Point }>;
+/** `alpha`: görünürlük (0–1; yoksa 1): kesmede ve sahneye giriş / çıkışta solar. */
+export type Spots = Map<number, { side: Side; at: Point; alpha?: number }>;
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
@@ -22,6 +23,15 @@ function easeOut(u: number): number {
 }
 
 const lerp = (a: Point, b: Point, t: number): Point => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+
+/**
+ * `a`'dan `b`'ye `durationMs` içinde `u` anı: yol kısaysa yumuşak süzülme; hız sınırını aşıyorsa (gol sonrası santra,
+ * başka dakikanın sahnesi, devre arasında yer değişimi) koşulmaz, kesilir: eski yerinde solar, yenisinde belirir.
+ */
+function glide(a: Point, b: Point, u: number, durationMs: number): { at: Point; alpha?: number } {
+  if (Math.hypot(b.x - a.x, b.y - a.y) <= MAX_GLIDE_SPEED * durationMs) return { at: lerp(a, b, easeInOut(u)) };
+  return u < 0.5 ? { at: a, alpha: 1 - 2 * u } : { at: b, alpha: 2 * u - 1 };
+}
 
 /** Topun yolundaki ilerleme: şut ve havadan top sabit hızda, yerden pas yavaşlayarak, sürmede oyuncuyla birlikte. */
 function ballProgress(frame: SceneFrame, u: number): number {
@@ -74,37 +84,52 @@ export interface MotionSample {
   ball: Point;
   /** Topun yerden yüksekliği (metre). */
   height: number;
+  /** Topun görünürlüğü (0–1). */
+  ballAlpha: number;
+}
+
+/** Geçişte oyuncular: varsa süzülür / kesilir, yeni gelen belirir, giden eski yerinde solar. */
+function blend(from: Spots | undefined, to: Spots, u: number, durationMs: number): Spots {
+  const players: Spots = new Map();
+  for (const [id, b] of to) {
+    const a = from?.get(id);
+    players.set(id, { side: b.side, ...(a ? glide(a.at, b.at, u, durationMs) : { at: b.at, alpha: u }) });
+  }
+  for (const [id, a] of from ?? []) if (!players.has(id)) players.set(id, { side: a.side, at: a.at, alpha: (a.alpha ?? 1) * (1 - u) });
+  return players;
 }
 
 /**
- * Sahnenin `t` (ms) anı. `spots`: her karenin yerleşimi (frameSpots). `previous`: girişte oyuncuların geldiği yerler
- * (önceki sahnenin son hâli); yoksa ilk karede belirirler.
+ * Sahnenin `t` (ms) anı. `spots`: her karenin yerleşimi (frameSpots). `previous` / `previousBall`: girişte oyuncuların
+ * ve topun geldiği yerler (önceki sahnenin son hâli); yoksa ilk karede belirirler.
  */
-export function sampleScene(scene: readonly SceneFrame[], spots: readonly Spots[], t: number, previous?: Spots, starts = frameStartsMs(scene)): MotionSample {
+export function sampleScene(
+  scene: readonly SceneFrame[],
+  spots: readonly Spots[],
+  t: number,
+  previous?: Spots,
+  starts = frameStartsMs(scene),
+  previousBall?: Point,
+): MotionSample {
   const last = scene.length - 1;
   if (t < starts[0]!) {
     const u = clamp(t / starts[0]!, 0, 1);
-    const players: Spots = new Map();
-    for (const [id, s] of spots[0]!) {
-      const from = previous?.get(id);
-      players.set(id, from ? { side: s.side, at: lerp(from.at, s.at, easeInOut(u)) } : s);
-    }
-    return { index: 0, u, leadIn: true, players, ball: scene[0]!.ball, height: 0 };
+    const ball = previousBall ? glide(previousBall, scene[0]!.ball, u, starts[0]!) : { at: scene[0]!.ball, alpha: u };
+    return { index: 0, u, leadIn: true, players: blend(previous, spots[0]!, u, starts[0]!), ball: ball.at, height: 0, ballAlpha: ball.alpha ?? 1 };
   }
   let i = 1;
   while (i <= last && t >= starts[i]!) i++;
-  if (i > last) return { index: last, u: 1, leadIn: false, players: spots[last]!, ball: scene[last]!.ball, height: 0 };
-  const u = clamp((t - starts[i - 1]!) / (starts[i]! - starts[i - 1]!), 0, 1);
-  const eased = easeInOut(u);
-  const players: Spots = new Map();
-  for (const [id, b] of spots[i]!) {
-    const a = spots[i - 1]!.get(id);
-    players.set(id, a ? { side: b.side, at: lerp(a.at, b.at, eased) } : b);
+  if (i > last) return { index: last, u: 1, leadIn: false, players: spots[last]!, ball: scene[last]!.ball, height: 0, ballAlpha: 1 };
+  const duration = starts[i]! - starts[i - 1]!;
+  const u = clamp((t - starts[i - 1]!) / duration, 0, 1);
+  const players = blend(spots[i - 1], spots[i]!, u, duration);
+  // Vuruşsuz kare (santra, kurulum): top kendi kendine uzun yol gitmez, kesilir
+  if (scene[i]!.move === 'none') {
+    const ball = glide(scene[i - 1]!.ball, scene[i]!.ball, u, duration);
+    return { index: i, u, leadIn: false, players, ball: ball.at, height: 0, ballAlpha: ball.alpha ?? 1 };
   }
-  // Bu karede olmayan (sahadan çıkan) oyuncu karenin sonuna kadar eski yerinde
-  for (const [id, a] of spots[i - 1]!) if (!players.has(id)) players.set(id, a);
   const ball = ballPath(scene[i - 1]!.ball, scene[i]!, u);
-  return { index: i, u, leadIn: false, players, ball: ball.at, height: ball.height };
+  return { index: i, u, leadIn: false, players, ball: ball.at, height: ball.height, ballAlpha: 1 };
 }
 
 /**

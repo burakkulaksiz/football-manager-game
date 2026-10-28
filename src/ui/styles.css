@@ -3456,6 +3456,14 @@ select {
 
 .dom-side.away .dom-arrow { animation-direction: reverse; }
 
+/* İkinci yarı: taraflar yer değiştirdi, ev sahibi sağda sola iter */
+.pitch-quiet.swapped .dom-names,
+.pitch-quiet.swapped .dom-bar { flex-direction: row-reverse; }
+.pitch-quiet.swapped .dom-side.home { justify-content: flex-start; }
+.pitch-quiet.swapped .dom-side.away { justify-content: flex-end; }
+.pitch-quiet.swapped .dom-side.home .dom-arrow { animation-direction: reverse; }
+.pitch-quiet.swapped .dom-side.away .dom-arrow { animation-direction: normal; }
+
 @keyframes dom-push {
   0%, 100% { transform: translateX(-3px); }
   50% { transform: translateX(3px); }

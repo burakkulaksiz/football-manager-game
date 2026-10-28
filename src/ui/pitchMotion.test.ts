@@ -36,11 +36,23 @@ describe('sahne örnekleme', () => {
   ];
   const starts = frameStartsMs(scene);
 
-  it('girişte ilk kare; önceki sahneden gelen oyuncu oradan süzülür', () => {
-    const previous: Spots = new Map([[1, { side: 'home', at: { x: 0, y: 30 } }]]);
-    const s = sampleScene(scene, spots, LEAD_IN_MS / 2, previous, starts);
+  it('girişte ilk kare; önceki sahneden gelen oyuncu ve top yakınsa oradan süzülür, uzaksa kesilir (solar, sonra belirir)', () => {
+    const near: Spots = new Map([[1, { side: 'home', at: { x: 10, y: 30 } }]]);
+    const s = sampleScene(scene, spots, LEAD_IN_MS / 2, near, starts, { x: 14, y: 30 });
     expect(s.leadIn).toBe(true);
-    expect(s.players.get(1)!.at.x).toBeCloseTo(10);
+    expect(s.players.get(1)!.at.x).toBeCloseTo(15);
+    expect(s.players.get(1)!.alpha).toBeUndefined();
+    expect(s.ball.x).toBeCloseTo(17);
+    // 80 m'yi 400 ms'de koşamaz: önce eski yerinde solar, sonra yeni yerinde belirir
+    const far: Spots = new Map([[1, { side: 'home', at: { x: 100, y: 30 } }]]);
+    const early = sampleScene(scene, spots, LEAD_IN_MS * 0.25, far, starts, { x: 100, y: 30 });
+    expect(early.players.get(1)).toMatchObject({ at: { x: 100, y: 30 }, alpha: 0.5 });
+    expect(early.ball).toEqual({ x: 100, y: 30 });
+    expect(early.ballAlpha).toBeCloseTo(0.5);
+    const late = sampleScene(scene, spots, LEAD_IN_MS * 0.75, far, starts, { x: 100, y: 30 });
+    expect(late.players.get(1)).toMatchObject({ at: { x: 20, y: 30 }, alpha: 0.5 });
+    // Önceki sahne yoksa ilk karede belirir
+    expect(sampleScene(scene, spots, LEAD_IN_MS / 2, undefined, starts).players.get(1)!.alpha).toBeCloseTo(0.5);
   });
 
   it('kareler arasında oyuncular ve top yolda; sonunda son karede', () => {

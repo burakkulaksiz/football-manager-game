@@ -16,9 +16,10 @@ import {
   toScreen,
   type CameraTransform,
   type PitchViewBox,
+  type Point,
 } from '../pitch';
 import { ballTrack, dominance, reachedIndex, sampleScene, type Spots } from '../pitchMotion';
-import { bannerKind, buildScene, frameSpots, frameStartsMs, isHighlight, playLabel, revealIndex, SCENE_HOLD_MS } from '../pitchScene';
+import { bannerKind, buildScene, frameStartsMs, isHighlight, playLabel, revealIndex, SCENE_HOLD_MS, sidesSwapped, viewScene } from '../pitchScene';
 
 /** Forma/şort sınırı: noktanın yukarıdan %69'u (yarıçap 1.3, merkezin 0.5 altı). */
 const SHIRT_SPLIT = 69;
@@ -191,17 +192,19 @@ function DominanceBar({ match, colors, names }: { match: MatchState; colors: Rec
   const caption = match.period === 'full' ? 'Maç sona erdi'
     : match.period === 'half' ? 'Devre arası'
       : Math.abs(d) < 0.15 ? 'Oyun dengede' : `${names[d > 0 ? 'home' : 'away']} baskılı`;
+  // Sahadaki gibi: ikinci yarıda ev sahibi sağda, sola hücum eder
+  const swapped = sidesSwapped(match);
   return (
-    <div className="pitch-quiet">
+    <div className={`pitch-quiet${swapped ? ' swapped' : ''}`}>
       <div className="dom-names">
         <span style={{ color: colors.home }}>{names.home}</span>
         <span className="dom-caption">{caption}</span>
         <span style={{ color: colors.away }}>{names.away}</span>
       </div>
       <div className="dom-bar">
-        <div className="dom-side home" style={{ width: `${home}%`, background: colors.home }}><span className="dom-arrow">›</span></div>
-        <div className="dom-side away" style={{ width: `${100 - home}%`, background: colors.away }}><span className="dom-arrow">‹</span></div>
-        <div className="dom-knot" style={{ left: `${home}%` }} />
+        <div className="dom-side home" style={{ width: `${home}%`, background: colors.home }}><span className="dom-arrow">{swapped ? '‹' : '›'}</span></div>
+        <div className="dom-side away" style={{ width: `${100 - home}%`, background: colors.away }}><span className="dom-arrow">{swapped ? '›' : '‹'}</span></div>
+        <div className="dom-knot" style={{ left: `${swapped ? 100 - home : home}%` }} />
       </div>
       {now && <div className="dom-now">{now}</div>}
     </div>
@@ -226,8 +229,10 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
   const kickoff = play === null;
   const visible = kickoff || isHighlight(play);
   // Sahne yalnızca yeni anda yeniden kurulur (değişiklik vb. ile maç nesnesi değişse de baştan başlamaz)
-  const scene = useMemo(() => (visible ? buildScene(match, play, match.minute) : []), [play, match.minute, match.period, visible]);
-  const spots = useMemo(() => scene.map((f) => frameSpots(match, f, kickoff)), [scene]);
+  const built = useMemo(() => (visible ? buildScene(match, play, match.minute) : []), [play, match.minute, match.period, visible]);
+  // Ekran yönünde (ikinci yarıda saha dönük): kareler ve herkesin yeri
+  const { frames: scene, spots } = useMemo(() => viewScene(match, built, kickoff), [built]);
+  const swapped = sidesSwapped(match);
   const starts = useMemo(() => frameStartsMs(scene), [scene]);
   const reveal = scene.length > 0 ? revealIndex(scene) : 0;
 
@@ -251,21 +256,23 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
   const shadowRef = useRef<HTMLDivElement>(null);
   const cameraRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<HTMLDivElement>(null);
-  /** Önceki sahnenin son yerleri: yeni sahnenin girişinde oyuncular buradan süzülür (ışınlanmasın). */
+  /** Önceki sahnenin son yerleri: yeni sahnenin girişinde oyuncular ve top buradan süzülür (uzaksa kesilir). */
   const lastPlayers = useRef<Spots | undefined>(undefined);
+  const lastBall = useRef<Point | undefined>(undefined);
   const cam = useRef<CameraTransform>({ tx: 0, ty: 0, zoom: 1 });
-  const sceneStart = useRef<{ scene: unknown; at: number }>({ scene: null, at: 0 });
+  /** Oynayan sahne, başladığı an ve girişte gelinen yerler (boyut / kamera değişince döngü yeniden kurulsa da aynı kalır). */
+  const sceneStart = useRef<{ scene: unknown; at: number; from?: Spots; ball?: Point }>({ scene: null, at: 0 });
 
   useEffect(() => {
     if (scene.length === 0) {
       lastPlayers.current = undefined;
+      lastBall.current = undefined;
       return;
     }
     if (stageWidth <= 0) return;
     // Aynı sahne (yalnızca boyut değişti): baştan başlamaz
-    if (sceneStart.current.scene !== scene) sceneStart.current = { scene, at: performance.now() };
-    const begin = sceneStart.current.at;
-    const from = lastPlayers.current;
+    if (sceneStart.current.scene !== scene) sceneStart.current = { scene, at: performance.now(), from: lastPlayers.current, ball: lastBall.current };
+    const { at: begin, from, ball: fromBall } = sceneStart.current;
     const reduce = reducedMotion();
     const end = (starts.at(-1) ?? 0) + SCENE_HOLD_MS;
     let raf = 0;
@@ -274,9 +281,9 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
     let lastTime = performance.now();
     const tick = (now: number) => {
       const t = (now - begin) * speed;
-      let sample = sampleScene(scene, spots, t, from, starts);
+      let sample = sampleScene(scene, spots, t, from, starts, fromBall);
       if (reduce && !sample.leadIn) {
-        sample = { ...sample, players: spots[sample.index]!, ball: scene[sample.index]!.ball, height: 0 };
+        sample = { ...sample, players: spots[sample.index]!, ball: scene[sample.index]!.ball, height: 0, ballAlpha: 1 };
       }
       const arrived = reachedIndex(sample);
       if (sample.index !== lastIndex || arrived !== lastReached) {
@@ -300,7 +307,6 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
       const unit = screenUnit(c, stageWidth, view);
       layerRef.current?.style.setProperty('--u', `${unit}px`);
 
-      const fadeIn = sample.leadIn && !from ? sample.u : 1;
       for (const [id, el] of dotRefs.current) {
         const s = sample.players.get(id);
         if (!s) {
@@ -309,20 +315,21 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
         }
         const p = toScreen(s.at, c, stageWidth, view);
         el.style.transform = `translate3d(${p.x}px, ${p.y}px, 0)`;
-        el.style.opacity = String(from?.has(id) || !sample.leadIn ? 1 : fadeIn);
+        el.style.opacity = String(s.alpha ?? 1);
       }
       // Top: gölgesi yerde, kendisi yüksekliği kadar yukarıda ve büyük (havadan giden top)
       const ground = toScreen(sample.ball, c, stageWidth, view);
       const lift = sample.height * unit * 0.55;
       if (shadowRef.current) {
         shadowRef.current.style.transform = `translate3d(${ground.x}px, ${ground.y}px, 0) scale(${1 + sample.height * 0.05})`;
-        shadowRef.current.style.opacity = String(fadeIn * Math.max(0.25, 0.55 - sample.height * 0.04));
+        shadowRef.current.style.opacity = String(sample.ballAlpha * Math.max(0.25, 0.55 - sample.height * 0.04));
       }
       if (ballRef.current) {
         ballRef.current.style.transform = `translate3d(${ground.x}px, ${ground.y - lift}px, 0) scale(${1 + sample.height * 0.11})`;
-        ballRef.current.style.opacity = String(fadeIn);
+        ballRef.current.style.opacity = String(sample.ballAlpha);
       }
       lastPlayers.current = sample.players;
+      lastBall.current = sample.ball;
       // Sahne bitince (kamera da oturunca) dur; son hâl ekranda kalır
       const settling = Math.abs(desired.tx - c.tx) + Math.abs(desired.ty - c.ty) + Math.abs(desired.zoom - c.zoom) > 0.001;
       if (t < end || settling) raf = requestAnimationFrame(tick);
@@ -376,9 +383,9 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
                 <path d="M 0 0 H 0.55 M 0 0 V 0.55" stroke="rgba(255,255,255,0.55)" strokeWidth={0.07} />
               </pattern>
             </defs>
-            {/* Ev sahibi sağa hücum eder: ev sahibinin golü sağ kaleye */}
-            <GoalNet end="left" ripple={goalRipple === 'away' ? `${match.minute}` : null} k={view.k} />
-            <GoalNet end="right" ripple={goalRipple === 'home' ? `${match.minute}` : null} k={view.k} />
+            {/* İlk yarıda ev sahibi sağa hücum eder (golü sağ kaleye); ikinci yarıda taraflar yer değiştirir */}
+            <GoalNet end="left" ripple={goalRipple === (swapped ? 'home' : 'away') ? `${match.minute}` : null} k={view.k} />
+            <GoalNet end="right" ripple={goalRipple === (swapped ? 'away' : 'home') ? `${match.minute}` : null} k={view.k} />
             {frame && previous && frame.move !== 'none' && frame.move !== 'dribble' && (
               <path
                 key={`${match.minute}-${index}`}

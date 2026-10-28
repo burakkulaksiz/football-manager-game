@@ -147,11 +147,17 @@ function paceRuns(match: MatchState, scene: SceneFrame[]): void {
   const pull = (j: number, id: number, target: { side: Side; at: Point }) => {
     const f = scene[j];
     const now = spots[j]?.get(id);
-    // Topu taşıyan / duran topu kullanan topun başında kalır
-    if (!f || !now || f.carrierId === id || f.setPiece?.takerId === id) return;
-    const reach = MAX_GLIDE_SPEED * frameDurationMs(scene[j + 1]!) * 0.95;
+    if (!f || !now) return;
+    const next = scene[j + 1]!;
+    const reach = MAX_GLIDE_SPEED * frameDurationMs(next) * 0.95;
     const d = dist(now.at, target.at);
     if (d <= reach) return;
+    // Topu taşıyan / duran topu kullanan topun başında kalır: sonraki kare yetişecek kadar uzar (uzar, kısalmaz:
+    // önceki kararlar geçerli kalır)
+    if (f.carrierId === id || f.setPiece?.takerId === id) {
+      next.durationMs = Math.min(MAX_WALK_MS, Math.ceil(d / (MAX_GLIDE_SPEED * 0.95)));
+      return;
+    }
     const at = { x: target.at.x + ((now.at.x - target.at.x) * reach) / d, y: target.at.y + ((now.at.y - target.at.y) * reach) / d };
     f.placed = [...f.placed.filter((p) => p.id !== id), { id, side: target.side, at }];
     spots[j]!.set(id, { side: target.side, at });
@@ -426,24 +432,22 @@ function playFrames(match: MatchState, play: MatchPlay, minute: number): SceneFr
     }
   }
 
-  /**
-   * Motorun sahadan aldığı oyuncu (kırmızı kart, sakatlanıp çıkan) sonuç karesinde `offset` kadar topun yanında görünür;
-   * önceki karelerde de orada durur (birden belirmesin). Sahadaysa kendi yerinde kalır (kart dakikanın önceki faulünden
-   * şuta taşınmış olabilir: top kaleye giderken tek başına yarım saha koşmasın).
-   */
-  const keepInView = (id: number, playerSide: Side, dx: number, dy: number) => {
+  // Kart: kırmızıyla motorun sahadan aldığı oyuncu sonuç karesinde topun yanında görünür, önceki karelerde de orada durur
+  // (birden belirmesin). Sahadaysa kendi yerinde kalır (kart dakikanın önceki faulünden şuta taşınmış olabilir: top kaleye
+  // giderken tek başına yarım saha koşmasın)
+  if (play.card) {
+    const { playerId } = play.card;
+    const cardSide = match.players[playerId]?.side ?? opp;
     const last = resultFrame();
-    if (match[playerSide].onPitch.includes(id)) return;
-    // Faulü yapan zaten topun yanına konmuştur
-    const spot = last.placed.find((p) => p.id === id)?.at ?? { x: last.ball.x + (playerSide === 'home' ? -dx : dx), y: last.ball.y + dy };
-    for (const f of frames) if (!f.placed.some((p) => p.id === id)) f.placed.push({ id, side: playerSide, at: spot });
-  };
-  if (play.card) keepInView(play.card.playerId, match.players[play.card.playerId]?.side ?? opp, 1.8, -1.4);
-  // Sakatlık: sonuç karesinde oyuncu yerde (değişiklikle çıkmış olsa da o an görünür)
-  if (play.injuredId !== undefined) {
-    resultFrame().injuredId = play.injuredId;
-    keepInView(play.injuredId, match.players[play.injuredId]?.side ?? side, 3, 2);
+    if (!match[cardSide].onPitch.includes(playerId)) {
+      // Faulü yapan zaten topun yanına konmuştur
+      const spot = last.placed.find((p) => p.id === playerId)?.at ?? { x: last.ball.x + (cardSide === 'home' ? -1.8 : 1.8), y: last.ball.y - 1.4 };
+      for (const f of frames) if (!f.placed.some((p) => p.id === playerId)) f.placed.push({ id: playerId, side: cardSide, at: spot });
+    }
   }
+  // Sakatlık: sonuç karesinde oyuncu kendi yerinde yerde. Motor sakatı yalnızca değişiklikle sahadan alır; o zaman
+  // dakikanın sonuna kadar girenin yerinde görünür (buildScene: standIns)
+  if (play.injuredId !== undefined) resultFrame().injuredId = play.injuredId;
   const core = frames.slice(-MAX_PLAY_FRAMES);
   core[0]!.move = 'none';
   if (!core.some((f) => f.result)) core[core.length - 1]!.result = true;
@@ -557,8 +561,8 @@ export function revealIndex(scene: readonly SceneFrame[]): number {
 export const SCENE_FRAME_MS = 750;
 /** Son kare (etiketiyle) ekranda kalma süresi (ms). */
 export const SCENE_HOLD_MS = 1500;
-/** Sahne başında oyuncuların ilk kareye süzülmesi / belirmesi (ms). */
-export const LEAD_IN_MS = 400;
+/** Sahne başında oyuncuların ilk kareye süzülmesi / belirmesi (ms; art arda anlarda yakındakiler yürüyerek yetişsin). */
+export const LEAD_IN_MS = 600;
 
 /** Topun bu kareye gelme süresi, hareketine göre: şut hızlı, orta / uzun pas / top sürme daha uzun. */
 const MOVE_MS: Record<FrameMove, number> = { none: 700, pass: 750, lob: 950, cross: 1000, dribble: 950, shot: 520 };

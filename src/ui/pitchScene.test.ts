@@ -299,6 +299,24 @@ describe('2D saha sahnesi', () => {
     expect(frameSpots(m, last, false).has(injured)).toBe(true);
   });
 
+  it('sakatlanıp değişiklikle çıkan oyuncu (kaleci) sonuca kadar kendi yerinde yerde; topun yanına taşınmaz', () => {
+    const m = match();
+    m.period = 'first';
+    m.minute = 7;
+    m.away.userControlled = false;
+    const keeper = m.away.onPitch.find((id) => m.players[id]!.slot === 'GK')!;
+    const inId = m.away.bench[0]!;
+    expect(substitute(m, world.players, 'away', keeper, inId)).toBe(true);
+    m.pendingSubs = [];
+    const shooter = m.home.onPitch.find((id) => m.players[id]!.slot === 'ST')!;
+    const play: MatchPlay = { side: 'away', kind: 'miss', playerId: m.away.onPitch.find((id) => m.players[id]!.slot === 'ST') ?? shooter, injuredId: keeper, subs: [{ side: 'away', outId: keeper, inId }] };
+    const scene = buildScene(m, play, 7);
+    const reveal = revealIndex(scene);
+    expect(scene[reveal]!.injuredId).toBe(keeper);
+    // Deplasman kalesi mantıksal sahada sağda (x = 105): kaleci hiçbir karede orta çizgiyi geçmez
+    for (const f of scene.slice(0, reveal + 1)) expect(frameSpots(m, f, false).get(keeper)!.at.x).toBeGreaterThan(PITCH_LENGTH - 20);
+  });
+
   it('dakika sonundaki değişiklik: önce çıkan oyuncu oynar, sonra kenarda değişir, giren yerine geçer', () => {
     const m = match();
     const outId = m.home.onPitch.find((id) => m.players[id]!.slot === 'MC')!;

@@ -13,15 +13,19 @@ kart / sakatlık / değişiklik görselleri history.md > "Aşamalar" > 10. Cila 
   kanattan ceza sahasına orta, 30 m+ pas havadan, serbest vuruş falsolu 3,5–6 m ve 2,2+ m yüksek, uzaktan şut biraz havadan,
   bazen üstten aut). Top sürme: oyun kurmada ve asistten önce (yarı yarıya), golcü bazen topu geride alıp şut yerine sürer.
   Bir anın en çok 8 karesi (MAX_PLAY_FRAMES). Süreler harekete göre (frameDurationMs: şut 520, pas 750, havadan/orta/sürme
-  950–1000, sevinç 900 ms); LEAD_IN_MS 400; revealDelayMs (MatchScreen skoru bununla açıklar), sceneDurationMs.
+  950–1000, sevinç 900 ms); LEAD_IN_MS 600; revealDelayMs (MatchScreen skoru bununla açıklar), sceneDurationMs.
 - Işınlanma yok (ölçülü kural, pitchFlow.test.ts): gerçek motorla 6 maç baştan sona 16 ms adımlarla oynatılır; görünen
   oyuncu / top bir ekran karesinde en çok 1,5 m gider, görünürlük en çok 0,1 değişir. Hız sınırı MAX_GLIDE_SPEED
   (0,045 m/ms, pitchScene): sampleScene bunu aşan yolu süzmez, kesme yapar (eski yerinde solar, yenisinde belirir; top
   da). Sahne sınırı aşmayacak biçimde kurulur (paceRuns): vuruşlu karede uzaktaki oyuncu (topu alan, faulü yapan)
-  önceki karelerde koşuya başlar; vuruşsuz kare (duran top kurulumu, sevinç, değişiklik, kırmızı kart) herkes yürüyerek
-  yetişecek kadar uzar (SceneFrame.durationMs, en çok 2,5 sn). Bilerek kesme: gol sonrası santra, başka dakikanın
-  sahnesine giriş (uzaktakiler), devre arası yer değişimi. Kök neden (eski): giriş 400 ms'de 80 m'ye kadar süzülüyordu,
-  top girişte anında sıçrıyordu, sevinçten santraya 90 m / 900 ms koşuluyordu.
+  önceki karelerde koşuya başlar (topun başındaki çekilemezse sonraki kare uzar); vuruşsuz kare (duran top kurulumu,
+  sevinç, değişiklik, kırmızı kart) herkes yürüyerek yetişecek kadar uzar (SceneFrame.durationMs, en çok 2,5 sn).
+  Sahne içinde kesme yalnızca santraya geçişte (testli). Bilerek kesme: gol sonrası santra, başka dakikanın sahnesine
+  giriş (uzaktakiler; oyuncuların üçte birinden çoğu yetişemiyorsa herkes ve top birlikte: temiz sahne kesmesi), devre
+  arası yer değişimi. Giriş LEAD_IN_MS 600. Kök neden (eski): giriş 400 ms'de 80 m'ye kadar süzülüyordu, top girişte
+  anında sıçrıyordu, sevinçten santraya 90 m / 900 ms koşuluyordu.
+- Sakatlık: oyuncu kendi yerinde yerde. Motor sakatı yalnızca değişiklikle sahadan alır; dakikanın sonuna kadar girenin
+  yerinde görünür (standIns). Kırmızı kartla atılan sonuç karesinde topun yanında, önceki karelerde de orada.
 - Devre arası yer değişimi: sahne mantıksal sahada kurulur (ev sahibi sağa hücum eder); ikinci yarıda ve maç sonunda
   (sidesSwapped) viewScene ekrana 180° döndürür (oyuncunun sağı / solu korunur). Yedek kulübesi mantıksal sahada karşı
   kenarda kurulur ki ekranda hep altta kalsın. Gol filesi, baskı çubuğu da çevrilir. Uzatma devresi yok (eşitlikte

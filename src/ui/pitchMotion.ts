@@ -28,10 +28,15 @@ const lerp = (a: Point, b: Point, t: number): Point => ({ x: a.x + (b.x - a.x) *
  * `a`'dan `b`'ye `durationMs` içinde `u` anı: yol kısaysa yumuşak süzülme; hız sınırını aşıyorsa (gol sonrası santra,
  * başka dakikanın sahnesi, devre arasında yer değişimi) koşulmaz, kesilir: eski yerinde solar, yenisinde belirir.
  */
-function glide(a: Point, b: Point, u: number, durationMs: number): { at: Point; alpha?: number } {
-  if (Math.hypot(b.x - a.x, b.y - a.y) <= MAX_GLIDE_SPEED * durationMs) return { at: lerp(a, b, easeInOut(u)) };
+function glide(a: Point, b: Point, u: number, durationMs: number, cut = !reachable(a, b, durationMs)): { at: Point; alpha?: number } {
+  if (!cut) return { at: lerp(a, b, easeInOut(u)) };
   return u < 0.5 ? { at: a, alpha: 1 - 2 * u } : { at: b, alpha: 2 * u - 1 };
 }
+
+const reachable = (a: Point, b: Point, durationMs: number) => Math.hypot(b.x - a.x, b.y - a.y) <= MAX_GLIDE_SPEED * durationMs;
+
+/** Girişte bu paydan çok oyuncu yetişemiyorsa (başka anın sahnesi) herkes ve top birlikte kesilir: yarısı süzülüp yarısı sönmesin. */
+const SCENE_CUT_SHARE = 1 / 3;
 
 /** Topun yolundaki ilerleme: şut ve havadan top sabit hızda, yerden pas yavaşlayarak, sürmede oyuncuyla birlikte. */
 function ballProgress(frame: SceneFrame, u: number): number {
@@ -89,11 +94,11 @@ export interface MotionSample {
 }
 
 /** Geçişte oyuncular: varsa süzülür / kesilir, yeni gelen belirir, giden eski yerinde solar. */
-function blend(from: Spots | undefined, to: Spots, u: number, durationMs: number): Spots {
+function blend(from: Spots | undefined, to: Spots, u: number, durationMs: number, cutAll = false): Spots {
   const players: Spots = new Map();
   for (const [id, b] of to) {
     const a = from?.get(id);
-    players.set(id, { side: b.side, ...(a ? glide(a.at, b.at, u, durationMs) : { at: b.at, alpha: u }) });
+    players.set(id, { side: b.side, ...(a ? glide(a.at, b.at, u, durationMs, cutAll || !reachable(a.at, b.at, durationMs)) : { at: b.at, alpha: u }) });
   }
   for (const [id, a] of from ?? []) if (!players.has(id)) players.set(id, { side: a.side, at: a.at, alpha: (a.alpha ?? 1) * (1 - u) });
   return players;
@@ -113,9 +118,15 @@ export function sampleScene(
 ): MotionSample {
   const last = scene.length - 1;
   if (t < starts[0]!) {
-    const u = clamp(t / starts[0]!, 0, 1);
-    const ball = previousBall ? glide(previousBall, scene[0]!.ball, u, starts[0]!) : { at: scene[0]!.ball, alpha: u };
-    return { index: 0, u, leadIn: true, players: blend(previous, spots[0]!, u, starts[0]!), ball: ball.at, height: 0, ballAlpha: ball.alpha ?? 1 };
+    const lead = starts[0]!;
+    const u = clamp(t / lead, 0, 1);
+    const far = [...spots[0]!].filter(([id, b]) => {
+      const a = previous?.get(id);
+      return a !== undefined && !reachable(a.at, b.at, lead);
+    }).length;
+    const cutAll = far > spots[0]!.size * SCENE_CUT_SHARE;
+    const ball = previousBall ? glide(previousBall, scene[0]!.ball, u, lead, cutAll || !reachable(previousBall, scene[0]!.ball, lead)) : { at: scene[0]!.ball, alpha: u };
+    return { index: 0, u, leadIn: true, players: blend(previous, spots[0]!, u, lead, cutAll), ball: ball.at, height: 0, ballAlpha: ball.alpha ?? 1 };
   }
   let i = 1;
   while (i <= last && t >= starts[i]!) i++;

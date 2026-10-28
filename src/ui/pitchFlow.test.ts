@@ -8,9 +8,9 @@ import { buildScene, frameStartsMs, isHighlight, sceneDurationMs, viewScene } fr
 
 const world = createWorld(gameData, 3, 'galatasaray', '2026-07-01');
 
-function match(seed: number): MatchState {
+function match(seed: number, home = 'galatasaray', away = 'besiktas'): MatchState {
   const team = (clubId: string) => ({ clubId, name: clubId, lineup: autoSelectLineup(clubPlayers(world, clubId)) });
-  return createMatch({ fixtureId: 1, home: team('galatasaray'), away: team('besiktas'), seed }, world.players);
+  return createMatch({ fixtureId: 1, home: team(home), away: team(away), seed }, world.players);
 }
 
 /** Bir ekran karesi (~60 fps, maç hızı 1). */
@@ -27,6 +27,8 @@ class Viewer {
   players: Spots | undefined;
   ball: { at: Point; alpha: number } | undefined;
   worst: Worst = { step: 0, fade: 0, where: '' };
+  /** Sahne içinde (santraya geçiş dışında) iki karede de olan ama koşamayıp kesilen oyuncular. */
+  cuts: string[] = [];
 
   play(m: MatchState, play: MatchPlay | null): void {
     const kickoff = play === null;
@@ -45,6 +47,8 @@ class Viewer {
       for (const id of new Set([...s.players.keys(), ...(this.players?.keys() ?? [])])) {
         const p = s.players.get(id);
         const q = this.players?.get(id);
+        const both = !s.leadIn && spots[s.index]!.has(id) && spots[s.index - 1]?.has(id);
+        if (both && !frames[s.index]!.kickoff && (p?.alpha ?? 1) < 1) this.cuts.push(where(`oyuncu ${id}`));
         this.check(p ? { at: p.at, alpha: p.alpha ?? 1 } : undefined, q ? { at: q.at, alpha: q.alpha ?? 1 } : undefined, where(`oyuncu ${id}`));
       }
       if (this.ball) this.check({ at: s.ball, alpha: s.ballAlpha }, this.ball, where('top'));
@@ -65,8 +69,10 @@ class Viewer {
 describe('2D saha akışı: ışınlanma yok', () => {
   it('bütün maç boyunca (sahneler arası, devre arası yer değişimi, gol sonrası santra, değişiklik, duran top) kimse sıçramaz', () => {
     const seen = new Set<string>();
-    for (const seed of [1, 2, 3, 4, 5, 6]) {
-      const m = match(seed);
+    // Tester'ın yeniden üretme maçları dahil (A-001 tohum 32, A-002 tohum 21)
+    const games: [number, string?, string?][] = [[1], [2], [3], [4], [5], [6], [21, 'fenerbahce', 'trabzonspor'], [32, 'fenerbahce', 'trabzonspor']];
+    for (const [seed, home, away] of games) {
+      const m = match(seed, home, away);
       const viewer = new Viewer();
       while (m.period !== 'full') {
         const before = viewer.players !== undefined;
@@ -81,6 +87,8 @@ describe('2D saha akışı: ışınlanma yok', () => {
       }
       expect(viewer.worst.step, viewer.worst.where).toBeLessThanOrEqual(MAX_STEP_M);
       expect(viewer.worst.fade, viewer.worst.where).toBeLessThanOrEqual(MAX_FADE_STEP);
+      // Sahne içinde kesme yalnızca santraya geçişte (bilerek); başka her yerde oyuncular yürüyerek / koşarak yetişir
+      expect(viewer.cuts.slice(0, 3)).toEqual([]);
     }
     expect([...seen].sort()).toEqual(['devre arası', 'değişiklik', 'gol', 'korner', 'serbest vuruş / penaltı']);
   });

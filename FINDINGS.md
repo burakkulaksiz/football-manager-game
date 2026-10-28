@@ -52,9 +52,15 @@ Son gözden geçirme: 2026-10-25 (kod ve git geçmişi okunarak; tarayıcıda el
   - Düzeltme: ortayı savunmacı keser, top ondan sekip çizgiyi geçer, korneri hücum eden kullanır; aut (kale vuruşu) ve golde
     son dokunan hücumcu, sahne taç göstermez.
   - Kanıt: pitchScene.test.ts "top çizgiyi geçince son dokunan"; commit 5a81c0c.
-- [x] Kırmızı kart gören (ya da sakatlanıp aynı dakika çıkan) oyuncu sonuç karesinde topun yanında birden beliriyordu.
+- [x] Kırmızı kart gören oyuncu sonuç karesinde topun yanında birden beliriyordu.
   - Neden: motor oyuncuyu sahadan aldığı için önceki karelerde yoktu. Düzeltme: sonuç karesindeki yerinde önceki karelerde de durur.
   - Kanıt: pitchScene.test.ts "motorun sahadan aldığı (kırmızı kart gören) oyuncu".
+- [x] Değişiklikle çıkan sakat oyuncu topun yanına taşınıyordu (sakat kaleci rakip kaleye kadar koşuyordu; tester A-001).
+  - Düzeltme: sakat kendi yerinde yerde (değişiklikte girenin yerinde görünür). Kanıt: pitchScene.test.ts "sakatlanıp değişiklikle çıkan".
+- [x] Sahne içinde uzun top atan oyuncu bir sonraki yerine yetişemeyip kesiliyordu; sahne girişinde oyuncuların bir kısmı
+  süzülüp bir kısmı sönüyordu (tester A-002, A-003).
+  - Düzeltme: topun başındaki çekilemezse sonraki kare uzar; girişte çoğu yetişemiyorsa temiz sahne kesmesi, giriş 600 ms.
+  - Kanıt: pitchFlow.test.ts (8 maç, sahne içinde santra dışı kesme yok); 12 maçlık ölçüm: karışık girişte ortalama 12,9 → 3,8 oyuncu.
 
 ## Taktik
 - [x] Taktik saha görünümünde sürükle-bırak.

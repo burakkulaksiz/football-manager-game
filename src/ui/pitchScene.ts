@@ -45,6 +45,8 @@ export interface SceneFrame {
   subs?: PlaySub[];
   /** Değişiklikten önceki karelerde girenin yerinde çıkan oyuncu görünür: [giren, çıkan]. */
   standIns?: [number, number][];
+  /** Bu kareye geçiş süresi (ms), hareketin süresi yerine: vuruşsuz karede herkes yürüyerek yetişsin diye uzar. */
+  durationMs?: number;
 }
 
 export interface SetPiece {
@@ -70,10 +72,10 @@ function progress(side: Side, p: Point): number {
 }
 
 /** Hedef noktaya (o anki takım yerleşimine göre) en yakın takım arkadaşı; kaleci ve hariç tutulanlar dışında. */
-function nearestTeammate(match: MatchState, side: Side, target: Point, exclude: ReadonlySet<number>): number | null {
+function nearestTeammate(match: MatchState, side: Side, target: Point, exclude: ReadonlySet<number>, possession: Side = side): number | null {
   let best: number | null = null;
   let bestDist = Infinity;
-  for (const [id, p] of teamSpots(match, side, target, false, side)) {
+  for (const [id, p] of teamSpots(match, side, target, false, possession)) {
     if (exclude.has(id) || match.players[id]!.slot === 'GK') continue;
     const d = Math.hypot(p.x - target.x, p.y - target.y);
     if (d < bestDist) {
@@ -102,12 +104,13 @@ export function buildScene(match: MatchState, play: MatchPlay | null, minute: nu
     const pause: SceneFrame = { ball: ballSpot(play, minute), carrierId: null, carrierSide: play.side, placed: [], move: 'none' };
     const frames = substitutionFrames(match, subs, pause);
     frames[0]!.result = true;
+    paceRuns(match, frames);
     return frames;
   }
   const core = playFrames(match, play, minute);
   const result = core[core.length - 1]!;
   const scene = [...core];
-  if (play.card?.type === 'red') scene.push(sendOff(result, play.card.playerId, match.players[play.card.playerId]?.side ?? other(play.side)));
+  if (play.card?.type === 'red') scene.push(sendOff(match, result, play.card.playerId, match.players[play.card.playerId]?.side ?? other(play.side)));
   if (play.kind === 'goal') scene.push(...celebration(match, play, result));
   if (late.length > 0) {
     // Dakikanın sonundaki değişiklik: o ana kadar çıkan oyuncu sahada (girenin yerinde)
@@ -120,20 +123,103 @@ export function buildScene(match: MatchState, play: MatchPlay | null, minute: nu
     scene.push(...substitutionFrames(match, late, scene[scene.length - 1]!));
   }
   if (early.length > 0) scene.unshift(...substitutionFrames(match, early, core[0]!));
+  paceRuns(match, scene);
   return scene;
 }
 
-/** Değişiklikte oyuncuların girip çıktığı yer: orta çizginin hizasında, alt kenarın hemen dışı (yedek kulübesi). */
-const BENCH_Y = PITCH_WIDTH + 0.6;
+/**
+ * Kareler arası süzülmenin en yüksek ortalama hızı (m/ms). Daha uzun yol kare içinde koşulmaz (pitchMotion kesme yapar);
+ * sahne bu sınırı aşmayacak biçimde kurulur (paceRuns). Bilerek kesilenler: gol sonrası santra, başka dakikanın sahnesi.
+ */
+export const MAX_GLIDE_SPEED = 0.045;
+/** Vuruşsuz karenin en uzun süresi (ms; kırmızı kartla sahanın öbür ucundan kulübeye yürüyüş). */
+const MAX_WALK_MS = 2500;
+
+/**
+ * Işınlanma yok: vuruşlu karede (pas, şut…) kimse sınırdan hızlı koşmaz — topu alan, faulü yapan, kurtarışa uzanan
+ * önceki karelerde oraya doğru koşmaya başlar. Vuruşsuz kare (duran top kurulumu, sevinç, değişiklik, kırmızı kart)
+ * herkes yürüyerek yetişecek kadar uzar. Santra dizilişine geçiş bilerek kesmedir.
+ */
+function paceRuns(match: MatchState, scene: SceneFrame[]): void {
+  const spots = scene.map((f) => frameSpots(match, f, false));
+  const dist = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
+  /** `j` karesinde oyuncu, sonraki karedeki yerine (`target`) o karenin süresinde yetişebilecek yerde olsun. */
+  const pull = (j: number, id: number, target: { side: Side; at: Point }) => {
+    const f = scene[j];
+    const now = spots[j]?.get(id);
+    if (!f || !now) return;
+    const next = scene[j + 1]!;
+    const reach = MAX_GLIDE_SPEED * frameDurationMs(next) * 0.95;
+    const d = dist(now.at, target.at);
+    if (d <= reach) return;
+    // Topu taşıyan / duran topu kullanan topun başında kalır: sonraki kare yetişecek kadar uzar (uzar, kısalmaz:
+    // önceki kararlar geçerli kalır)
+    if (f.carrierId === id || f.setPiece?.takerId === id) {
+      next.durationMs = Math.min(MAX_WALK_MS, Math.ceil(d / (MAX_GLIDE_SPEED * 0.95)));
+      return;
+    }
+    const at = { x: target.at.x + ((now.at.x - target.at.x) * reach) / d, y: target.at.y + ((now.at.y - target.at.y) * reach) / d };
+    f.placed = [...f.placed.filter((p) => p.id !== id), { id, side: target.side, at }];
+    spots[j]!.set(id, { side: target.side, at });
+    pull(j - 1, id, { side: target.side, at });
+  };
+  for (let i = 1; i < scene.length; i++) {
+    if (scene[i]!.move !== 'none') for (const [id, s] of spots[i]!) pull(i - 1, id, s);
+  }
+  for (let i = 1; i < scene.length; i++) {
+    const f = scene[i]!;
+    if (f.move !== 'none' || (f.kickoff && !scene[i - 1]!.kickoff)) continue;
+    let far = 0;
+    for (const [id, s] of spots[i]!) {
+      const before = spots[i - 1]!.get(id);
+      if (before) far = Math.max(far, dist(before.at, s.at));
+    }
+    const need = Math.ceil(far / (MAX_GLIDE_SPEED * 0.95));
+    if (need > frameDurationMs(f)) f.durationMs = Math.min(MAX_WALK_MS, need);
+  }
+}
+
+/**
+ * İkinci yarıda (ve maç bitince) takımlar yer değiştirmiştir: ekranda ev sahibi sola hücum eder.
+ * Uzatma devresi yok (eşitlikte doğrudan penaltılar); uzatma dakikaları kendi yarısının yönünde oynanır.
+ */
+export function sidesSwapped(match: Pick<MatchState, 'period'>): boolean {
+  return match.period === 'second' || match.period === 'full';
+}
+
+/** Mantıksal sahadan (ev sahibi sağa hücum eder) ekrana: yer değişince saha 180° döner (oyuncuların sağı / solu korunur). */
+export function turnPoint(p: Point, swapped: boolean): Point {
+  return swapped ? { x: PITCH_LENGTH - p.x, y: PITCH_WIDTH - p.y } : p;
+}
+
+/**
+ * Ekranda gösterilecek sahne: karelerin topu ve herkesin yeri (frameSpots) ekran yönünde.
+ * Sahne mantıksal sahada kurulur; ikinci yarıda burada döndürülür.
+ */
+export function viewScene(match: MatchState, scene: readonly SceneFrame[], kickoff: boolean): { frames: SceneFrame[]; spots: Map<number, { side: Side; at: Point }>[] } {
+  const swapped = sidesSwapped(match);
+  const spots = scene.map((f) => {
+    const s = frameSpots(match, f, kickoff);
+    if (swapped) for (const v of s.values()) v.at = turnPoint(v.at, true);
+    return s;
+  });
+  return { frames: scene.map((f) => (swapped ? { ...f, ball: turnPoint(f.ball, true) } : f)), spots };
+}
+
+/**
+ * Değişiklikte oyuncuların girip çıktığı yer: orta çizginin hizasında, ekranın alt kenarının hemen dışı (yedek kulübesi).
+ * İkinci yarıda saha döndürülerek çizildiğinden mantıksal sahada karşı kenar.
+ */
+const benchY = (match: MatchState) => (sidesSwapped(match) ? -0.6 : PITCH_WIDTH + 0.6);
 const BENCH_X = PITCH_LENGTH / 2;
 
 /** Kırmızı kart: atılan oyuncu yedek kulübesinin önünden sahayı terk eder. */
-function sendOff(result: SceneFrame, playerId: number, side: Side): SceneFrame {
+function sendOff(match: MatchState, result: SceneFrame, playerId: number, side: Side): SceneFrame {
   return {
     ...result,
     result: undefined,
     move: 'none',
-    placed: [...result.placed.filter((p) => p.id !== playerId), { id: playerId, side, at: { x: BENCH_X, y: BENCH_Y } }],
+    placed: [...result.placed.filter((p) => p.id !== playerId), { id: playerId, side, at: { x: BENCH_X, y: benchY(match) } }],
   };
 }
 
@@ -158,13 +244,14 @@ function substitutionFrames(match: MatchState, subs: readonly PlaySub[], base: S
   const walk: SceneFrame = { ...still, placed: [] };
   const swap: SceneFrame = { ...still, placed: [] };
   const enter: SceneFrame = { ...still, placed: [] };
+  const y = benchY(match);
   subs.forEach((s, i) => {
     // Aynı anda birden çok değişiklik: kenar boyunca yan yana
     const x = BENCH_X + (i - (subs.length - 1) / 2) * 6;
-    const outAt = { x: x - 1.5, y: BENCH_Y };
-    const inAt = { x: x + 1.5, y: BENCH_Y };
+    const outAt = { x: x - 1.5, y };
+    const inAt = { x: x + 1.5, y };
     // Girenin sahadaki yeri, çıkanın oynadığı yerdir
-    const spot = field.get(s.inId)?.at ?? { x, y: PITCH_WIDTH - 6 };
+    const spot = field.get(s.inId)?.at ?? { x, y: clamp(y, 6, PITCH_WIDTH - 6) };
     walk.placed.push({ id: s.outId, side: s.side, at: toward(spot, outAt, 0.5) }, { id: s.inId, side: s.side, at: inAt });
     swap.placed.push({ id: s.outId, side: s.side, at: outAt }, { id: s.inId, side: s.side, at: toward(inAt, spot, 0.35) });
   });
@@ -226,9 +313,19 @@ function playFrames(match: MatchState, play: MatchPlay, minute: number): SceneFr
     frames.push({ ball, carrierId: id, carrierSide: side, placed: [], move: 'none', setPiece });
     return setPiece;
   };
-  /** Top savunmadan seker, kale çizgisini geçip dışarı çıkar: korner kurulumu topun dışarıda olduğu görüldükten sonra. */
-  const ballOut = (y: number) => {
-    frames.push({ ball: at(side, PITCH_LENGTH + 1.5, y), carrierId: null, carrierSide: side, placed: [], move: 'pass' });
+  /**
+   * Korner kazanılır: kale çizgisine inen hücumcunun ortası savunmacıya çarpar (son dokunan savunan takım), top çizgiyi
+   * geçer; korner kararı (sonuç) bu karede, kurulumu topun dışarıda olduğu görüldükten sonra (korneri hücum eden kullanır).
+   */
+  const wonCorner = (y: number) => {
+    passTo(at(side, 92 + h(4) * 6, y < MID_Y ? 6 : PITCH_WIDTH - 6));
+    const from = lastFrame().ball;
+    const block = at(side, progress(side, from) + 3, from.y + (MID_Y - from.y) * 0.2);
+    const blocker = nearestTeammate(match, opp, block, new Set(), side);
+    const blocked = blocker === null ? [] : [{ id: blocker, side: opp, at: block }];
+    frames.push({ ball: block, carrierId: null, carrierSide: side, placed: blocked, move: 'pass' });
+    // Savunmacı çarptığı yerde kalır (top dışarı giderken)
+    frames.push({ ball: at(side, PITCH_LENGTH + 1.5, y), carrierId: null, carrierSide: side, placed: [...blocked], move: 'pass' });
   };
 
   switch (play.kind) {
@@ -264,9 +361,8 @@ function playFrames(match: MatchState, play: MatchPlay, minute: number): SceneFr
     case 'corner': {
       buildUp(1);
       passTo(at(side, 70 + h(3) * 8, final.y < MID_Y ? 12 : PITCH_WIDTH - 12));
-      passTo(at(side, 92 + h(4) * 6, final.y < MID_Y ? 6 : PITCH_WIDTH - 6));
       // Korner kararı top çizgiyi geçince (sonuç bu karede); sonra kullanacak oyuncu bayrağa, ceza sahası dolar
-      ballOut(final.y < MID_Y ? 8 + h(15) * 10 : PITCH_WIDTH - 8 - h(15) * 10);
+      wonCorner(final.y < MID_Y ? 8 + h(15) * 10 : PITCH_WIDTH - 8 - h(15) * 10);
       lastFrame().result = true;
       setUp(final, null, 'corner');
       break;
@@ -294,7 +390,7 @@ function playFrames(match: MatchState, play: MatchPlay, minute: number): SceneFr
       } else if (play.fromCorner) {
         // Korner: bayraktan orta, kafayı vuran altıpas önünde
         buildUp(1);
-        ballOut(origin.y < MID_Y ? 8 + h(15) * 10 : PITCH_WIDTH - 8 - h(15) * 10);
+        wonCorner(origin.y < MID_Y ? 8 + h(15) * 10 : PITCH_WIDTH - 8 - h(15) * 10);
         const flag = at(side, 104.6, origin.y < MID_Y ? 0.6 : PITCH_WIDTH - 0.6);
         // Kafayı vuran korneri kullanamaz (bayraktan altıpasa ışınlanmasın)
         if (play.playerId !== null) used.add(play.playerId);
@@ -336,24 +432,22 @@ function playFrames(match: MatchState, play: MatchPlay, minute: number): SceneFr
     }
   }
 
-  // Kart: sahadan atılan, sonuç karesinde topun yanında görünür; sahadaki kendi yerinde kalır (kart dakikanın önceki
-  // faulünden şuta taşınmış olabilir: top kaleye giderken tek başına yarım saha koşmasın)
+  // Kart: kırmızıyla motorun sahadan aldığı oyuncu sonuç karesinde topun yanında görünür, önceki karelerde de orada durur
+  // (birden belirmesin). Sahadaysa kendi yerinde kalır (kart dakikanın önceki faulünden şuta taşınmış olabilir: top kaleye
+  // giderken tek başına yarım saha koşmasın)
   if (play.card) {
+    const { playerId } = play.card;
+    const cardSide = match.players[playerId]?.side ?? opp;
     const last = resultFrame();
-    const cardSide = match.players[play.card.playerId]?.side ?? opp;
-    if (!match[cardSide].onPitch.includes(play.card.playerId) && !last.placed.some((p) => p.id === play.card!.playerId)) {
-      last.placed.push({ id: play.card.playerId, side: cardSide, at: { x: last.ball.x + (cardSide === 'home' ? -1.8 : 1.8), y: last.ball.y - 1.4 } });
+    if (!match[cardSide].onPitch.includes(playerId)) {
+      // Faulü yapan zaten topun yanına konmuştur
+      const spot = last.placed.find((p) => p.id === playerId)?.at ?? { x: last.ball.x + (cardSide === 'home' ? -1.8 : 1.8), y: last.ball.y - 1.4 };
+      for (const f of frames) if (!f.placed.some((p) => p.id === playerId)) f.placed.push({ id: playerId, side: cardSide, at: spot });
     }
   }
-  // Sakatlık: sonuç karesinde oyuncu yerde (değişiklikle çıkmış olsa da o an görünür)
-  if (play.injuredId !== undefined) {
-    const last = resultFrame();
-    last.injuredId = play.injuredId;
-    const injuredSide = match.players[play.injuredId]?.side ?? side;
-    if (!match[injuredSide].onPitch.includes(play.injuredId) && !last.placed.some((p) => p.id === play.injuredId)) {
-      last.placed.push({ id: play.injuredId, side: injuredSide, at: { x: last.ball.x + (injuredSide === 'home' ? -3 : 3), y: last.ball.y + 2 } });
-    }
-  }
+  // Sakatlık: sonuç karesinde oyuncu kendi yerinde yerde. Motor sakatı yalnızca değişiklikle sahadan alır; o zaman
+  // dakikanın sonuna kadar girenin yerinde görünür (buildScene: standIns)
+  if (play.injuredId !== undefined) resultFrame().injuredId = play.injuredId;
   const core = frames.slice(-MAX_PLAY_FRAMES);
   core[0]!.move = 'none';
   if (!core.some((f) => f.result)) core[core.length - 1]!.result = true;
@@ -377,7 +471,8 @@ function shapeBallPaths(frames: SceneFrame[], play: MatchPlay, minute: number): 
     const sign = h(0) < 0.5 ? -1 : 1;
     const distance = Math.hypot(f.ball.x - from.x, f.ball.y - from.y);
     if (f.move === 'pass') {
-      const intoBox = progress(side, f.ball) > 84 && Math.abs(f.ball.y - MID_Y) < 22;
+      // Kale çizgisini geçen top (savunmacıdan seken) orta değildir
+      const intoBox = progress(side, f.ball) > 84 && progress(side, f.ball) <= PITCH_LENGTH && Math.abs(f.ball.y - MID_Y) < 22;
       if (frames[i - 1]!.setPiece?.kind === 'corner' && intoBox) {
         f.move = 'cross';
         f.height = 6.5 + h(1) * 2;
@@ -466,8 +561,8 @@ export function revealIndex(scene: readonly SceneFrame[]): number {
 export const SCENE_FRAME_MS = 750;
 /** Son kare (etiketiyle) ekranda kalma süresi (ms). */
 export const SCENE_HOLD_MS = 1500;
-/** Sahne başında oyuncuların ilk kareye süzülmesi / belirmesi (ms). */
-export const LEAD_IN_MS = 400;
+/** Sahne başında oyuncuların ilk kareye süzülmesi / belirmesi (ms; art arda anlarda yakındakiler yürüyerek yetişsin). */
+export const LEAD_IN_MS = 600;
 
 /** Topun bu kareye gelme süresi, hareketine göre: şut hızlı, orta / uzun pas / top sürme daha uzun. */
 const MOVE_MS: Record<FrameMove, number> = { none: 700, pass: 750, lob: 950, cross: 1000, dribble: 950, shot: 520 };
@@ -476,6 +571,7 @@ export const PENALTY_SETUP_MS = 1300;
 
 /** Önceki kareden bu kareye geçiş süresi (ms). */
 export function frameDurationMs(frame: SceneFrame): number {
+  if (frame.durationMs !== undefined) return frame.durationMs;
   if (frame.subs) return SCENE_FRAME_MS;
   if (frame.setPiece?.kind === 'penalty' && frame.move === 'none') return PENALTY_SETUP_MS;
   // Gol sevinci koşusu ve santra dizilişi yürüyerek

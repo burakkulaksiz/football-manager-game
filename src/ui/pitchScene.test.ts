@@ -17,6 +17,8 @@ import {
   revealIndex,
   SCENE_HOLD_MS,
   sceneDurationMs,
+  sidesSwapped,
+  viewScene,
 } from './pitchScene';
 
 const world = createWorld(gameData, 3, 'galatasaray', '2026-07-01');
@@ -214,6 +216,41 @@ describe('2D saha sahnesi', () => {
     }
   });
 
+  it('top çizgiyi geçince son dokunan: kornerde savunan (korneri hücum eden kullanır), autta ve golde hücumcu; taç yok', () => {
+    const seen = { corner: 0, miss: 0 };
+    for (const { minute, play, state } of plays.filter((p) => isHighlight(p.play))) {
+      const scene = buildScene(state, play, minute);
+      scene.forEach((f, i) => {
+        // Sahne topu yan çizgiden çıkarmaz (taç gösterilmez)
+        expect(f.ball.y).toBeGreaterThanOrEqual(0);
+        expect(f.ball.y).toBeLessThanOrEqual(PITCH_WIDTH);
+        const out = (x: number) => x < 0 || x > PITCH_LENGTH;
+        const prev = scene[i - 1];
+        if (!prev || !out(f.ball.x) || out(prev.ball.x)) return;
+        // Son dokunan: önceki karede topa vuran (taşıyıcı), yoksa topa en yakın oyuncu (savunmacı topa çarptıysa topun yerinde)
+        const spots = frameSpots(state, prev, false);
+        const [nearest] = [...spots]
+          .map(([id, s]) => ({ id, side: s.side, d: Math.hypot(s.at.x - prev.ball.x, s.at.y - prev.ball.y) }))
+          .sort((a, b) => a.d - b.d);
+        const toucher = prev.carrierId !== null ? { id: prev.carrierId, side: spots.get(prev.carrierId)!.side } : nearest!;
+        if (prev.carrierId === null) expect(nearest!.d).toBeLessThan(1);
+        const corner = scene[i + 1]?.setPiece?.kind === 'corner' ? scene[i + 1]!.setPiece! : null;
+        if (corner) {
+          seen.corner++;
+          expect(toucher.side).not.toBe(play.side);
+          expect(corner.side).toBe(play.side);
+          expect(state.players[corner.takerId!]!.side).toBe(play.side);
+        } else {
+          // Aut (kale vuruşu) ya da gol: şutu çeken hücumcu
+          if (play.kind === 'miss') seen.miss++;
+          expect(toucher.side).toBe(play.side);
+        }
+      });
+    }
+    expect(seen.corner).toBeGreaterThan(3);
+    expect(seen.miss).toBeGreaterThan(3);
+  });
+
   it('serbest vuruş: topa 9.15 m uzaklıkta 4 kişilik baraj, kullanan topun başında', () => {
     const m = match();
     const taker = m.away.onPitch.find((id) => m.players[id]!.slot === 'AMC' || m.players[id]!.slot === 'MC')!;
@@ -262,6 +299,24 @@ describe('2D saha sahnesi', () => {
     expect(frameSpots(m, last, false).has(injured)).toBe(true);
   });
 
+  it('sakatlanıp değişiklikle çıkan oyuncu (kaleci) sonuca kadar kendi yerinde yerde; topun yanına taşınmaz', () => {
+    const m = match();
+    m.period = 'first';
+    m.minute = 7;
+    m.away.userControlled = false;
+    const keeper = m.away.onPitch.find((id) => m.players[id]!.slot === 'GK')!;
+    const inId = m.away.bench[0]!;
+    expect(substitute(m, world.players, 'away', keeper, inId)).toBe(true);
+    m.pendingSubs = [];
+    const shooter = m.home.onPitch.find((id) => m.players[id]!.slot === 'ST')!;
+    const play: MatchPlay = { side: 'away', kind: 'miss', playerId: m.away.onPitch.find((id) => m.players[id]!.slot === 'ST') ?? shooter, injuredId: keeper, subs: [{ side: 'away', outId: keeper, inId }] };
+    const scene = buildScene(m, play, 7);
+    const reveal = revealIndex(scene);
+    expect(scene[reveal]!.injuredId).toBe(keeper);
+    // Deplasman kalesi mantıksal sahada sağda (x = 105): kaleci hiçbir karede orta çizgiyi geçmez
+    for (const f of scene.slice(0, reveal + 1)) expect(frameSpots(m, f, false).get(keeper)!.at.x).toBeGreaterThan(PITCH_LENGTH - 20);
+  });
+
   it('dakika sonundaki değişiklik: önce çıkan oyuncu oynar, sonra kenarda değişir, giren yerine geçer', () => {
     const m = match();
     const outId = m.home.onPitch.find((id) => m.players[id]!.slot === 'MC')!;
@@ -282,14 +337,13 @@ describe('2D saha sahnesi', () => {
       expect(spots.has(outId)).toBe(true);
       expect(spots.has(inId)).toBe(false);
     }
-    const [walk, swap, enter] = scene.slice(-3);
-    expect(walk!.subs).toEqual([sub]);
-    // Kenarda (alt çizginin dışı) buluşurlar
-    expect(frameSpots(m, swap!, false).get(outId)!.at.y).toBeGreaterThan(PITCH_WIDTH);
-    expect(frameSpots(m, walk!, false).get(inId)!.at.y).toBeGreaterThan(PITCH_WIDTH);
-    const end = frameSpots(m, enter!, false);
-    expect(end.has(outId)).toBe(false);
-    expect(end.get(inId)!.at.y).toBeLessThan(PITCH_WIDTH);
+    expect(scene.at(-3)!.subs).toEqual([sub]);
+    // Kenarda (ekranda alt çizginin dışı; ikinci yarıda saha dönük çizilir) buluşurlar
+    const [walk, swap, end] = viewScene(m, scene, false).spots.slice(-3);
+    expect(swap!.get(outId)!.at.y).toBeGreaterThan(PITCH_WIDTH);
+    expect(walk!.get(inId)!.at.y).toBeGreaterThan(PITCH_WIDTH);
+    expect(end!.has(outId)).toBe(false);
+    expect(end!.get(inId)!.at.y).toBeLessThan(PITCH_WIDTH);
   });
 
   it('kullanıcının dakikalar arasındaki değişikliği sıradaki dakikanın sahnesinin başında görünür', () => {
@@ -315,6 +369,44 @@ describe('2D saha sahnesi', () => {
     const subs = all.flatMap((p) => p.play.subs ?? []);
     expect(subs.length).toBeGreaterThan(0);
     for (const s of subs) expect(s.early).toBeUndefined();
+  });
+
+  it('devre arasından sonra taraflar yer değiştirir: ekranda ev sahibi sola hücum eder, kanatlar ve kulübe tutarlı', () => {
+    const m = match();
+    const shooter = m.home.onPitch.find((id) => m.players[id]!.slot === 'ST')!;
+    const back = m.home.onPitch.find((id) => m.players[id]!.slot === 'DR')!;
+    const goal: MatchPlay = { side: 'home', kind: 'goal', playerId: shooter };
+    const screen = (period: MatchState['period'], minute: number, play: MatchPlay | null) => {
+      m.period = period;
+      m.minute = minute;
+      return viewScene(m, buildScene(m, play, minute), play === null);
+    };
+    expect([sidesSwapped({ period: 'pre' }), sidesSwapped({ period: 'first' }), sidesSwapped({ period: 'half' })]).toEqual([false, false, false]);
+    expect([sidesSwapped({ period: 'second' }), sidesSwapped({ period: 'full' })]).toEqual([true, true]);
+    // İlk yarıda ev sahibinin golü sağ kaleye, ikinci yarıda sol kaleye
+    const first = screen('first', 30, goal);
+    const second = screen('second', 70, goal);
+    expect(first.frames[revealIndex(first.frames)]!.ball.x).toBeGreaterThan(PITCH_LENGTH);
+    expect(second.frames[revealIndex(second.frames)]!.ball.x).toBeLessThan(0);
+    // İkinci yarı santrası: ev sahibi sağ yarıda; sağ bek hücum yönünün sağında (ekranda yukarıda)
+    const kickoff = screen('second', 45, null).spots[0]!;
+    for (const [, p] of kickoff) {
+      if (p.side === 'home') expect(p.at.x).toBeGreaterThanOrEqual(PITCH_LENGTH / 2);
+      else expect(p.at.x).toBeLessThanOrEqual(PITCH_LENGTH / 2);
+    }
+    expect(kickoff.get(back)!.at.y).toBeLessThan(PITCH_WIDTH / 2);
+    expect(screen('pre', 0, null).spots[0]!.get(back)!.at.y).toBeGreaterThan(PITCH_WIDTH / 2);
+  });
+
+  it('motorun sahadan aldığı (kırmızı kart gören) oyuncu sonuç karesinden önce de aynı yerde görünür, birden belirmez', () => {
+    const m = match();
+    const red = m.away.onPitch.find((id) => m.players[id]!.slot === 'DC')!;
+    // Motor gibi: kırmızı kartla atılan sahadan çıkar
+    m.away.onPitch = m.away.onPitch.filter((id) => id !== red);
+    const scene = buildScene(m, { side: 'home', kind: 'foul', playerId: null, defenderId: red, card: { playerId: red, type: 'red' } }, 30);
+    const reveal = revealIndex(scene);
+    const at = frameSpots(m, scene[reveal]!, false).get(red)!.at;
+    for (const f of scene.slice(0, reveal + 1)) expect(frameSpots(m, f, false).get(red)?.at).toEqual(at);
   });
 
   it('kırmızı kart gören oyuncu sonuçtan sonra kenara yürüyerek sahayı terk eder', () => {

@@ -56,7 +56,10 @@ export interface MatchMapsProps {
   compact?: boolean;
 }
 
-/** Şut haritası ve ısı haritası (aynı saha üstünde, sekmeyle). Ev sahibi sağa hücum eder. */
+/**
+ * Şut haritası ve ısı haritası (aynı saha üstünde, sekmeyle). İki yarı tek haritada: ev sahibi hep sağa hücum eder
+ * (canlı sahada ikinci yarıda taraflar yer değiştirir; haritada karışmasın diye çevrilir).
+ */
 export function MatchMaps({ shots, timeline, home, away, nameOf, compact = false }: MatchMapsProps) {
   const [mode, setMode] = useState<Mode>('shots');
   const [team, setTeam] = useState<TeamFilter>('both');
@@ -71,6 +74,7 @@ export function MatchMaps({ shots, timeline, home, away, nameOf, compact = false
   const visible = (side: Side) => team === 'both' || team === side;
   const names: Record<Side, string> = { home: home.name, away: away.name };
   const terr = territory(points);
+  const direction = `İki yarı birlikte: ${home.shortName} sağa hücum eder.`;
   const summary = (side: Side) => {
     const s = shotSummary(shots, side);
     return `${s.shots} şut · ${s.onTarget} isabet · ${s.goals} gol`;
@@ -131,6 +135,7 @@ export function MatchMaps({ shots, timeline, home, away, nameOf, compact = false
           {(['home', 'away'] as const).filter(visible).map((side) => (
             <span key={side}><i className="legend-dot" style={{ background: colors[side] }} /> {names[side]}: {summary(side)}</span>
           ))}
+          <span className="muted">{direction}</span>
           {!compact && (
             <span className="muted legend-keys">
               <svg viewBox="-2 -2 4 4" className="legend-icon"><circle r={1.5} fill="#fff" /></svg> gol
@@ -146,6 +151,7 @@ export function MatchMaps({ shots, timeline, home, away, nameOf, compact = false
           <span>
             Topun yeri (dakika payı): {home.shortName} kalesi önü %{terr.own} · orta saha %{terr.middle} · {away.shortName} kalesi önü %{terr.opp}
           </span>
+          <span className="muted">{direction}</span>
           {!compact && <span className="muted">Her dakika topun nerede olduğu, o an topa sahip takımın renginde.</span>}
         </div>
       )}

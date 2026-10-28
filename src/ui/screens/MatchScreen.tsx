@@ -123,24 +123,13 @@ function useGoalFlash(total: number): boolean {
  */
 function useMatchSound(match: MatchState | null, held: Held | null, running: boolean): () => void {
   const settings = useGameStore((s) => s.settings);
-  const s = { sound: settings.sound && settings.matchSpeed !== 'veryFast', soundVolume: settings.soundVolume };
+  const s = { ...settings, sound: settings.sound && settings.matchSpeed !== 'veryFast' };
   const shown = match ? shownEvents(match, held).length : 0;
   const cursor = useRef<ReturnType<typeof createEventCursor> | null>(null);
   cursor.current ??= createEventCursor(shown);
   useEffect(() => {
     for (const id of cursor.current!.next(match?.events ?? [], shown)) sound.play(id, s);
   }, [shown, match]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Tarayıcının oto-oynatma kuralı: bağlam ilk tıklama / tuşta kurulup sürdürülür
-  useEffect(() => {
-    const unlock = () => sound.unlock(s);
-    window.addEventListener('pointerdown', unlock, true);
-    window.addEventListener('keydown', unlock, true);
-    return () => {
-      window.removeEventListener('pointerdown', unlock, true);
-      window.removeEventListener('keydown', unlock, true);
-    };
-  }, [s.sound, s.soundVolume]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const live = running && (match?.period === 'first' || match?.period === 'second');
   useEffect(() => {

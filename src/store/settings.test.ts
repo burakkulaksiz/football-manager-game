@@ -21,6 +21,9 @@ describe('parseSettings', () => {
     expect(parseSettings({ matchSpeed: 'fast' }).sound).toBe(true);
     expect(parseSettings({ sound: false, soundVolume: 'high' })).toMatchObject({ sound: false, soundVolume: 'high' });
     expect(parseSettings({ sound: 1, soundVolume: 90 })).toMatchObject({ sound: true, soundVolume: 'medium' });
+    expect(parseSettings({}).menuSound).toBe('events');
+    expect(parseSettings({ menuSound: 'all' }).menuSound).toBe('all');
+    expect(parseSettings({ menuSound: 'loud' }).menuSound).toBe('events');
   });
 });
 

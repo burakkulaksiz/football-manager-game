@@ -215,7 +215,16 @@ export function SettingsPanel() {
             field="sound"
             options={ON_OFF}
             extra={<SoundTest />}
-            hint="Maçta düdük, gol sevinci ve tribün uğultusu (maçta V ile açıp kapatabilirsin). Çok hızlı maçta ve Anında Sonuçlandır'da ses çalmaz. Sesi dene, ayar kapalıyken de çalar."
+            hint="Bütün sesler: maçta düdük, gol sevinci, kaçan pozisyonda tribün, stadyum uğultusu (maçta V ile açıp kapatabilirsin). Çok hızlı maçta ve Anında Sonuçlandır'da maç sesi çalmaz. Sesi dene, ayar kapalıyken de çalar."
+          />
+          <Choice
+            label="Maç Dışı Sesler"
+            field="menuSound"
+            options={[
+              { value: 'off', label: 'Kapalı', hint: 'Ses yalnızca maçta.' },
+              { value: 'events', label: 'Önemli olaylar', hint: 'Devam\'ı durduran haber, kulübe transfer, kupa / şampiyonluk, iş teklifi ve kovulma.' },
+              { value: 'all', label: '+ Tıklamalar', hint: 'Önemli olaylar ve düğmelerde hafif tıklama sesi.' },
+            ]}
           />
           <Choice
             label="Ses Düzeyi"

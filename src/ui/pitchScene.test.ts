@@ -380,6 +380,17 @@ describe('2D saha sahnesi', () => {
     expect(screen('pre', 0, null).spots[0]!.get(back)!.at.y).toBeGreaterThan(PITCH_WIDTH / 2);
   });
 
+  it('motorun sahadan aldığı (kırmızı kart gören) oyuncu sonuç karesinden önce de aynı yerde görünür, birden belirmez', () => {
+    const m = match();
+    const red = m.away.onPitch.find((id) => m.players[id]!.slot === 'DC')!;
+    // Motor gibi: kırmızı kartla atılan sahadan çıkar
+    m.away.onPitch = m.away.onPitch.filter((id) => id !== red);
+    const scene = buildScene(m, { side: 'home', kind: 'foul', playerId: null, defenderId: red, card: { playerId: red, type: 'red' } }, 30);
+    const reveal = revealIndex(scene);
+    const at = frameSpots(m, scene[reveal]!, false).get(red)!.at;
+    for (const f of scene.slice(0, reveal + 1)) expect(frameSpots(m, f, false).get(red)?.at).toEqual(at);
+  });
+
   it('kırmızı kart gören oyuncu sonuçtan sonra kenara yürüyerek sahayı terk eder', () => {
     const m = match();
     const red = m.away.onPitch.find((id) => m.players[id]!.slot === 'DC')!;

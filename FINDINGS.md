@@ -37,6 +37,24 @@ Son gözden geçirme: 2026-10-25 (kod ve git geçmişi okunarak; tarayıcıda el
   - Doğrulama: --u = 6 / 9 / 14 / 20 / 40 px boyutlarında ekran görüntüsü; 9 px ve üstünde futbol topu olarak okunuyor. Yamalar yuvarlak (beşgen değil); topun sahadaki boyutunda fark edilmiyor.
 - [x] Maç bittikten sonra denge çubuğunda "Galatasaray atakta" gibi yazılar çıkmasın; maçın bittiğini ifade etsin.
   - Kanıt: "maç sonu baskı çubuğu"; commit aca73d5.
+- [x] Işınlanma hâlâ var: oyuncular / top kareler arasında sıçrıyor.
+  - Neden (ölçüldü): sahneler arası giriş 400 ms'de 80 m'ye kadar süzülüyordu (kare başına 6 m), top girişte anında 85 m
+    sıçrıyordu; gol sevincinden santraya 90 m / 900 ms; duran top kurulumu, değişiklik, sevinç koşusu, pası alan ve faul
+    yapan da hız sınırını aşıyordu.
+  - Düzeltme: hız sınırını aşan yol kesilir (solar / belirir), sahne sınırı aşmayacak tempoda kurulur (paceRuns); docs/match-pitch.md.
+  - Kanıt: src/ui/pitchFlow.test.ts (gerçek motorla 6 maç, 16 ms adım: görünen oyuncu / top kare başına ≤ 1,5 m; eski kodda
+    5,1 m'de kırılıyor); commit 749b54b.
+- [x] Devre arasından sonra takımlar saha yarısı değiştirmiyor.
+  - Düzeltme: ikinci yarıda saha ekranda 180° döner (viewScene); gol filesi, baskı çubuğu, yedek kulübesi tutarlı.
+    Şut / ısı haritası maçın tamamı için tek yönde kalır (notla). Uzatma devresi motorda yok.
+  - Kanıt: pitchScene.test.ts "devre arasından sonra taraflar yer değiştirir"; commit 749b54b.
+- [x] Kornere çıkış yanlış: top hücumcudan çıkıp hücum eden takım korner kullanıyordu.
+  - Düzeltme: ortayı savunmacı keser, top ondan sekip çizgiyi geçer, korneri hücum eden kullanır; aut (kale vuruşu) ve golde
+    son dokunan hücumcu, sahne taç göstermez.
+  - Kanıt: pitchScene.test.ts "top çizgiyi geçince son dokunan"; commit 5a81c0c.
+- [x] Kırmızı kart gören (ya da sakatlanıp aynı dakika çıkan) oyuncu sonuç karesinde topun yanında birden beliriyordu.
+  - Neden: motor oyuncuyu sahadan aldığı için önceki karelerde yoktu. Düzeltme: sonuç karesindeki yerinde önceki karelerde de durur.
+  - Kanıt: pitchScene.test.ts "motorun sahadan aldığı (kırmızı kart gören) oyuncu".
 
 ## Taktik
 - [x] Taktik saha görünümünde sürükle-bırak.

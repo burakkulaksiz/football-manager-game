@@ -426,23 +426,23 @@ function playFrames(match: MatchState, play: MatchPlay, minute: number): SceneFr
     }
   }
 
-  // Kart: sahadan atılan, sonuç karesinde topun yanında görünür; sahadaki kendi yerinde kalır (kart dakikanın önceki
-  // faulünden şuta taşınmış olabilir: top kaleye giderken tek başına yarım saha koşmasın)
-  if (play.card) {
+  /**
+   * Motorun sahadan aldığı oyuncu (kırmızı kart, sakatlanıp çıkan) sonuç karesinde `offset` kadar topun yanında görünür;
+   * önceki karelerde de orada durur (birden belirmesin). Sahadaysa kendi yerinde kalır (kart dakikanın önceki faulünden
+   * şuta taşınmış olabilir: top kaleye giderken tek başına yarım saha koşmasın).
+   */
+  const keepInView = (id: number, playerSide: Side, dx: number, dy: number) => {
     const last = resultFrame();
-    const cardSide = match.players[play.card.playerId]?.side ?? opp;
-    if (!match[cardSide].onPitch.includes(play.card.playerId) && !last.placed.some((p) => p.id === play.card!.playerId)) {
-      last.placed.push({ id: play.card.playerId, side: cardSide, at: { x: last.ball.x + (cardSide === 'home' ? -1.8 : 1.8), y: last.ball.y - 1.4 } });
-    }
-  }
+    if (match[playerSide].onPitch.includes(id)) return;
+    // Faulü yapan zaten topun yanına konmuştur
+    const spot = last.placed.find((p) => p.id === id)?.at ?? { x: last.ball.x + (playerSide === 'home' ? -dx : dx), y: last.ball.y + dy };
+    for (const f of frames) if (!f.placed.some((p) => p.id === id)) f.placed.push({ id, side: playerSide, at: spot });
+  };
+  if (play.card) keepInView(play.card.playerId, match.players[play.card.playerId]?.side ?? opp, 1.8, -1.4);
   // Sakatlık: sonuç karesinde oyuncu yerde (değişiklikle çıkmış olsa da o an görünür)
   if (play.injuredId !== undefined) {
-    const last = resultFrame();
-    last.injuredId = play.injuredId;
-    const injuredSide = match.players[play.injuredId]?.side ?? side;
-    if (!match[injuredSide].onPitch.includes(play.injuredId) && !last.placed.some((p) => p.id === play.injuredId)) {
-      last.placed.push({ id: play.injuredId, side: injuredSide, at: { x: last.ball.x + (injuredSide === 'home' ? -3 : 3), y: last.ball.y + 2 } });
-    }
+    resultFrame().injuredId = play.injuredId;
+    keepInView(play.injuredId, match.players[play.injuredId]?.side ?? side, 3, 2);
   }
   const core = frames.slice(-MAX_PLAY_FRAMES);
   core[0]!.move = 'none';

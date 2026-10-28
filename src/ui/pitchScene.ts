@@ -72,10 +72,10 @@ function progress(side: Side, p: Point): number {
 }
 
 /** Hedef noktaya (o anki takım yerleşimine göre) en yakın takım arkadaşı; kaleci ve hariç tutulanlar dışında. */
-function nearestTeammate(match: MatchState, side: Side, target: Point, exclude: ReadonlySet<number>): number | null {
+function nearestTeammate(match: MatchState, side: Side, target: Point, exclude: ReadonlySet<number>, possession: Side = side): number | null {
   let best: number | null = null;
   let bestDist = Infinity;
-  for (const [id, p] of teamSpots(match, side, target, false, side)) {
+  for (const [id, p] of teamSpots(match, side, target, false, possession)) {
     if (exclude.has(id) || match.players[id]!.slot === 'GK') continue;
     const d = Math.hypot(p.x - target.x, p.y - target.y);
     if (d < bestDist) {
@@ -307,9 +307,19 @@ function playFrames(match: MatchState, play: MatchPlay, minute: number): SceneFr
     frames.push({ ball, carrierId: id, carrierSide: side, placed: [], move: 'none', setPiece });
     return setPiece;
   };
-  /** Top savunmadan seker, kale çizgisini geçip dışarı çıkar: korner kurulumu topun dışarıda olduğu görüldükten sonra. */
-  const ballOut = (y: number) => {
-    frames.push({ ball: at(side, PITCH_LENGTH + 1.5, y), carrierId: null, carrierSide: side, placed: [], move: 'pass' });
+  /**
+   * Korner kazanılır: kale çizgisine inen hücumcunun ortası savunmacıya çarpar (son dokunan savunan takım), top çizgiyi
+   * geçer; korner kararı (sonuç) bu karede, kurulumu topun dışarıda olduğu görüldükten sonra (korneri hücum eden kullanır).
+   */
+  const wonCorner = (y: number) => {
+    passTo(at(side, 92 + h(4) * 6, y < MID_Y ? 6 : PITCH_WIDTH - 6));
+    const from = lastFrame().ball;
+    const block = at(side, progress(side, from) + 3, from.y + (MID_Y - from.y) * 0.2);
+    const blocker = nearestTeammate(match, opp, block, new Set(), side);
+    const blocked = blocker === null ? [] : [{ id: blocker, side: opp, at: block }];
+    frames.push({ ball: block, carrierId: null, carrierSide: side, placed: blocked, move: 'pass' });
+    // Savunmacı çarptığı yerde kalır (top dışarı giderken)
+    frames.push({ ball: at(side, PITCH_LENGTH + 1.5, y), carrierId: null, carrierSide: side, placed: [...blocked], move: 'pass' });
   };
 
   switch (play.kind) {
@@ -345,9 +355,8 @@ function playFrames(match: MatchState, play: MatchPlay, minute: number): SceneFr
     case 'corner': {
       buildUp(1);
       passTo(at(side, 70 + h(3) * 8, final.y < MID_Y ? 12 : PITCH_WIDTH - 12));
-      passTo(at(side, 92 + h(4) * 6, final.y < MID_Y ? 6 : PITCH_WIDTH - 6));
       // Korner kararı top çizgiyi geçince (sonuç bu karede); sonra kullanacak oyuncu bayrağa, ceza sahası dolar
-      ballOut(final.y < MID_Y ? 8 + h(15) * 10 : PITCH_WIDTH - 8 - h(15) * 10);
+      wonCorner(final.y < MID_Y ? 8 + h(15) * 10 : PITCH_WIDTH - 8 - h(15) * 10);
       lastFrame().result = true;
       setUp(final, null, 'corner');
       break;
@@ -375,7 +384,7 @@ function playFrames(match: MatchState, play: MatchPlay, minute: number): SceneFr
       } else if (play.fromCorner) {
         // Korner: bayraktan orta, kafayı vuran altıpas önünde
         buildUp(1);
-        ballOut(origin.y < MID_Y ? 8 + h(15) * 10 : PITCH_WIDTH - 8 - h(15) * 10);
+        wonCorner(origin.y < MID_Y ? 8 + h(15) * 10 : PITCH_WIDTH - 8 - h(15) * 10);
         const flag = at(side, 104.6, origin.y < MID_Y ? 0.6 : PITCH_WIDTH - 0.6);
         // Kafayı vuran korneri kullanamaz (bayraktan altıpasa ışınlanmasın)
         if (play.playerId !== null) used.add(play.playerId);
@@ -458,7 +467,8 @@ function shapeBallPaths(frames: SceneFrame[], play: MatchPlay, minute: number): 
     const sign = h(0) < 0.5 ? -1 : 1;
     const distance = Math.hypot(f.ball.x - from.x, f.ball.y - from.y);
     if (f.move === 'pass') {
-      const intoBox = progress(side, f.ball) > 84 && Math.abs(f.ball.y - MID_Y) < 22;
+      // Kale çizgisini geçen top (savunmacıdan seken) orta değildir
+      const intoBox = progress(side, f.ball) > 84 && progress(side, f.ball) <= PITCH_LENGTH && Math.abs(f.ball.y - MID_Y) < 22;
       if (frames[i - 1]!.setPiece?.kind === 'corner' && intoBox) {
         f.move = 'cross';
         f.height = 6.5 + h(1) * 2;

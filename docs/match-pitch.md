@@ -27,6 +27,10 @@ kart / sakatlık / değişiklik görselleri history.md > "Aşamalar" > 10. Cila 
   kenarda kurulur ki ekranda hep altta kalsın. Gol filesi, baskı çubuğu da çevrilir. Uzatma devresi yok (eşitlikte
   doğrudan penaltılar); uzatma dakikaları devrenin yönünde. Şut / ısı haritası maçın tamamını gösterdiğinden çevrilmez:
   ev sahibi hep sağa hücum eder (haritada not yazar).
+- Top dışarı (testli): korner kazanılırken kale çizgisine inen hücumcunun ortası topa en yakın savunmacıya çarpar
+  (son dokunan savunan takım; motor korner anına savunmacı yazmaz, sahne seçer), top çizgiyi geçer, korneri hücum eden
+  kullanır. Aut (kale vuruşu) ve golde son dokunan şutu çeken hücumcu. Sahne topu yan çizgiden çıkarmaz (taç yok).
+  Çizgiyi geçen sekme orta / havadan top sayılmaz (shapeBallPaths).
 - Sakin dakika: boş saha yerine soluk saha + baskı çubuğu (DominanceBar): iki takım renginde birbirini iten çubuk, sınırda top;
   dominance = son 10 dk, yeni dakikalar ağır (0,82^yaş), ataklar %60 + topa sahip olma (timeline harfi) %40.
 - Büyük bant (bannerKind): GOL! (golcü, sevinç boyunca), PENALTI! (penaltı dizilişinden sonuca), PENALTI KAÇTI!, KIRMIZI KART;

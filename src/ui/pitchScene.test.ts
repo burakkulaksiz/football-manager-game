@@ -216,6 +216,41 @@ describe('2D saha sahnesi', () => {
     }
   });
 
+  it('top çizgiyi geçince son dokunan: kornerde savunan (korneri hücum eden kullanır), autta ve golde hücumcu; taç yok', () => {
+    const seen = { corner: 0, miss: 0 };
+    for (const { minute, play, state } of plays.filter((p) => isHighlight(p.play))) {
+      const scene = buildScene(state, play, minute);
+      scene.forEach((f, i) => {
+        // Sahne topu yan çizgiden çıkarmaz (taç gösterilmez)
+        expect(f.ball.y).toBeGreaterThanOrEqual(0);
+        expect(f.ball.y).toBeLessThanOrEqual(PITCH_WIDTH);
+        const out = (x: number) => x < 0 || x > PITCH_LENGTH;
+        const prev = scene[i - 1];
+        if (!prev || !out(f.ball.x) || out(prev.ball.x)) return;
+        // Son dokunan: önceki karede topa vuran (taşıyıcı), yoksa topa en yakın oyuncu (savunmacı topa çarptıysa topun yerinde)
+        const spots = frameSpots(state, prev, false);
+        const [nearest] = [...spots]
+          .map(([id, s]) => ({ id, side: s.side, d: Math.hypot(s.at.x - prev.ball.x, s.at.y - prev.ball.y) }))
+          .sort((a, b) => a.d - b.d);
+        const toucher = prev.carrierId !== null ? { id: prev.carrierId, side: spots.get(prev.carrierId)!.side } : nearest!;
+        if (prev.carrierId === null) expect(nearest!.d).toBeLessThan(1);
+        const corner = scene[i + 1]?.setPiece?.kind === 'corner' ? scene[i + 1]!.setPiece! : null;
+        if (corner) {
+          seen.corner++;
+          expect(toucher.side).not.toBe(play.side);
+          expect(corner.side).toBe(play.side);
+          expect(state.players[corner.takerId!]!.side).toBe(play.side);
+        } else {
+          // Aut (kale vuruşu) ya da gol: şutu çeken hücumcu
+          if (play.kind === 'miss') seen.miss++;
+          expect(toucher.side).toBe(play.side);
+        }
+      });
+    }
+    expect(seen.corner).toBeGreaterThan(3);
+    expect(seen.miss).toBeGreaterThan(3);
+  });
+
   it('serbest vuruş: topa 9.15 m uzaklıkta 4 kişilik baraj, kullanan topun başında', () => {
     const m = match();
     const taker = m.away.onPitch.find((id) => m.players[id]!.slot === 'AMC' || m.players[id]!.slot === 'MC')!;

@@ -80,13 +80,20 @@ export async function saveGame(world: GameWorld, name: string, overwriteId?: num
   });
 }
 
-/** Kariyerin otomatik kaydını günceller (kariyer başına tek otomatik kayıt). */
+/** Kariyer başına dönüşümlü otomatik kayıt slotu: son kayıt bozulursa öncekiler yedek kalır. */
+export const AUTOSAVE_SLOTS = 3;
+
+/** Kariyerin otomatik kaydı: slot sayısı dolmadıysa yeni slot, dolduysa en eskisinin üzerine yazar. */
 export async function autosave(world: GameWorld): Promise<number> {
   const snapshot = structuredClone(world);
   const careerId = careerIdOf(snapshot);
   return db.transaction('rw', db.saves, db.saveData, async () => {
-    const existing = await db.saves.where('careerId').equals(careerId).filter((s) => s.isAutosave).first();
+    const autos = (await db.saves.where('careerId').equals(careerId).filter((s) => s.isAutosave).toArray())
+      .sort((a, b) => a.updatedAt - b.updatedAt);
+    const existing = autos.length >= AUTOSAVE_SLOTS ? autos[0] : undefined;
     const data = meta(snapshot, `Otomatik — ${defaultSaveName(snapshot)}`, true);
+    // Aynı milisaniyede art arda kayıtta da sıra korunsun (en eski hep doğru seçilsin)
+    data.updatedAt = Math.max(data.updatedAt, (autos.at(-1)?.updatedAt ?? 0) + 1);
     let id: number;
     if (existing) {
       id = existing.id;

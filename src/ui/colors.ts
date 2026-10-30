@@ -1,4 +1,5 @@
 /** Kulüp renkleriyle yazı: ikinci renk zemin üstünde okunmuyorsa beyaz ya da siyah. */
+import { colorsClash } from './pitch';
 
 function rgb(hex: string): [number, number, number] {
   const h = hex.replace('#', '');
@@ -20,6 +21,24 @@ function luminance(hex: string): number {
 export function contrastRatio(a: string, b: string): number {
   const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
   return (hi + 0.05) / (lo + 0.05);
+}
+
+type ClubColors = { primary: string; secondary: string };
+
+/** Saha üstündeki koyu panellerin (baskı çubuğu, son 10 dk) yaklaşık zemin rengi. */
+export const DARK_PANEL = '#101c12';
+
+const TEAM_FALLBACK ={ home: '#ffd23f', away: '#7fd3ff' } as const;
+
+/**
+ * Zeminde (çim, koyu panel) iki takımı ayıran okunur renkler: zeminde okunan ilk kulüp rengi; deplasmanınki ev sahibine
+ * çok benziyorsa diğer rengi; hiçbiri olmazsa sarı / açık mavi. Siyah formalı takım koyu zeminde beyaz rengiyle görünür.
+ */
+export function teamColorsOn(home: ClubColors, away: ClubColors, background: string, minContrast = 1.8): { home: string; away: string } {
+  const pick = (club: ClubColors, avoid?: string) =>
+    [club.primary, club.secondary].find((c) => contrastRatio(c, background) >= minContrast && (!avoid || !colorsClash(c, avoid)));
+  const h = pick(home) ?? TEAM_FALLBACK.home;
+  return { home: h, away: pick(away, h) ?? TEAM_FALLBACK.away };
 }
 
 /**

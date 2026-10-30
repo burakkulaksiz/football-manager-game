@@ -4,6 +4,7 @@ import {
   ageOn,
   askingPrice,
   canSendToAcademy,
+  exerciseOption,
   listingPrice,
   loanFeeAsk,
   unlistPlayer,
@@ -107,12 +108,25 @@ function TransferActions({ player }: { player: Player }) {
               : player.loan
                 ? `${getClub(world, player.loan.fromClubId).name} kulübünden kiralık · dönüş ${formatDateShort(player.loan.until)}`
                 : `Sözleşme bitişi ${formatDateShort(player.contract.expires)} · yıllık ${formatMoney(player.contract.wage)}`}
+            {player.sellOn && ` · ${getClub(world, player.sellOn.clubId).name} satış payı %${player.sellOn.percent}`}
             {activeOffers.length > 0 && ` · ${activeOffers.length} açık teklif`}
           </span>
           {activeOffers.length > 0 && <button className="btn btn-small" onClick={() => setScreen('transfers')}>Teklifleri Gör</button>}
           {player.academy && <button className="btn btn-go" onClick={moveSquad}>A takıma al</button>}
           {canSendToAcademy(world, player) && <button className="btn" onClick={moveSquad}>U19&apos;a gönder</button>}
           {!player.loan && !player.academy && <button className="btn" onClick={() => setDialog('contract')}>Sözleşme Yenile</button>}
+          {player.loan?.optionFee !== undefined && (
+            <button
+              className="btn btn-go"
+              title="Bedel kiralık veren kulübe ödenir; oyuncu mevcut sözleşmesiyle kalır."
+              onClick={() => {
+                const error = worldAction((w) => exerciseOption(w, player.id));
+                showNotice(error ?? `${player.firstName} ${player.lastName} kalıcı olarak kulübüne katıldı.`);
+              }}
+            >
+              Opsiyonu kullan ({formatMoney(player.loan.optionFee)})
+            </button>
+          )}
         </div>
         {!player.loan && (
           <div className="panel-body action-bar listing-bar">

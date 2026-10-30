@@ -7,6 +7,7 @@ import { addDays, makeDate } from '../date';
 import { clubPlayers, getClub, leagueClubs } from '../generation/worldGenerator';
 import { academyIntake, manageAcademies, renewAcademyContracts } from '../squad/academy';
 import { generateSeason, seasonLabel } from '../league/schedule';
+import { generateLowerLeague } from '../league/lowerLeague';
 import { addNews } from '../news';
 import { foreignFinanceShares, foreignIntake, isForeign } from '../generation/foreign';
 import { pruneKnowledge } from '../transfer/scouting';
@@ -242,6 +243,8 @@ export function startNewSeason(world: GameWorld, rng: Rng, data: GameData): void
 
   const year = world.season.year + 1;
   world.season = generateSeason(rng, leagueClubs(world).map((c) => c.id), year);
+  const lower = generateLowerLeague(world, year);
+  if (lower) world.season.lower = lower;
   world.seasonState = 'running';
 
   if (isUnemployed(world)) return; // işsiz menajere yeni sezon hedefi / bütçe haberi yok

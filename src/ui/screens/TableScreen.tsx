@@ -1,11 +1,12 @@
-import { computeStandings, getClub, goalDifference, leagueClubs, seasonLabel } from '../../engine';
+import { computeStandings, getClub, goalDifference, leagueClubs, lowerStandings, seasonLabel } from '../../engine';
 import { useUiState, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { OutcomeBox } from '../components/OutcomeBox';
 import { TableCharts } from '../components/TableCharts';
 
-/** Sıraya göre bölge: Avrupa kupaları ve küme düşme hattı. */
-function zoneClass(position: number, total: number): string {
+/** Sıraya göre bölge: Avrupa kupaları ve küme düşme hattı (1. Lig'de ilk üç çıkar). */
+function zoneClass(position: number, total: number, lower: boolean): string {
+  if (lower) return position <= 3 ? 'zone-cl' : '';
   if (position <= 2) return 'zone-cl';
   if (position <= 4) return 'zone-el';
   if (position > total - 3) return 'zone-rel';
@@ -13,25 +14,29 @@ function zoneClass(position: number, total: number): string {
 }
 
 export function TableScreen() {
-  const [view, setView] = useUiState<'table' | 'charts'>('table.view', 'table');
+  const [view, setView] = useUiState<'table' | 'lower' | 'charts'>('table.view', 'table');
   return (
     <div className="screen">
       <div className="tabs" role="tablist">
-        <button className={`tab${view === 'table' ? ' active' : ''}`} onClick={() => setView('table')}>Tablo</button>
+        <button className={`tab${view === 'table' ? ' active' : ''}`} onClick={() => setView('table')}>Süper Lig</button>
+        <button className={`tab${view === 'lower' ? ' active' : ''}`} onClick={() => setView('lower')}>1. Lig</button>
         <button className={`tab${view === 'charts' ? ' active' : ''}`} onClick={() => setView('charts')}>Grafikler</button>
       </div>
-      {view === 'table' ? <StandingsTable /> : <TableCharts />}
+      {view === 'charts' ? <TableCharts /> : <StandingsTable lower={view === 'lower'} />}
     </div>
   );
 }
 
-function StandingsTable() {
+function StandingsTable({ lower }: { lower: boolean }) {
   const world = useWorld();
-  const table = computeStandings(leagueClubs(world).map((c) => c.id), world.season.fixtures);
+  const table = lower ? lowerStandings(world) : computeStandings(leagueClubs(world).map((c) => c.id), world.season.fixtures);
 
+  if (lower && !world.season.lower) {
+    return <section className="panel"><div className="panel-body muted">1. Lig bu sezon oynanmıyor (eski kayıt); gelecek sezondan itibaren oynanır.</div></section>;
+  }
   return (
     <section className="panel">
-      <h2 className="panel-title">Puan Durumu — Süper Lig {seasonLabel(world.season.year)}</h2>
+      <h2 className="panel-title">Puan Durumu — {lower ? '1. Lig' : 'Süper Lig'} {seasonLabel(world.season.year)}</h2>
       <table className="data-table">
         <thead>
           <tr>
@@ -52,7 +57,7 @@ function StandingsTable() {
           {table.map((row, i) => {
             const club = getClub(world, row.clubId);
             const gd = goalDifference(row);
-            const classes = [zoneClass(i + 1, table.length), row.clubId === world.playerClubId ? 'own-row' : '']
+            const classes = [zoneClass(i + 1, table.length, lower), row.clubId === world.playerClubId ? 'own-row' : '']
               .filter(Boolean)
               .join(' ');
             return (
@@ -81,11 +86,15 @@ function StandingsTable() {
           })}
         </tbody>
       </table>
-      <div className="legend">
-        <span><i className="zone-mark zone-cl" /> Şampiyonlar Ligi</span>
-        <span><i className="zone-mark zone-el" /> Avrupa Ligi (kupa şampiyonu da katılır)</span>
-        <span><i className="zone-mark zone-rel" /> Küme düşme</span>
-      </div>
+      {lower ? (
+        <div className="legend"><span><i className="zone-mark zone-cl" /> Süper Lig&apos;e çıkış</span></div>
+      ) : (
+        <div className="legend">
+          <span><i className="zone-mark zone-cl" /> Şampiyonlar Ligi</span>
+          <span><i className="zone-mark zone-el" /> Avrupa Ligi (kupa şampiyonu da katılır)</span>
+          <span><i className="zone-mark zone-rel" /> Küme düşme</span>
+        </div>
+      )}
     </section>
   );
 }

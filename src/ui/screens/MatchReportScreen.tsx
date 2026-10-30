@@ -5,11 +5,14 @@ import {
   formatMinute,
   getClub,
   isEuropeFixture,
+  answerPress,
   matchTimeline,
+  PRESS_QUESTIONS,
   primaryPosition,
   teamAppearances,
   type Fixture,
   type GameWorld,
+  type PressAnswer,
   type TimelineEvent,
 } from '../../engine';
 import { tabFor, useGameStore, useWorld } from '../../store/gameStore';
@@ -150,6 +153,43 @@ function PlayerRatings({ fixture, clubId }: { fixture: Fixture; clubId: string }
 }
 
 /** Maç sonrası rapor: tabela, olaylar, istatistikler ve oyuncu puanları. */
+/** Maç sonu basın toplantısı: bir soru, üç cevap (isteğe bağlı; sonraki maçta düşer). */
+function PressPanel() {
+  const world = useWorld();
+  const worldAction = useGameStore((s) => s.worldAction);
+  const showNotice = useGameStore((s) => s.showNotice);
+  const { question, answers } = PRESS_QUESTIONS[world.press!.tone];
+  const effect = (a: PressAnswer) =>
+    [['Moral', a.morale], ['Taraftar', a.fans], ['Yönetim', a.board]]
+      .filter(([, v]) => v !== 0)
+      .map(([k, v]) => `${k} ${Number(v) > 0 ? '+' : ''}${v}`)
+      .join(', ') || 'Etkisi yok';
+  return (
+    <section className="panel">
+      <h2 className="panel-title">Basın Toplantısı</h2>
+      <div className="panel-body">
+        <p><strong>Muhabir:</strong> &quot;{question}&quot;</p>
+        <div className="press-answers">
+          {answers.map((a, i) => (
+            <button
+              key={i}
+              className="btn"
+              title={effect(a)}
+              onClick={() => {
+                worldAction((w) => answerPress(w, i));
+                showNotice('Sözlerin medyada yer aldı.');
+              }}
+            >
+              {a.text}
+            </button>
+          ))}
+        </div>
+        <div className="panel-note">İstersen konuşmadan geçebilirsin; toplantı sonraki maçta düşer. Cevapların kadronun moralini, taraftarı ve yönetimi etkiler.</div>
+      </div>
+    </section>
+  );
+}
+
 export function MatchReportScreen() {
   const world = useWorld();
   const fixtureId = useGameStore((s) => s.selectedFixtureId);
@@ -179,10 +219,16 @@ export function MatchReportScreen() {
       .filter((e) => e.clubId === clubId && (e.kind === 'goal' || e.kind === 'penalty'))
       .map((e) => `${world.players[e.playerId]?.lastName ?? '?'} ${formatMinute(e.minute, e.extra)}${e.kind === 'penalty' ? ' (P)' : ''}`);
 
+  // Avrupa maçında o kupanın sekmesi (kullanıcı ŞL'de olsa da AL maçının raporundan AL açılır)
+  const europePreset = isEuropeFixture(fixture) ? { 'fixtures.europe': fixture.competition } : undefined;
   const showRound = () => {
     setFixturesView(tabFor(fixture.competition), fixture.round);
-    setScreen('fixtures');
+    setScreen('fixtures', europePreset);
   };
+  // Puan durumu maçın kendi turnuvasının: lig → Süper Lig tablosu, Avrupa → grup tabloları / eşleşmeler; kupada tablo yok
+  const showStandings = fixture.competition === undefined
+    ? () => setScreen('table')
+    : europePreset ? () => { setFixturesView('europe'); setScreen('fixtures', europePreset); } : null;
 
   return (
     <div className="match-screen">
@@ -211,6 +257,8 @@ export function MatchReportScreen() {
         </div>
       </div>
 
+      {world.press?.fixtureId === fixture.id && <PressPanel />}
+
       <div className="report-meta">
         <span>{formatDateTR(fixture.date)}</span>
         <span>{fixtureLabel(fixture)}</span>
@@ -229,7 +277,9 @@ export function MatchReportScreen() {
             <span className={ratingClass(motmRecord.rating)}>{motmRecord.rating.toFixed(1)}</span>
           </div>
         ) : <div />}
-        <button className="btn" onClick={() => setScreen('table')}>Puan Durumu</button>
+        {showStandings && (
+          <button className="btn" onClick={showStandings}>{europePreset ? (fixture.group ? 'Grup Tabloları' : 'Eşleşmeler') : 'Puan Durumu'}</button>
+        )}
         <button className="btn-continue" onClick={showRound}>
           Haftanın Sonuçları <span className="btn-continue-arrow">›</span>
         </button>

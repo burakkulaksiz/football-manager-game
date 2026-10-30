@@ -3,13 +3,30 @@
 Ayrıca: Türkiye Kupası ve Avrupa kupalarının kuralları history.md > "Aşamalar" > 10. Cila maddelerinde.
 
 ## Sezon döngüsü ve yönetim kuralları (aşama 9)
-- **Lig yapısı:** world.clubs = Süper Lig (division 1) + 1. Lig (division 2). Fikstür ve puan durumu yalnızca
-  `leagueClubs(world)`. 1. Lig maçları oynanmaz; çıkan 3 kulüp itibar² ağırlıklı rastgele seçilir.
+- **Lig yapısı:** world.clubs = Süper Lig (division 1) + 1. Lig (division 2). Süper Lig fikstürü ve puan durumu
+  `leagueClubs(world)`.
+- **1. Lig** (league/lowerLeague.ts): Season.lower = çift devreli fikstür (generateSeason, tohum seed ^ LOWER_SEED_SALT ^ yıl),
+  haftalar Süper Lig lig günlerine yayılır (20 kulüp = 38 hafta / 34 gün: bazı günlerde iki hafta). playTodaysMatches sonunda
+  tarihi gelen maçlar oynanır (gerçek motor, maç başına ayrı tohum; ana rng kaymaz). Kalıcı etki yok: form, kondisyon,
+  sakatlık, kart, finans, oyuncu istatistiği işlenmez; kayıtta yalnızca skor (TableFixture). Sezon sonunda kalanlar oynanır,
+  ilk 3 çıkar (promotedIds tablo sırasıyla, ilki şampiyon). Play-off yok. Tek sayıda kulüpte ya da Season.lower olmayan
+  eski kayıtta çıkanlar eskisi gibi itibar² ağırlıklı rastgele (ana rng). Arayüz: Puan Durumu > 1. Lig sekmesi.
 - **Yönetim:** hedef sıra = beklentiden (title 1, europe 4, top_half 8, mid_table 12, avoid_relegation 15).
   Güven 60'tan başlar. Maç: galibiyet +1.5, beraberlik +0.3 (büyük kulüpte −0.5), yenilgi −2.5 (büyük kulüpte −3.5).
   Aylık (5. haftadan sonra): (hedef − sıra) × 0.8 (−5…+3); kasa eksi → −3. < 30 uyarı, < 10 ve 8+ hafta oynanmışsa
   görevden alma. Sezon sonu: şampiyon +30, hedef tuttu +15, 3 sıraya kadar geride −5, daha kötü −20; < 15 → görevden
   alma; küme düşme → görevden alma. Görevden alınınca `world.gameOver`: Devam kapalı, otomatik kayıt alınmaz.
+- **Taraftar memnuniyeti** (season/fans.ts; BoardState.fans 0–100, yalnızca kullanıcı kulübü, yoksa 60; yeni işte initialBoard
+  alanı koymadığından 60'tan başlar): maç (boardAfterMatch içinde) galibiyet +2, yenilgi −3, 3+ farkta ±1 daha, büyük kulüpte
+  (hedef ≤ 4) beraberlik −1. Sezon sonu: şampiyon +10, hedef tuttu +5, hedefin 3 sırasından fazla gerisi −8. Transfer: "önemli
+  oyuncu" rolüyle bonservisli alım +3, ilk 11 oyuncusunun satışı (serbest kalma bedeli dahil) −6. Ay başı farkın %10'u kadar
+  60'a döner. Etkiler: iç saha seyircisi × (0,85 + 0,3 × memnuniyet/100) (kapasite sınırı yine geçerli); aylık yönetim güveni
+  < 25 → −2, ≥ 80 → +1; aylık yönetim haberinde yazar. Arayüz: Kulüp Bilgisi > Yönetim. Yapay zekâ kulüplerinde yok.
+- **Basın toplantısı ve medya** (season/press.ts; rastgelelik yok): applyResult kullanıcının her maçından sonra world.press =
+  { fixtureId, tone: win/draw/loss } (öncekini düşürür; isteğe bağlı, Devam'ı engellemez). PRESS_QUESTIONS: tona göre bir soru,
+  üç cevap; her cevabın kadro morali (herkese), taraftar ve yönetim güveni etkisi var (ör. yenilgide oyuncuları eleştirmek
+  moral −4, taraftar +2, yönetim +1; hakemi suçlamak yönetim −3). answerPress: etkiler + 'media' haberi (manşet, önemli değil).
+  Arayüz: o maçın raporunun üstünde Basın Toplantısı paneli (düğmenin üstünde etkiler). 1. Lig maçları toplantı açmaz.
 - **Sezon sonu (son maçın ertesi günü):** ödüller (Gol Kralı, Asist Kralı, Sezonun Oyuncusu [≥ hafta×0.55 maç],
   Genç Oyuncusu [≤21 yaş, ≥10 maç], Kalecisi), sıralama primi (15 / 10 / 7 / 5 Mn, sonra 3.5 → 0.8 Mn),
   world.history'ye SeasonSummary (isimler saklanır), seasonState = 'ended'.

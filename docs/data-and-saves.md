@@ -16,7 +16,14 @@
   `SAVE_FORMAT_VERSION = CURRENT_WORLD_VERSION` (şu an 11). GameWorld yapısı değişince sürümü artır ve
   `engine/migrate.ts`'e dönüşüm ekle; `loadGame` eski kayıtları otomatik dönüştürür, daha yeni sürümü reddeder.
   Sezon sonu kaydı ~1.7 MB (+ haberler/teklifler).
-- **careerId** = `${seed}-${playerClubId}`. Otomatik kayıt kariyer başına tek slot; elle kayıt sınırsız.
+- **careerId** = `${seed}-${playerClubId}`. Otomatik kayıt kariyer başına AUTOSAVE_SLOTS (3) dönüşümlü slot:
+  dolmadıysa yeni slot, dolduysa updatedAt'i en eski olanın üzerine yazar (updatedAt art arda kayıtta da kesin artar); elle kayıt sınırsız.
+- **Hata günlüğü** (persistence/errorLog.ts): localStorage 'fm-error-log', son 50 { at, source, message, stack? }. Kaynaklar:
+  window 'error', 'unhandledrejection' (installErrorLog, main.tsx), ErrorBoundary (ekran çökmesi; boş sayfa yerine yenile ekranı),
+  otomatik kayıt hatası (store). Depolama erişilemezse sessizce atlanır. Arayüz: Ayarlar > Hata Günlüğü (kopyala, temizle).
+- **PWA**: public/manifest.webmanifest + icon.svg + sw.js (bağımlılık yok). sw.js yalnızca üretimde kaydedilir (main.tsx); sayfa
+  önce ağ, diğer dosyalar önce önbellek (önbellek adı sürümlü: 'futbol-menajeri-v1'; değiştirince eskisi silinir). Sesler ilk
+  çalındıklarında saklanır. navigator.storage.persist() istenir (kayıtlar silinmesin).
 
 ## Kayıt kuralları (kullanıcıyla kararlaştırıldı)
 - Canlı maç sürerken (başlama öncesi dahil) kayıt **yapılamaz**; liveMatch kaydedilmez.

@@ -16,7 +16,8 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
         ve genişliği değiştirir; kullanıcı taktiğinin etkisi sahada görünür.
   - [x] **Kart / sakatlık / değişiklik görselleri:** oyuncunun üstünde sarı/kırmızı kart simgesi, atılan oyuncu sahadan
         çıkar, sakat oyuncu yerde, değişiklikte yeni numara kenardan girer.
-  - [ ] **Oyuncu üzerine gelince bilgi:** isim, mevki, kondisyon ve maç puanı; tıklayınca değişiklik seçimi.
+  - [x] **Oyuncu üzerine gelince bilgi:** isim, mevki, kondisyon ve maç puanı; tıklayınca değişiklik seçimi.
+        Kanıt: `ui/playerTip.test.ts` (bilgi metni); tıklama arayüzde elle denenmedi (DOM testi yok).
   - [x] **Isı haritası / şut haritası:** maç içinde ve maç raporunda, takımın şutları (gol/isabet/aut) ve top hakimiyeti bölgeleri.
   - [x] **Kamera seçenekleri:** tam saha / topu takip eden yakın görünüm; tam ekran saha modu.
         (Büyük saha yapıldı: maç ekranında tam genişlik, ekrana sığan yükseklik.)
@@ -29,7 +30,8 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
   - [x] Gerçek kayıtlar: kodla üretilen seslerin yerini aldı (public/sounds/, freesound; kaynaklar KAYNAKLAR.md). Faul düdüğü, deplasman golü, kırmızı kartta yuha, stadyum ambiyansı döngüsü; çakışma sınırı. Kanıt: `ui/sound.test.ts`.
   - [x] Maç dışı sesler: Devam'ı durduran haber, kulübe transfer (imza), kupa / şampiyonluk (fanfar), iş teklifi, kovulma; isteğe bağlı düğme tıklaması; Ayarlar > Maç Dışı Sesler. Kanıt: `ui/sound.test.ts` (maç dışı sesler), `store/settings.test.ts`.
 - [x] Maç ortasında kayıt (maçın o anki durumu kayda girer; yüklenince maç kaldığı dakikadan devam eder)
-- [ ] Devre arası konuşması (moral etkisi)
+- [x] Devre arası konuşması (moral etkisi): Öv / Daha fazlasını iste / Sakinleştir / Sert çık; skora ve profesyonelliğe göre ikinci yarı verimi ve moral.
+  - Kanıt: `engine/match/teamTalk.test.ts` (etki yönleri, yalnızca devre arası ve bir kez, rng kaymaz). Arayüzde elle denenmedi.
 - [x] Duran top talimatları (kornerci, hedef adam; korner ön/arka direk/kısa, serbest vuruş kaleye/orta)
 - [x] Oyuncuya bireysel talimat (görev: geride kal / destek / ileri çık; içe kat / kanada aç, uzaktan şut, top sür, sıkı markaj, serbest rol)
 - [x] Yeni takım talimatları (karşı atak, ofsayt taktiği, geriden oyun kurma, zaman geçirme, müdahale sertliği, orta tercihi, yaratıcılık)
@@ -47,14 +49,16 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
 ## Transfer
 - [x] Gözlemci sistemi (bilinmeyen oyuncuların özellikleri gizli, gözlemciyle açılır)
 - [x] Yurtdışı ligleri ve yabancı kulüplerden transfer (maç oynanmayan 40 kulüp, 8 ülke)
-- [ ] Satın alma opsiyonlu kiralık, sonradan satış payı gibi sözleşme maddeleri
+- [x] Satın alma opsiyonlu kiralık, sonradan satış payı gibi sözleşme maddeleri (kullanıcı alıcıyken; satarken pay isteme yok)
+  - Kanıt: `transfer/transfer.test.ts` > sözleşme maddeleri (payla düşen istem, satışta pay ödemesi, opsiyon reddi ve kullanımı). Arayüzde elle denenmedi.
 - [x] Menajer pazarlığı / oyuncu ajanları (menajerlerin oyuncu önermesi hariç)
 
 ## Lig ve rekabet
 - [x] Türkiye Kupası (tek maç eleme, beraberlikte penaltılar; uzatma yok)
 - [x] Avrupa kupaları (Şampiyonlar Ligi, Avrupa Ligi; 4'lü gruplar, iki maçlı eleme, tek maç final)
 - [x] Milli takım ve milli maç arası (yalnızca kulüp tarafı: çağrılar, elemeler, iki yılda bir yaz turnuvası)
-- [ ] 1. Lig'in gerçekten oynanması (şu an çıkanlar rastgele seçiliyor)
+- [x] 1. Lig'in gerçekten oynanması (çift devre, gerçek motorla yalnızca skor; ilk 3 çıkar, play-off yok; Puan Durumu > 1. Lig)
+  - Kanıt: `league/lowerLeague.test.ts` (fikstür, tarihler, rng kaymaz, tek sayı), `season/season.test.ts` (çıkanlar tablonun ilk üçü). Arayüzde elle denenmedi.
 - [x] Gerçek kadrolar (`data/squads/`; Transfermarkt 2026/27, gerçek Süper Lig ve 1. Lig)
 
 ## Kulüp ve menajer
@@ -62,21 +66,27 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
   - Kanıt: `season/jobs.test.ts` (işsiz sezon geçişi, başvuru/teklif, kulüp değiştirme), `saves.test.ts` (işsizken kayıt, kariyer kimliği sabit). Eski sürümde görevden alınmış kayıtlar "kariyer bitti" olarak kalır.
 - [x] Menajer itibarı ve kariyer geçmişi ekranı (geçmiş seçimi, transfer ve yönetime etkisi)
 - [x] Tesis yatırımı (stadyum, antrenman tesisi, altyapı, sağlık merkezi; yönetimden talep, inşaat süresi, bakım)
-- [ ] Taraftar memnuniyeti
-- [ ] Basın toplantısı ve medya
+- [x] Taraftar memnuniyeti (sonuçlar, sezon hedefi, yıldız alımı / ilk 11 satışı; seyirciyi ve yönetim güvenini etkiler; Kulüp Bilgisi > Yönetim)
+  - Kanıt: `season/fans.test.ts` (sınırlar, maç etkisi, ay başı dönüş, seyirci çarpanı). Arayüzde elle denenmedi.
+- [x] Basın toplantısı ve medya (maç sonu, isteğe bağlı; sonuca göre soru, 3 cevap → moral / taraftar / yönetim; manşet "Medya" haberi)
+  - Kanıt: `season/press.test.ts` (açılma koşulu, etkiler, haber, tek cevap). Arayüzde elle denenmedi. Maç öncesi toplantı yok.
 
 ## Arayüz ve konfor
 - [x] Ayarlar ekranı (maç hızı, otomatik kayıt sıklığı, zemin ve vurgu rengi, yazı boyutu, onay ve uyarılar)
 - [x] Klavye kısayolları (Boşluk = Devam, Alt+←/→ geri-ileri, Ctrl+S kaydet, harfle ekranlar, maçta Boşluk ve +/-, ? yardım; Ayarlar'dan kapatılır)
 - [x] Grafikler (Puan Durumu > Grafikler: sıralamanın haftalara göre seyri, rakip karşılaştırma; form eğrisi)
-- [ ] Haber ve mesajlarda arama
-- [ ] Mobil / dar ekran uyumu
+- [x] Haber ve mesajlarda arama (Gelen Kutusu ve Transfer Merkezi > Haberler; başlık + metin, Türkçe harf duyarsız, her kelime geçmeli)
+  - Kanıt: `engine/newsSearch.test.ts`. Arayüzde elle denenmedi.
+- [x] Mobil / dar ekran uyumu (≤ 900 px: sol menü ☰ çekmece, başlık sade, çok sütunlu ekranlar alt alta, tablolar yana kayar)
+  - Kanıt yok: CSS, tarayıcıda / telefonda denenmedi (ortamda tarayıcı aracı yoktu). Derleme geçiyor.
 
 ## Teknik
 - [x] Kayıt dosyasını dışa/içe aktarma (.json yedek) (Kayıt Yükle ekranı: satırda Dışa Aktar, altta İçe Aktar; yeni slot, üzerine yazmaz)
   - Kanıt: `persistence/exchange.test.ts` (zarf, bozuk/yanlış/gelecek sürüm dosya), `saves.test.ts` > kayıt dışa / içe aktarma (gidiş-dönüş, maç ortası, eski biçim, otomatik kayıt).
-- [ ] PWA: internetsiz, uygulama gibi açılan sürüm
-- [ ] Hata günlüğü ve yedek otomatik kayıt slotları
+- [x] PWA: internetsiz, uygulama gibi açılan sürüm (manifest, SVG simge, public/sw.js; yalnızca üretim derlemesinde; kalıcı depolama isteği)
+  - Kanıt: `npm run build` + `vite preview`te sw.js / manifest / simge doğru türle sunuluyor. Kurulum ve internetsiz açılış tarayıcıda denenmedi.
+- [x] Hata günlüğü ve yedek otomatik kayıt slotları (kariyer başına 3 dönüşümlü otomatik kayıt; hata günlüğü Ayarlar'da, çökme ekranı)
+  - Kanıt: `persistence/saves.test.ts` (dönüşüm, en eskinin üzerine yazma), `persistence/errorLog.test.ts`. Çökme ekranı denenmedi.
 
 ## Mimari ve backend (beyin fırtınası, 2026-10-25)
 

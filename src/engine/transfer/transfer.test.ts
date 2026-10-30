@@ -7,9 +7,10 @@ import { marketValue } from '../player';
 import { playSeason } from '../testing';
 import type { GameWorld, Player } from '../types';
 import { agentProfile, contractDemand } from './agents';
-import { askingPrice, loanFeeAsk, playerImportance, returnLoans, type TransferTerms } from './market';
+import { askingPrice, loanFeeAsk, playerImportance, returnLoans, transferPlayer, type TransferTerms } from './market';
 import {
   acceptCounter,
+  exerciseOption,
   makeOffer,
   negotiateRenewal,
   negotiateTransfer,
@@ -291,5 +292,60 @@ describe('sezon boyunca yapay zekâ transferleri', () => {
   it('sezonda 11 aylık rapor kapanır', () => {
     // Temmuz 2026 – Mayıs 2027 arası: 10 ay kapanır, Mayıs açık
     expect(world.finances.samsunspor!.history.length).toBe(10);
+  });
+});
+
+describe('sözleşme maddeleri', () => {
+  it('satış payı istenen bonservisi düşürür; oyuncu sonra satılınca pay eski kulübe gider', () => {
+    const { world, target } = setup();
+    const full = askingPrice(world, target);
+    // Payla birlikte istemin %92'sini karşılayan, paysız istemin altındaki teklif kabul edilir
+    const fee = Math.round(full * 0.88 * 0.97);
+    expect(fee).toBeLessThan(full * 0.92);
+    const offer = makeOffer(world, target.id, 'transfer', fee, { sellOn: 20 });
+    if (typeof offer === 'string') throw new Error(offer);
+    nextDay(world);
+    expect(offer.status).toBe('accepted');
+    expect(negotiateTransfer(world, offer.id, demandTerms(world, target)).outcome).toBe('signed');
+    expect(target.sellOn).toEqual({ clubId: 'konyaspor', percent: 20 });
+
+    // Kasımpaşa oyuncuyu satar: bedelin %20'si Konyaspor'a
+    const konya = world.finances.konyaspor!.balance;
+    const kasim = world.finances.kasimpasa!.balance;
+    transferPlayer(world, target, 'trabzonspor', 10_000_000, { wage: 1_000_000, years: 3, signingBonus: 0 });
+    expect(world.finances.konyaspor!.balance - konya).toBe(2_000_000);
+    expect(world.finances.kasimpasa!.balance - kasim).toBe(8_000_000);
+    expect(target.sellOn).toBeUndefined();
+  });
+
+  it('satış payı en çok %50', () => {
+    const { world, target } = setup();
+    expect(makeOffer(world, target.id, 'transfer', 1_000_000, { sellOn: 60 })).toBeTypeOf('string');
+  });
+
+  it('opsiyonlu kiralık: düşük opsiyon reddedilir; kabul edilende opsiyon kullanılınca oyuncu sözleşmesiyle kalır', () => {
+    const { world, reserve } = setup();
+    const low = makeOffer(world, reserve.id, 'loan', loanFeeAsk(world, reserve), { optionFee: 1000 });
+    if (typeof low === 'string') throw new Error(low);
+    nextDay(world);
+    expect(low.status).toBe('rejected');
+
+    const optionFee = askingPrice(world, reserve);
+    const offer = makeOffer(world, reserve.id, 'loan', loanFeeAsk(world, reserve), { optionFee });
+    if (typeof offer === 'string') throw new Error(offer);
+    nextDay(world);
+    expect(offer.status).toBe('completed');
+    expect(reserve.loan?.optionFee).toBe(optionFee);
+
+    const contract = reserve.contract;
+    const number = reserve.squadNumber;
+    const konya = world.finances.konyaspor!.balance;
+    expect(exerciseOption(world, reserve.id)).toBeNull();
+    expect(reserve.clubId).toBe('kasimpasa');
+    expect(reserve.loan).toBeNull();
+    expect(reserve.contract).toBe(contract);
+    expect(reserve.squadNumber).toBe(number);
+    expect(world.finances.konyaspor!.balance - konya).toBe(optionFee);
+    expect(exerciseOption(world, reserve.id)).toBeTypeOf('string'); // ikinci kez olmaz
   });
 });

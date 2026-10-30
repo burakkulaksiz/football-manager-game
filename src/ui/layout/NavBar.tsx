@@ -1,4 +1,4 @@
-import { daysBetween, getClub, nextFixtureFor, UNEMPLOYMENT_LIMIT_DAYS, type GameWorld } from '../../engine';
+import { daysBetween, getClub, nextFixtureFor, todaysFixtures, todaysUserFixture, UNEMPLOYMENT_LIMIT_DAYS, type GameWorld } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { formatDayMonth } from '../labels';
 
@@ -16,21 +16,25 @@ function statusText(world: GameWorld): string {
 }
 
 /** Başlığın altındaki çubuk: geri/ileri, durum ve Devam. */
-export function NavBar() {
+export function NavBar({ onMenu }: { onMenu: () => void }) {
   const world = useWorld();
   const back = useGameStore((s) => s.back);
   const forward = useGameStore((s) => s.forward);
   const advance = useGameStore((s) => s.advance);
   const canBack = useGameStore((s) => s.historyIndex > 0);
   const canForward = useGameStore((s) => s.historyIndex < s.history.length - 1);
-  const isMatchDay = world.season.fixtures.some((f) => f.date === world.date && f.result === null);
+  // "Maça Çık" yalnızca bugün bizim maçımız varsa; yalnızca başkalarının maçı varsa Devam onları oynatıp sonuçları gösterir
+  const isMatchDay = todaysUserFixture(world) !== null;
+  const othersPlay = !isMatchDay && todaysFixtures(world).length > 0;
   const liveMatch = useGameStore((s) => s.liveMatch);
   const onMatchScreen = useGameStore((s) => s.screen === 'match');
   // Canlı maç sürerken Devam maça döndürür; maç ekranındayken kontroller oradadır.
-  const label = liveMatch ? (onMatchScreen ? 'Maç Oynanıyor' : 'Maça Dön') : isMatchDay ? 'Maça Çık' : 'Devam';
+  const label = liveMatch ? (onMatchScreen ? 'Maç Oynanıyor' : 'Maça Dön') : isMatchDay ? 'Maça Çık' : othersPlay ? 'Günün Maçları' : 'Devam';
 
   return (
     <nav className="navbar">
+      {/* Yalnızca dar ekranda görünür (sol menü çekmece olur) */}
+      <button className="icon-btn menu-toggle" onClick={onMenu} title="Menü" aria-label="Menü">☰</button>
       <div className="nav-arrows">
         <button className="icon-btn" onClick={back} disabled={!canBack} title="Geri">
           ◀

@@ -1,4 +1,4 @@
-import { formatDateTR, inboxItems, type NewsCategory, type NewsItem } from '../../engine';
+import { formatDateTR, inboxItems, searchNews, type NewsCategory, type NewsItem } from '../../engine';
 import type { ScreenId } from '../../store/gameStore';
 import { useGameStore, useUiState, useWorld } from '../../store/gameStore';
 import { formatDateShort, NEWS_CATEGORY_LABELS } from '../labels';
@@ -35,9 +35,10 @@ export function InboxScreen() {
   const openPlayer = useGameStore((s) => s.openPlayer);
   const setScreen = useGameStore((s) => s.setScreen);
   const [filter, setFilter] = useUiState<Filter>('inbox.filter', 'all');
+  const [query, setQuery] = useUiState('inbox.search', '');
   const all = inboxItems(world);
   const active = FILTERS.find((f) => f.id === filter)!;
-  const items = all.filter((n) =>
+  const items = searchNews(all, query).filter((n) =>
     filter === 'unread' ? !n.read : active.categories ? active.categories.includes(n.category) : true,
   );
   const [selectedId, setSelectedId] = useUiState<number | null>('inbox.selected', all[0]?.id ?? null);
@@ -76,8 +77,9 @@ export function InboxScreen() {
             </button>
           ))}
         </div>
+        <input className="search-input wide" type="search" placeholder="Mesajlarda ara…" value={query} onChange={(e) => setQuery(e.target.value)} />
         <div className="inbox-list">
-          {items.length === 0 && <div className="panel-body muted">Mesaj yok.</div>}
+          {items.length === 0 && <div className="panel-body muted">{query.trim() ? 'Aramaya uyan mesaj yok.' : 'Mesaj yok.'}</div>}
           {items.map((n) => (
             <button
               key={n.id}

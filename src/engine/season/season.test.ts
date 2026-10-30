@@ -6,6 +6,7 @@ import { clubPlayers, createWorld, getClub, leagueClubs } from '../generation/wo
 import { CUP_ROUNDS, cupFixtures, fixtureWinner } from '../league/cup';
 import { europeCompetitionOf } from '../league/europe';
 import { computeStandings } from '../league/standings';
+import { lowerStandings } from '../league/lowerLeague';
 import { negotiateFreeAgent } from '../transfer/offers';
 import { contractDemand } from '../transfer/agents';
 import { makeResult, playUntil } from '../testing';
@@ -36,7 +37,9 @@ describe('sezon döngüsü', () => {
     expect(summary.year).toBe(2026);
     expect(summary.championId).toBe(finalTable[0]!.clubId);
     expect(summary.relegatedIds).toEqual(finalTable.slice(-3).map((r) => r.clubId));
-    expect(summary.promotedIds).toHaveLength(3);
+    // 1. Lig oynandı: bütün maçların skoru var, çıkanlar tablonun ilk üçü
+    expect(world.season.lower!.every((f) => f.result !== null)).toBe(true);
+    expect(summary.promotedIds).toEqual(lowerStandings(world).slice(0, 3).map((r) => r.clubId));
     for (const id of summary.promotedIds) expect(lowerIds).toContain(id);
     expect(summary.awards.length).toBeGreaterThanOrEqual(4);
     const championPrize = world.finances[summary.championId]!.current.income.prize + world.finances[summary.championId]!.history.reduce((s, r) => s + (r.income.prize ?? 0), 0);

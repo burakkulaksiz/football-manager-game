@@ -8,6 +8,7 @@ import {
   MAX_SUBS,
   PLAN_LABELS,
   primaryPosition,
+  TEAM_TALKS,
   type GameWorld,
   type MatchEventType,
   type MatchState,
@@ -16,7 +17,7 @@ import {
 import { MATCH_SPEEDS, MATCH_SPEED_FACTOR, MATCH_SPEED_LABELS } from '../../store/settings';
 import { useGameStore, userSide, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
-import { readableText } from '../colors';
+import { DARK_PANEL, readableText, teamColorsOn } from '../colors';
 import { FormationPicker, InstructionsPanel, PlanPicker, SetPieceStyles } from '../components/InstructionsPanel';
 import { MatchStatRows } from '../components/MatchStatRows';
 import { AssistantPanel } from '../components/AssistantPanel';
@@ -25,7 +26,7 @@ import { PitchView, type CameraMode } from '../components/PitchView';
 import { useHotkeys } from '../hotkeys';
 import { buildScene, isHighlight, QUIET_MINUTE_MS, revealDelayMs, sceneDurationMs } from '../pitchScene';
 import { createEventCursor, sound } from '../sound';
-import { MENTALITY_LABELS, POSITION_LABELS, positionGroup, ratingClass } from '../labels';
+import { MENTALITY_LABELS, POSITION_LABELS, positionGroup, ratingClass, TALK_HINTS, TALK_LABELS } from '../labels';
 
 /**
  * Önemli an oynarken sonucu (skor, golcü, anlatım) erken göstermemek için anın öncesindeki durum.
@@ -182,8 +183,10 @@ function Scoreboard({ match, held }: { match: MatchState; held: Held | null }) {
 /** FM'deki "Son 5 dk" çubuğu gibi: son dakikalarda hangi takım atak yaptı. */
 function MomentumBar({ match }: { match: MatchState }) {
   const world = useWorld();
-  const homeColor = getClub(world, match.home.clubId).colors.primary;
-  const awayColor = getClub(world, match.away.clubId).colors.primary;
+  // Koyu zeminde okunur ve birbirinden ayrılan renkler (siyah formalı takım beyaz rengiyle)
+  const { home: homeColor, away: awayColor } = teamColorsOn(
+    getClub(world, match.home.clubId).colors, getClub(world, match.away.clubId).colors, DARK_PANEL, 2.5,
+  );
   const cells = Array.from({ length: 10 }, (_, i) => match.momentum[match.momentum.length - 10 + i]);
   return (
     <div className="momentum">
@@ -257,12 +260,17 @@ function useCameraPref(): [CameraMode, (mode: CameraMode) => void] {
 }
 
 /** Tam ekranda tabela görünmez: sahanın üstünde skor, saat ve oynat/duraklat. */
-function FullscreenBar({ match, held, running, onToggleRun, onExit }: {
+/** Tam ekranda sahanın üstüne açılan çekmece: değişiklik (kadro) ya da taktik. */
+type Drawer = 'subs' | 'tactics' | null;
+
+function FullscreenBar({ match, held, running, onToggleRun, onExit, drawer, setDrawer }: {
   match: MatchState;
   held: Held | null;
   running: boolean;
   onToggleRun: () => void;
   onExit: () => void;
+  drawer: Drawer;
+  setDrawer: (d: Drawer) => void;
 }) {
   const world = useWorld();
   const home = getClub(world, match.home.clubId);
@@ -275,7 +283,11 @@ function FullscreenBar({ match, held, running, onToggleRun, onExit }: {
       <span className="fs-team" style={{ background: away.colors.primary, color: readableText(away.colors.primary, away.colors.secondary) }}>{away.name}</span>
       <span className="fs-clock">{clockText(match)}</span>
       {match.period !== 'full' && (
-        <button className="btn btn-small" onClick={onToggleRun}>{running ? '❚❚ Duraklat' : '▶ Devam'}</button>
+        <>
+          <button className="btn btn-small" onClick={onToggleRun}>{running ? '❚❚ Duraklat' : '▶ Devam'}</button>
+          <button className={`btn btn-small${drawer === 'subs' ? ' active' : ''}`} onClick={() => setDrawer(drawer === 'subs' ? null : 'subs')}>Değişiklik</button>
+          <button className={`btn btn-small${drawer === 'tactics' ? ' active' : ''}`} onClick={() => setDrawer(drawer === 'tactics' ? null : 'tactics')}>Taktik</button>
+        </>
       )}
       <button className="btn btn-small" onClick={onExit} title="Tam ekrandan çık (Esc)">Küçült</button>
     </div>
@@ -318,7 +330,11 @@ function PitchTools({ camera, setCamera, onFullscreen, onHide }: {
   );
 }
 
-function PitchPanel({ match, held, show, toggle, running, onToggleRun, camera, fullscreen, onExitFullscreen, panelRef }: {
+function PitchPanel({ match, held, show, toggle, running, onToggleRun, camera, fullscreen, onExitFullscreen, panelRef, selectedOut, setSelectedOut, onPick }: {
+  selectedOut: number | null;
+  setSelectedOut: (id: number | null) => void;
+  /** Sahadaki kendi oyuncuya tıklanınca (değişiklik hakkı varsa verilir). */
+  onPick?: (id: number) => void;
   match: MatchState;
   held: Held | null;
   show: boolean;
@@ -330,6 +346,9 @@ function PitchPanel({ match, held, show, toggle, running, onToggleRun, camera, f
   onExitFullscreen: () => void;
   panelRef: React.RefObject<HTMLElement | null>;
 }) {
+  const world = useWorld();
+  const [drawer, setDrawer] = useState<Drawer>(null);
+  const open = fullscreen && match.period !== 'full' ? drawer : null;
   if (!show) {
     return (
       <section className="panel pitch-panel collapsed">
@@ -340,9 +359,33 @@ function PitchPanel({ match, held, show, toggle, running, onToggleRun, camera, f
   }
   return (
     <section className={`panel pitch-panel${fullscreen ? ' fullscreen' : ''}`} ref={panelRef}>
-      {fullscreen && <FullscreenBar match={match} held={held} running={running} onToggleRun={onToggleRun} onExit={onExitFullscreen} />}
-      <PitchView match={match} camera={camera} fullscreen={fullscreen} />
+      {fullscreen && (
+        <FullscreenBar match={match} held={held} running={running} onToggleRun={onToggleRun} onExit={onExitFullscreen} drawer={open} setDrawer={setDrawer} />
+      )}
+      <PitchView
+        match={match}
+        camera={camera}
+        fullscreen={fullscreen}
+        selectedId={selectedOut}
+        // Tam ekranda sahadan oyuncu seçilince girecek yedek için değişiklik çekmecesi açılır
+        onPick={onPick && ((id) => {
+          onPick(id);
+          if (fullscreen) setDrawer('subs');
+        })}
+      />
       <EventBar match={match} held={held} />
+      {open && (
+        <div className="fs-drawer">
+          {open === 'subs' ? (
+            <TeamPanel match={match} side={userSide(match, world)} selectedOut={selectedOut} setSelectedOut={setSelectedOut} />
+          ) : (
+            <>
+              {match.period === 'half' && <HalfTimeTalk match={match} />}
+              <LiveTactics match={match} />
+            </>
+          )}
+        </div>
+      )}
     </section>
   );
 }
@@ -370,14 +413,23 @@ function Commentary({ match, held }: { match: MatchState; held: Held | null }) {
   );
 }
 
-function TeamPanel({ match, side }: { match: MatchState; side: Side }) {
+/** Kullanıcı bu tarafın değişikliğini yapabilir mi (kendi takımı, maç bitmedi, hakkı var). */
+const canSubstitute = (match: MatchState, world: GameWorld, side: Side) =>
+  userSide(match, world) === side && match.period !== 'full' && match[side].subsUsed < MAX_SUBS;
+
+/** Değişiklik için seçilen oyuncu sahadan (sahadaki nokta ya da kadro satırı) seçilir, yedek satırı girecek olanı seçer. */
+function TeamPanel({ match, side, selectedOut, setSelectedOut }: {
+  match: MatchState;
+  side: Side;
+  selectedOut: number | null;
+  setSelectedOut: (id: number | null) => void;
+}) {
   const world = useWorld();
   const liveSubstitute = useGameStore((s) => s.liveSubstitute);
   const team = match[side];
   const club = getClub(world, team.clubId);
   const isUser = userSide(match, world) === side;
-  const canSub = isUser && match.period !== 'full' && team.subsUsed < MAX_SUBS;
-  const [selectedOut, setSelectedOut] = useState<number | null>(null);
+  const canSub = canSubstitute(match, world, side);
 
   // Oyundan çıkanlar ve atılanlar (sahada değil ama oynadı)
   const departed = Object.values(match.players).filter(
@@ -531,6 +583,37 @@ function Controls({ match, running, setRunning, showTactics, setShowTactics, onI
 }
 
 /** Maç içi taktik paneli: taktik seti, diziliş ve talimatlar anında uygulanır. */
+/** Devre arası konuşması: bir kez seçilir; etkisi skora ve oyuncuların profesyonelliğine göre (ikinci yarı verimi ve moral). */
+function HalfTimeTalk({ match }: { match: MatchState }) {
+  const world = useWorld();
+  const talk = useGameStore((s) => s.liveTeamTalk);
+  const given = match[userSide(match, world)].talk;
+  return (
+    <section className="panel">
+      <h2 className="panel-title">Devre Arası Konuşması</h2>
+      <div className="panel-body">
+        <div className="toolbar">
+          {TEAM_TALKS.map((t) => (
+            <button
+              key={t}
+              className={`btn btn-small${given === t ? ' active' : ''}`}
+              disabled={given !== undefined}
+              title={TALK_HINTS[t]}
+              onClick={() => talk(t)}
+            >
+              {TALK_LABELS[t]}
+            </button>
+          ))}
+        </div>
+        <div className="panel-note">
+          {given ? 'Konuşma yapıldı; etkisi ikinci yarıda oyunda ve oyuncuların moralinde görülür.'
+            : 'Skora uygun konuşma ikinci yarıda verimi ve morali artırır; yanlışı geri teper. Konuşmamak da bir seçenek.'}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function LiveTactics({ match }: { match: MatchState }) {
   const world = useWorld();
   const change = useGameStore((s) => s.liveChangeTactics);
@@ -566,6 +649,7 @@ export function MatchScreen() {
   const world = useWorld();
   const [running, setRunning] = useState(false);
   const [showTactics, setShowTactics] = useState(false);
+  const [selectedOut, setSelectedOut] = useState<number | null>(null);
   const [showPitch, togglePitch] = usePitchPref();
   // Maç hızı (Ayarlar): saat ve 2D sahadaki sahneler bu çarpanla hızlanır
   const speed = MATCH_SPEED_FACTOR[useGameStore((s) => s.settings.matchSpeed)];
@@ -702,6 +786,7 @@ export function MatchScreen() {
         </div>
       )}
       {match.period === 'half' && <div className="motm">Devre arası — oyuncu değişikliği ve taktik değişikliği yapabilirsin.</div>}
+      {match.period === 'half' && <HalfTimeTalk match={match} />}
       <PitchPanel
         match={match}
         held={hold}
@@ -713,15 +798,18 @@ export function MatchScreen() {
         onExitFullscreen={exitFullscreen}
         panelRef={pitchRef}
         onToggleRun={toggleRun}
+        selectedOut={selectedOut}
+        setSelectedOut={setSelectedOut}
+        onPick={canSubstitute(match, world, userSide(match, world)) ? (id) => setSelectedOut(selectedOut === id ? null : id) : undefined}
       />
       <div className="match-grid">
-        <TeamPanel match={match} side="home" />
+        <TeamPanel match={match} side="home" selectedOut={selectedOut} setSelectedOut={setSelectedOut} />
         <div className="match-center">
           <StatsPanel match={match} />
           <LiveMaps match={match} held={hold} />
           <Commentary match={match} held={hold} />
         </div>
-        <TeamPanel match={match} side="away" />
+        <TeamPanel match={match} side="away" selectedOut={selectedOut} setSelectedOut={setSelectedOut} />
       </div>
     </div>
   );

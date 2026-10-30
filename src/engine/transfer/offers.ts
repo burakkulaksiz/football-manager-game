@@ -8,6 +8,7 @@ import { clubPlayers, getClub } from '../generation/worldGenerator';
 import { addNews } from '../news';
 import { ageOn, roundNice } from '../player';
 import { promisePlayingTime } from '../squad/talks';
+import { changeFans } from '../season/fans';
 import type { GameWorld, Player, SquadRole, TransferOffer } from '../types';
 import { agentOf, agentProfile, contractDemand, contractFromTerms, evaluateTerms, type ContractDemand } from './agents';
 import {
@@ -56,14 +57,29 @@ export function offerBlocker(world: GameWorld, player: Player, kind: TransferOff
   return null;
 }
 
+/** Sonradan satış payı en çok bu kadar (%). */
+export const MAX_SELL_ON = 50;
+/** Satıcı, satış payının her yüzdesini istediği bedelin bu kadarı değerinde sayar (gelecekteki gelir belirsiz). */
+const SELL_ON_WORTH = 0.006;
+
+/** Sözleşme maddeleri: transferde satış payı (%), kiralıkta satın alma opsiyonu bedeli. */
+export interface OfferClauses {
+  sellOn?: number;
+  optionFee?: number;
+}
+
 /** Kullanıcının teklifi: kulüp ertesi gün yanıtlar. Hata varsa metin döner. */
-export function makeOffer(world: GameWorld, playerId: number, kind: TransferOffer['kind'], fee: number): TransferOffer | string {
+export function makeOffer(world: GameWorld, playerId: number, kind: TransferOffer['kind'], fee: number, clauses: OfferClauses = {}): TransferOffer | string {
   const player = world.players[playerId];
   if (!player) return 'Oyuncu bulunamadı.';
   const blocker = offerBlocker(world, player, kind);
   if (blocker) return blocker;
   const fin = world.finances[world.playerClubId]!;
   if (fee < 0) return 'Geçersiz tutar.';
+  const sellOn = kind === 'transfer' ? Math.round(clauses.sellOn ?? 0) : 0;
+  const optionFee = kind === 'loan' ? roundNice(clauses.optionFee ?? 0) : 0;
+  if (sellOn < 0 || sellOn > MAX_SELL_ON) return `Satış payı %0–${MAX_SELL_ON} arasında olmalı.`;
+  if (optionFee < 0) return 'Geçersiz opsiyon bedeli.';
   if (fee > fin.transferBudget) return `Transfer bütçen yetersiz (€${formatPlain(fin.transferBudget)}).`;
   if (kind === 'loan') {
     const projected = totalWages(Object.values(world.players), world.playerClubId) + player.contract.wage;
@@ -76,6 +92,8 @@ export function makeOffer(world: GameWorld, playerId: number, kind: TransferOffe
     sellerId: player.clubId!,
     kind,
     fee: roundNice(fee),
+    ...(sellOn > 0 ? { sellOn } : {}),
+    ...(optionFee > 0 ? { optionFee } : {}),
     counterFee: null,
     status: 'pending',
     created: world.date,
@@ -98,7 +116,7 @@ export function acceptCounter(world: GameWorld, offerId: number): string | null 
   offer.fee = offer.counterFee;
   offer.counterFee = null;
   if (offer.kind === 'loan') {
-    loanPlayer(world, world.players[offer.playerId]!, offer.buyerId, offer.fee);
+    loanPlayer(world, world.players[offer.playerId]!, offer.buyerId, offer.fee, offer.optionFee);
     offer.status = 'completed';
     offer.note = 'Kiralık tamamlandı.';
   } else {
@@ -114,6 +132,25 @@ export function withdrawOffer(world: GameWorld, offerId: number): void {
     offer.status = 'cancelled';
     offer.note = 'Teklif geri çekildi.';
   }
+}
+
+/**
+ * Kiralık oyuncunun satın alma opsiyonunu kullan: bedel sahibine ödenir, oyuncu mevcut sözleşmesiyle kalıcı olarak kalır.
+ * Kiralık sürerken her zaman (transfer dönemi şartı yok; kiralık 30 Haziran'da, dönem dışında biter). Hata varsa metin döner.
+ */
+export function exerciseOption(world: GameWorld, playerId: number): string | null {
+  const player = world.players[playerId];
+  const loan = player?.loan;
+  if (!player || !loan || player.clubId !== world.playerClubId || !loan.optionFee) return 'Kullanılacak bir satın alma opsiyonu yok.';
+  const fee = loan.optionFee;
+  if (fee > world.finances[world.playerClubId]!.transferBudget) return `Opsiyon bedeli (€${formatPlain(fee)}) için transfer bütçen yetersiz.`;
+  const { contract, squadNumber } = player;
+  // Bonservis sahibine gider: satıcı kiralık veren kulüp; sözleşme ve forma numarası aynen kalır
+  player.clubId = loan.fromClubId;
+  transferPlayer(world, player, world.playerClubId, fee, { wage: contract.wage, years: 1, signingBonus: 0 });
+  player.contract = contract;
+  player.squadNumber = squadNumber;
+  return null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -194,8 +231,10 @@ export function negotiateTransfer(world: GameWorld, offerId: number, offered: Tr
   const result = respond(world, player, world.playerClubId, terms, offer.patience);
   offer.patience = result.patienceLeft;
   if (result.outcome === 'signed') {
-    transferPlayer(world, player, world.playerClubId, offer.fee, terms);
+    transferPlayer(world, player, world.playerClubId, offer.fee, terms, offer.sellOn);
     afterSigning(world, player, terms);
+    // Yıldız transferi tribünü coşturur
+    if (terms.role === 'star') changeFans(world, 3);
     offer.status = 'completed';
     offer.note = 'Transfer tamamlandı.';
   } else if (result.outcome === 'collapsed') {
@@ -334,6 +373,8 @@ export function completeAiPurchase(world: GameWorld, offer: TransferOffer, fee: 
   const age = ageOn(player.birthDate, world.date);
   const [minYears, maxYears] = preferredYears(age);
   const wage = wageDemand(world, player, offer.buyerId);
+  // İlk 11 oyuncusunun satılması taraftarı kızdırır
+  if (offer.sellerId === world.playerClubId && playerImportance(world, player) >= 1) changeFans(world, -6);
   transferPlayer(world, player, offer.buyerId, fee, { wage, years: Math.round((minYears + maxYears) / 2), signingBonus: 0 });
   offer.fee = fee;
   offer.status = 'completed';
@@ -359,9 +400,13 @@ function sellerDecision(world: GameWorld, offer: TransferOffer): void {
   if (squadSize <= MIN_SQUAD_TO_SELL) reject(`${seller} kadrosu dar olduğu için oyuncu satmıyor.`);
   else if (offer.kind === 'loan') {
     const ask = loanFeeAsk(world, player);
+    // Opsiyonla satmaya razı olacağı en düşük bedel: satış istemi
+    const optionAsk = askingPrice(world, player);
     if (importance >= 1) reject(`${seller}, ilk 11 oyuncusunu kiralık vermiyor.`);
-    else if (offer.fee >= ask * 0.8) {
-      loanPlayer(world, player, offer.buyerId, offer.fee);
+    else if (offer.optionFee && offer.optionFee < optionAsk) {
+      reject(`${seller} satın alma opsiyonu için en az €${formatPlain(optionAsk)} istiyor.`);
+    } else if (offer.fee >= ask * 0.8) {
+      loanPlayer(world, player, offer.buyerId, offer.fee, offer.optionFee);
       offer.status = 'completed';
       offer.note = 'Kiralık tamamlandı.';
       return; // loanPlayer haberi zaten yazdı
@@ -371,14 +416,16 @@ function sellerDecision(world: GameWorld, offer: TransferOffer): void {
       offer.note = `${seller} kiralık bedeli olarak €${formatPlain(ask)} istiyor.`;
     }
   } else {
-    const ask = askingPrice(world, player);
+    const fullAsk = askingPrice(world, player);
+    // Satış payı istenen bonservisi düşürür (karşı teklif de payla birlikte)
+    const ask = roundNice(fullAsk * (1 - (offer.sellOn ?? 0) * SELL_ON_WORTH));
     if (offer.fee >= ask * 0.92) {
       offer.status = 'accepted';
       offer.note = 'Kulüple anlaşıldı. Oyuncuyla sözleşme görüşmesi yapabilirsin.';
     } else if (offer.fee >= ask * 0.6) {
       offer.status = 'countered';
       offer.counterFee = ask;
-      offer.note = `${seller} €${formatPlain(ask)} istiyor.`;
+      offer.note = `${seller} €${formatPlain(ask)} istiyor${offer.sellOn ? ` (%${offer.sellOn} satış payıyla)` : ''}.`;
     } else {
       reject(`${seller} teklifi çok düşük buldu.`);
     }

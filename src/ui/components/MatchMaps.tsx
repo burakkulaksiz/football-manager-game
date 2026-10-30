@@ -1,24 +1,17 @@
 import { useId, useMemo, useState } from 'react';
 import { formatMinute, type Club, type ShotOutcome, type ShotRecord, type Side } from '../../engine';
-import { contrastRatio } from '../colors';
+import { teamColorsOn } from '../colors';
 import { heatPoints, shotMarks, shotSummary, territory } from '../matchMaps';
-import { colorsClash, PITCH_LENGTH, PITCH_WIDTH } from '../pitch';
+import { PITCH_LENGTH, PITCH_WIDTH } from '../pitch';
 import { PitchMarkings } from './PitchView';
 
 type Mode = 'shots' | 'heat';
 type TeamFilter = 'both' | Side;
 
 const GRASS = '#2c6a28';
-const FALLBACK: Record<Side, string> = { home: '#ffd23f', away: '#7fd3ff' };
 
 /** Haritada takım rengi: çimde okunan ilk kulüp rengi; deplasman ev sahibine çok benziyorsa diğer rengi. */
-function mapColors(home: Club, away: Club): Record<Side, string> {
-  const readable = (c: string) => contrastRatio(c, GRASS) >= 1.8;
-  const pick = (club: Club, avoid?: string) =>
-    [club.colors.primary, club.colors.secondary].find((c) => readable(c) && (!avoid || !colorsClash(c, avoid)));
-  const h = pick(home) ?? FALLBACK.home;
-  return { home: h, away: pick(away, h) ?? FALLBACK.away };
-}
+const mapColors = (home: Club, away: Club): Record<Side, string> => teamColorsOn(home.colors, away.colors, GRASS);
 
 const OUTCOME_LABELS: Record<ShotOutcome, string> = { goal: 'Gol', saved: 'Kurtarıldı', missed: 'Aut', blocked: 'Engellendi' };
 const KIND_LABELS: Record<NonNullable<ShotRecord['kind']>, string> = {

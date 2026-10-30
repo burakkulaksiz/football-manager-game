@@ -57,6 +57,13 @@ verdi; "esinlen ama modern olsun"). Tüm renkler `styles.css` başındaki CSS de
   sıfırlanır (area); openPlayer / openReport / geri-ileri sıfırlamaz. Transfer Merkezi (sekme, arama filtreleri), Gelen Kutusu (filtre,
   seçili haber), Altyapı, Milli Takımlar, Kadro sıralaması, Avrupa sekmesi bununla. GameShell geri / ileri dönüşte kaydırma konumunu
   geri yükler (geçmiş sırası + sayfa anahtarına göre).
+- Dar ekran (styles.css sonu, max-width 900px): .shell min-width kalkar; sol menü çekmece (GameShell menuOpen, NavBar ☰
+  .menu-toggle yalnızca dar ekranda; arka plan tıklanınca ya da sayfa değişince kapanır); başlıkta yalnızca sayfa hapı; çok
+  sütunlu ızgaralar (two-columns, inbox, match-grid, tactics-grid, profile-grid…) tek sütun, kart ızgaraları iki sütun;
+  .data-table kendi içinde yana kayar. Tarayıcıda denenmedi.
+- Haber arama (engine/news.ts searchNews): başlık + metin, toLocaleLowerCase('tr'), boşlukla ayrılan her kelime geçmeli. Gelen
+  Kutusu'nda filtrelerle birlikte (ui "inbox.search"); Transfer Merkezi > Haberler'de aramada saklanan tüm haberler (NEWS_LIMIT 400),
+  aramasız son 100 (ui "transfers.newsSearch").
 - 2D saha baskı çubuğu: maç bitince “Maç sona erdi / Son düdük: skor”, devre arasında “Devre arası”.
 - Taktik sayfası: yardımcı antrenör ve “Taktik” başlık paneli (diziliş, Otomatik Seç, karşılaştırma) sol sütunda talimatların üstünde.
 

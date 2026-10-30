@@ -3,6 +3,8 @@ import {
   ageOn,
   clubPlayers,
   confidenceLabel,
+  fansLabel,
+  fansOf,
   formatDateTR,
   HOME_NATION,
   managerReputation,
@@ -10,6 +12,7 @@ import {
   marketValue,
   MIN_ROUNDS_BEFORE_SACK,
   seasonLabel,
+  UNHAPPY_FANS,
   userPosition,
   WARNING_CONFIDENCE,
 } from '../../engine';
@@ -111,6 +114,7 @@ export function ClubInfoScreen() {
   ];
 
   const board = world.board;
+  const fans = fansOf(world);
   // Sezon başında (henüz maç oynanmadıysa) sıra anlamsız; sezon arasında geçen sezonun sırası.
   const playedAny = world.season.fixtures.some((f) => f.result && (f.homeId === club.id || f.awayId === club.id));
   const position = world.seasonState === 'ended'
@@ -137,9 +141,18 @@ export function ClubInfoScreen() {
             <div className="usage-bar confidence-bar">
               <i style={{ width: `${board.confidence}%` }} className={board.confidence < WARNING_CONFIDENCE ? 'over' : ''} />
             </div>
+            <div className="kv">
+              <span className="kv-label">Taraftar</span>
+              <span className={`kv-value ${fans < UNHAPPY_FANS ? 'neg' : ''}`}>{fansLabel(fans)} ({Math.round(fans)}/100)</span>
+            </div>
+            <div className="usage-bar confidence-bar">
+              <i style={{ width: `${fans}%` }} className={fans < UNHAPPY_FANS ? 'over' : ''} />
+            </div>
             <div className="panel-note">
               Güven galibiyetlerle artar, yenilgilerle düşer; her ay sıralama hedefe göre değerlendirilir. Çok düşerse
               (sezonun ilk {MIN_ROUNDS_BEFORE_SACK} haftasından sonra) ya da takım küme düşerse görevine son verilir.
+              Taraftar sonuçlara, sezon hedefine ve büyük transferlere (yıldız alımı, ilk 11 oyuncusunun satışı) tepki verir;
+              memnuniyet iç saha seyircisini ve yönetimin güvenini etkiler.
             </div>
           </div>
         </section>

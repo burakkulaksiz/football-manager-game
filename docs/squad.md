@@ -13,6 +13,12 @@
 - **Moral:** galibiyet +5, yenilgi −5, puan ≥ 7.5 +3, ≤ 5.5 −3, ilk 11 +1; kadro sırası ilk 14'te olup
   oynamayan sağlam oyuncu −3; diğerleri sonucun yarısı. Günlük ortalamaya (60) dönüş (%3, en az 1 puan).
   Kullanıcının oyuncusu < 30 ise haftalık şikâyet haberi (45 gün arayla). Transfer → en az 72, yenileme +8.
+- **Devre arası konuşması** (engine/match/teamTalk.ts; yalnızca kullanıcı takımı, devre arasında bir kez, rng kullanmaz):
+  sahadaki + yedekteki her oyuncunun günlük formuna talkEffect eklenir (sınır ±0,15; verim çarpanı) ve morali
+  round(etki × 200) değişir (dünyada, hemen). Skor farkı takım açısından (rövanşta toplam). Öv: önde +0,03, eşit +0,01,
+  geride −0,02. Daha fazlasını iste: önde 0, eşit +0,02, 1–2 geride +0,03, 3+ geride −0,01. Sakinleştir: önde +0,02, eşit
+  +0,01, 1 geride 0, 2+ geride +0,02. Sert çık: gerideyken profesyonellik ≥ 14 +0,04, < 10 −0,03, diğer +0,01; değilken
+  ≥ 14 0, diğer −0,03. TeamState.talk (isteğe bağlı alan, sürüm artmadı); anlatıma 'info' satırı. Yapay zekâ konuşma yapmaz.
 - **Gelişim (pazartesi):** yaşa göre haftalık özellik puanı (≤18: 0.5 … 28–29: 0 … 34+: −0.28).
   Artı: × (PA − CA)/25 (0–1) × (0.6 + profesyonellik × 0.8) × yoğunluk; sakat gelişemez.
   Eksi: × (1.2 − prof × 0.4) × (1.15 − doğal kondisyon × 0.3). Birikim ±1 → bir özellik ±1, CA yeniden

@@ -48,7 +48,7 @@ function NextMatchCard() {
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ open = false }: { open?: boolean }) {
   const screen = useGameStore((s) => s.screen);
   const setScreen = useGameStore((s) => s.setScreen);
   const liveMatch = useGameStore((s) => s.liveMatch);
@@ -70,7 +70,7 @@ export function Sidebar() {
   const isActive = (id: string) => id === screen || (screen === 'player' && id === 'squad');
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${open ? ' open' : ''}`}>
       <nav className={`sidebar-menu${hotkeys ? ' hotkeys' : ''}`}>
         {MENU.map((group) => (
           <div key={group.title} className="menu-group">

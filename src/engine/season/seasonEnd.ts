@@ -6,6 +6,7 @@ import { addIncome } from '../finance/finance';
 import { formatPlain } from '../transfer/market';
 import { getClub, leagueClubs } from '../generation/worldGenerator';
 import { computeStandings, goalDifference } from '../league/standings';
+import { lowerStandings, playLowerLeague } from '../league/lowerLeague';
 import { CUP_NAME, cupChampion, leagueFixtures } from '../league/cup';
 import { EUROPE, europeChampion } from '../league/europe';
 import { topAssists, topRatings, topScorers } from '../league/stats';
@@ -18,6 +19,7 @@ import { sack } from './board';
 import { isUnemployed } from './jobs';
 import { managerSeasonEnd, sackThreshold } from './manager';
 import { divisionOf } from './expectation';
+import { fansSeasonEnd } from './fans';
 
 export const RELEGATED_COUNT = 3;
 
@@ -86,6 +88,7 @@ function boardSeasonReview(world: GameWorld, position: number, relegated: boolea
     sack(world, 'Takım küme düştü; yönetim kurulu görevine son verdi.');
     return;
   }
+  fansSeasonEnd(world, position);
   const diff = board.targetPosition - position;
   const delta = position === 1 ? 30 : diff >= 0 ? 15 : diff >= -3 ? -5 : -20;
   board.confidence = Math.max(0, Math.min(100, board.confidence + delta));
@@ -96,7 +99,11 @@ export function endSeason(world: GameWorld, rng: Rng): SeasonSummary {
   const clubs = leagueClubs(world);
   const table = computeStandings(clubs.map((c) => c.id), world.season.fixtures);
   const relegatedIds = table.slice(-RELEGATED_COUNT).map((r) => r.clubId);
-  const promotedIds = choosePromoted(world, rng, RELEGATED_COUNT);
+  // 1. Lig oynandıysa ilk üç çıkar (sıra = tablo; ilki şampiyon); eski kayıtta fikstür yoksa rastgele
+  playLowerLeague(world, world.date);
+  const promotedIds = world.season.lower
+    ? lowerStandings(world).slice(0, RELEGATED_COUNT).map((r) => r.clubId)
+    : choosePromoted(world, rng, RELEGATED_COUNT);
   const userPosition = table.findIndex((r) => r.clubId === world.playerClubId) + 1;
 
   // Sıralama primleri

@@ -59,3 +59,8 @@ kart / sakatlık / değişiklik görselleri history.md > "Aşamalar" > 10. Cila 
 - Yerleri: maç raporunda İstatistikler'in altında; canlı maçta orta sütunda "Haritalar" (önemli an oynarken o anın
   şutu ve dakikası skor gibi gizli). Motor şut listesini yerinde büyüttüğünden canlı ekran her çizimde kopya verir.
 - Kayıt: sezon sonunda ~4,55 MB'ın ~630 KB'ı şutlar, ~30 KB zaman çizelgesi (yalnızca bu sezonun fikstürü tutulur).
+
+## Oyuncu bilgisi ve değişiklik seçimi (sahada)
+- Sahadaki nokta üzerine gelince tarayıcı ipucu (title): isim, mevki, kondisyon, maç puanı (labels.ts playerTip; başlamadan puan yok).
+- Kendi takımın sahadaki oyuncusuna tıklamak, kadro panelindeki satıra tıklamakla aynı: değişiklik için seçer (vurgulu halka). Seçim
+  MatchScreen'de tutulur (saha + iki kadro paneli paylaşır); girecek yedek yine kadro panelinden seçilir. Hak bittiyse / maç bittiyse tıklanmaz.

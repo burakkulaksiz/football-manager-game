@@ -67,8 +67,11 @@ export function GameShell() {
   const unemployed = useGameStore((s) => s.world?.unemployed != null);
   const historyIndex = useGameStore((s) => s.historyIndex);
   const [helpOpen, setHelpOpen] = useState(false);
+  // Dar ekranda sol menü açılır çekmece; sayfa değişince kapanır
+  const [menuOpen, setMenuOpen] = useState(false);
   useGlobalHotkeys(() => setHelpOpen(true));
   const pageKey = `${screen}-${playerId ?? ''}-${fixtureId ?? ''}`;
+  useEffect(() => setMenuOpen(false), [pageKey]);
   // Geri / ileri dönüşte sayfanın kaydırma konumu geri gelir (geçmişteki yer + sayfa başına)
   const mainRef = useRef<HTMLElement>(null);
   const scrolls = useRef(new Map<string, number>());
@@ -89,9 +92,10 @@ export function GameShell() {
   return (
     <div className="shell">
       <Header />
-      <NavBar />
+      <NavBar onMenu={() => setMenuOpen(!menuOpen)} />
       <div className="shell-body">
-        <Sidebar />
+        <Sidebar open={menuOpen} />
+        {menuOpen && <div className="menu-backdrop" onClick={() => setMenuOpen(false)} />}
         {/* key: sayfa değişince içerik yeniden kurulur; kaydırma yeni sayfada en üstte, geri dönüşte eski yerinde */}
         <main
           className="content pitch-bg"

@@ -58,11 +58,13 @@ export function OfferDialog({ player, kind, onClose }: { player: Player; kind: T
   const asking = kind === 'loan' ? loanFeeAsk(world, player) : askingPrice(world, player);
   const budget = world.finances[world.playerClubId]!.transferBudget;
   const [fee, setFee] = useState(Math.min(budget, kind === 'loan' ? asking : value));
+  const [sellOn, setSellOn] = useState(0);
+  const [optionFee, setOptionFee] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const club = player.clubId ? getClub(world, player.clubId).name : '';
 
   const submit = () => {
-    const result = worldAction((w) => makeOffer(w, player.id, kind, fee));
+    const result = worldAction((w) => makeOffer(w, player.id, kind, fee, { sellOn, optionFee }));
     if (typeof result === 'string') {
       setError(result);
       return;
@@ -101,6 +103,22 @@ export function OfferDialog({ player, kind, onClose }: { player: Player; kind: T
         <button className="btn btn-small" onClick={() => setFee(asking)}>Beklenti</button>
         <button className="btn btn-small" onClick={() => setFee(budget)}>Tüm bütçe</button>
       </div>
+      {kind === 'transfer' ? (
+        <>
+          <label className="field">
+            <span>Sonradan satış payı</span>
+            <select value={sellOn} onChange={(e) => setSellOn(Number(e.target.value))}>
+              {[0, 10, 15, 20, 25, 30, 40, 50].map((p) => <option key={p} value={p}>{p === 0 ? 'Yok' : `%${p}`}</option>)}
+            </select>
+          </label>
+          <div className="field-note">Oyuncuyu ileride satarsan bonservisin bu payı {club} kulübüne gider; karşılığında kulüp daha az bonservis ister.</div>
+        </>
+      ) : (
+        <>
+          <MoneyInput label="Satın alma opsiyonu (0 = yok)" value={optionFee} onChange={setOptionFee} />
+          <div className="field-note">Kiralık sürerken bu bedeli ödeyip oyuncuyu mevcut sözleşmesiyle kalıcı alabilirsin. Kulüp en az bonservis beklentisini ister (≈ {formatMoney(askingPrice(world, player))}).</div>
+        </>
+      )}
       {error && <div className="form-error">{error}</div>}
     </Modal>
   );

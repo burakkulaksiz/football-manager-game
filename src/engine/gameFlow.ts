@@ -5,6 +5,7 @@
 import type { GameData } from './data';
 import { processDay } from './daily';
 import { addDays, makeDate, type GameDate } from './date';
+import { playLowerLeague } from './league/lowerLeague';
 import { buildResult } from './match/engine';
 import { applyResult, drawMatchSeed, playFixture, startFixture } from './match/simulate';
 import type { MatchState } from './match/state';
@@ -69,6 +70,7 @@ export function playTodaysMatches(world: GameWorld): Fixture[] {
   const rng = Rng.fromState(world.rngState);
   for (const f of fixtures) applyResult(world, f, playFixture(world, f, rng), rng);
   world.rngState = rng.getState();
+  playLowerLeague(world, world.date);
   return fixtures;
 }
 

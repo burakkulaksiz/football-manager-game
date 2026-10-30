@@ -4,6 +4,7 @@ import { ageOn, baseWage, computeCurrentAbility, primaryPosition, roundNice } fr
 import { Rng } from '../rng';
 import type { Club, GameWorld, Player, Position } from '../types';
 import { generateSeason } from '../league/schedule';
+import { generateLowerLeague } from '../league/lowerLeague';
 import { initFinances } from '../finance/finance';
 import { defaultTactics } from '../match/tactics';
 import { addNews } from '../news';
@@ -189,6 +190,8 @@ export function createWorld(
   };
   fillAcademies(world, data, new Rng((seed ^ ACADEMY_SEED_SALT) >>> 0));
   addForeignClubs(world, data, new Rng((seed ^ FOREIGN_SEED_SALT) >>> 0));
+  const lower = generateLowerLeague(world, season.year);
+  if (lower) world.season.lower = lower;
   recordGrowth(world);
   refreshAiListings(world);
   createInternational(world, data, startDate);

@@ -19,6 +19,8 @@ import {
   stepMatch,
   teamHierarchy,
   substitute,
+  giveTeamTalk,
+  type TeamTalk,
   type Competition,
   type GameWorld,
   type ManagerBackground,
@@ -30,6 +32,7 @@ import {
 import { DEFAULT_SQUAD_FILTERS, type SquadFilters, type SquadView } from '../ui/squadFilters';
 import { gameData } from '../gameData';
 import { autosave, liveMatchLabel, loadGame, loadSavedMatch, saveGame } from '../persistence/saves';
+import { logError } from '../persistence/errorLog';
 import { autosaveDue, loadSettings, saveSettings, type Settings } from './settings';
 
 /** Fikstür ekranı sekmeleri. */
@@ -173,6 +176,8 @@ interface GameState {
   /** Canlı maç: bir adım (dakika) ilerlet. */
   stepLiveMatch: () => void;
   liveSubstitute: (outId: number, inId: number) => boolean;
+  /** Devre arası konuşması (bir kez; oyuncuların morali dünyada değişir). */
+  liveTeamTalk: (talk: TeamTalk) => boolean;
   /** Kalan dakikaları anında oynat (değişiklikleri yapay zekâ yapar). */
   liveInstantFinish: () => void;
   /** Biten maçı kaydet, günün diğer maçlarını oynat, sonuçları göster. */
@@ -248,7 +253,10 @@ export const useGameStore = create<GameState>()((set, get) => {
       const date = world.date;
       autosave(world)
         .then(() => set({ savedRevision: revision, lastAutosave: date }))
-        .catch((e: unknown) => get().showNotice(`Otomatik kayıt başarısız: ${String(e)}`, 'error'));
+        .catch((e: unknown) => {
+          logError('otomatik kayıt', e);
+          get().showNotice(`Otomatik kayıt başarısız: ${String(e)}`, 'error');
+        });
     }, AUTOSAVE_DELAY_MS);
   };
 
@@ -502,6 +510,15 @@ export const useGameStore = create<GameState>()((set, get) => {
       const { world, liveMatch } = get();
       if (!world || !liveMatch) return false;
       const ok = substitute(liveMatch, world.players, userSide(liveMatch, world), outId, inId);
+      if (ok) set({ liveMatch: { ...liveMatch } });
+      return ok;
+    },
+
+    liveTeamTalk: (talk) => {
+      const { liveMatch } = get();
+      if (!get().world || !liveMatch) return false;
+      // Moral dünyadaki oyuncularda değişir: worldAction yeni referans verir (kaydedilmemiş ilerleme izlenir)
+      const ok = get().worldAction((w) => giveTeamTalk(liveMatch, w.players, userSide(liveMatch, w), talk));
       if (ok) set({ liveMatch: { ...liveMatch } });
       return ok;
     },

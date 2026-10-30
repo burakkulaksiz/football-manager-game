@@ -128,7 +128,7 @@ function Appearance() {
 
 const NEWS_ORDER: NewsCategory[] = [
   'offer', 'transfer', 'window', 'contract', 'loan', 'injury', 'discipline', 'player', 'training',
-  'board', 'job', 'finance', 'season', 'academy', 'scouting', 'cup', 'europe', 'international',
+  'board', 'job', 'finance', 'season', 'academy', 'scouting', 'cup', 'europe', 'international', 'media',
 ];
 
 /** Devam'ı durduran haber türleri. */

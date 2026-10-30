@@ -1,0 +1,15 @@
+{
+  "name": "Futbol Menajeri — Süper Lig",
+  "short_name": "Futbol Menajeri",
+  "description": "FM 2005 tarzında Türkçe futbol menajerlik oyunu; internetsiz de çalışır.",
+  "lang": "tr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1c2539",
+  "theme_color": "#253250",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

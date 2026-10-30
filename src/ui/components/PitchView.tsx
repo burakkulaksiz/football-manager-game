@@ -3,7 +3,8 @@ import { getClub, type MatchState, type Side } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { MATCH_SPEED_FACTOR } from '../../store/settings';
 import { uiZoom } from '../appearance';
-import { readableText } from '../colors';
+import { DARK_PANEL, readableText, teamColorsOn } from '../colors';
+import { playerTip } from '../labels';
 import {
   cameraTransform,
   CAMERA_ZOOM,
@@ -220,7 +221,15 @@ function DominanceBar({ match, colors, names }: { match: MatchState; colors: Rec
  */
 export type CameraMode = 'full' | 'follow';
 
-export function PitchView({ match, camera, fullscreen }: { match: MatchState; camera: CameraMode; fullscreen: boolean }) {
+export function PitchView({ match, camera, fullscreen, selectedId, onPick }: {
+  match: MatchState;
+  camera: CameraMode;
+  fullscreen: boolean;
+  /** Değişiklik için seçilen oyuncu (vurgulanır). */
+  selectedId?: number | null;
+  /** Verilirse sahadaki kendi oyuncuya tıklayınca çağrılır (değişiklik seçimi); yoksa nokta tıklanmaz. */
+  onPick?: (id: number) => void;
+}) {
   const world = useWorld();
   // Maç hızı (Ayarlar): sahne zamanı bu çarpanla akar
   const speed = MATCH_SPEED_FACTOR[useGameStore((s) => s.settings.matchSpeed)];
@@ -408,6 +417,8 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
             const at = frame ? spots[index]?.get(id)?.at : undefined;
             const shirt = keeper ? KEEPER_KIT : kits[side].fill;
             const shorts = keeper ? kits[side].fill : kits[side].stroke;
+            const ps = match.players[id];
+            const pickable = onPick !== undefined && match[side].onPitch.includes(id);
             return (
               <div
                 key={id}
@@ -418,7 +429,9 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
                 }}
               >
                 <div
-                  className={`pdot-body${carrier ? ' involved' : ''}${frame?.injuredId === id ? ' down' : ''}`}
+                  className={`pdot-body${carrier || selectedId === id ? ' involved' : ''}${frame?.injuredId === id ? ' down' : ''}${pickable ? ' pickable' : ''}`}
+                  title={ps && world.players[id] ? playerTip(world.players[id], ps, match.period !== 'pre') : undefined}
+                  onClick={pickable ? () => onPick(id) : undefined}
                   style={{ background: `linear-gradient(${shirt} ${SHIRT_SPLIT}%, ${shorts} ${SHIRT_SPLIT}%)`, color: keeper ? '#fff' : ink(side) }}
                 >
                   {world.players[id]?.squadNumber ?? ''}
@@ -438,7 +451,8 @@ export function PitchView({ match, camera, fullscreen }: { match: MatchState; ca
         {!visible && (
           <DominanceBar
             match={match}
-            colors={{ home: kits.home.fill, away: kits.away.fill }}
+            // Koyu panelde okunur renk: siyah formalı takım beyaz rengiyle (forma rengi zeminde kaybolur)
+            colors={teamColorsOn(homeClub.colors, awayClub.colors, DARK_PANEL, 2.5)}
             names={{ home: homeClub.name, away: awayClub.name }}
           />
         )}

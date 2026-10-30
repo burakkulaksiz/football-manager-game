@@ -4,6 +4,8 @@ import type { CareerMove, CareerSeason } from './squad/career';
 import type { ScoutingState } from './transfer/scouting';
 import type { Tactics } from './match/tactics';
 import type { InternationalState } from './league/international';
+import type { LowerFixture } from './league/lowerLeague';
+import type { PressConference } from './season/press';
 import type { ManagerBackground, ManagerRecordMatch, ManagerSeason } from './season/manager';
 import type { FacilitiesState } from './finance/facilities';
 import type { JobApplication, JobOffer, Unemployment, Vacancy } from './season/jobs';
@@ -79,6 +81,8 @@ export interface Injury {
 export interface Loan {
   fromClubId: string;
   until: GameDate;
+  /** Satın alma opsiyonu: kiralık sürerken kiralayan bu bedelle oyuncuyu kalıcı alabilir. */
+  optionFee?: number;
 }
 
 export interface Player {
@@ -109,6 +113,8 @@ export interface Player {
   contract: Contract;
   /** Kiralıksa dönüş bilgisi; değilse null. */
   loan: Loan | null;
+  /** Sonradan satış payı: oyuncu bonservisle satılınca bedelin `percent`'i bu kulübe gider (bir kez). */
+  sellOn?: { clubId: string; percent: number };
   /** Ceza için biriken sarı kart (4'te bir maç ceza, sonra sıfırlanır). */
   yellowCards: number;
   /** Kalan ceza (maç sayısı). */
@@ -317,6 +323,10 @@ export interface TransferOffer {
   sellerId: string;
   kind: 'transfer' | 'loan';
   fee: number;
+  /** Transferde satıcıya verilen sonradan satış payı (%; yoksa 0). */
+  sellOn?: number;
+  /** Kiralıkta satın alma opsiyonu bedeli. */
+  optionFee?: number;
   /** Karşı teklif tutarı (countered durumunda). */
   counterFee: number | null;
   status: OfferStatus;
@@ -349,7 +359,8 @@ export type NewsCategory =
   | 'cup'
   | 'europe'
   | 'international'
-  | 'job';
+  | 'job'
+  | 'media';
 
 /* ------------------------------------------------------------------ */
 /* Antrenman                                                           */
@@ -398,6 +409,8 @@ export interface Season {
   /** Sezonun başladığı yıl: 2026 → "2026/27" */
   year: number;
   fixtures: Fixture[];
+  /** 1. Lig fikstürü (yalnızca skor; league/lowerLeague.ts). Eski kayıtta yok: o sezon çıkanlar rastgele seçilir. */
+  lower?: LowerFixture[];
 }
 
 /** Oyunun tüm durumu — ileride kayıt dosyasına bu yazılacak. */
@@ -446,6 +459,8 @@ export interface GameWorld {
   facilities: FacilitiesState;
   /** Kapatılan kararlar (ör. sözleşmesinin bitmesine izin verilen oyuncu; bkz. decisions.ts). */
   dismissedDecisions?: string[];
+  /** Son maçımızın cevaplanmamış basın toplantısı (season/press.ts); yoksa null / yok. */
+  press?: PressConference | null;
   /** İşsizse (görevden alındı / istifa etti): `playerClubId` NO_CLUB olur, son kulüp burada (bkz. season/jobs.ts). */
   unemployed?: Unemployment | null;
   /** Boş teknik direktörlük koltukları (Türkiye kulüpleri). */
@@ -493,6 +508,8 @@ export interface BoardState {
   confidence: number;
   /** Sezon hedefi (lig sırası). */
   targetPosition: number;
+  /** Taraftar memnuniyeti 0–100 (season/fans.ts); eski kayıtta yok = 60. */
+  fans?: number;
 }
 
 export interface SeasonAward {

@@ -10,6 +10,9 @@ export type Mentality = -2 | -1 | 0 | 1 | 2;
 
 export type Period = 'pre' | 'first' | 'half' | 'second' | 'full';
 
+/** Devre arası konuşması (kullanıcı takımı, devre başına bir kez). */
+export type TeamTalk = 'praise' | 'demand' | 'calm' | 'angry';
+
 export type MatchEventType =
   | 'kickoff'
   | 'halftime'
@@ -157,6 +160,8 @@ export interface TeamState {
   fullWeights: { att: number; mid: number; def: number };
   /** Maç sakatlığı riski çarpanı (sağlık merkezi); yoksa 1. */
   injuryRisk?: number;
+  /** Devre arası konuşması yapıldıysa hangisi (yalnızca kullanıcı takımı; bir kez). */
+  talk?: TeamTalk;
 }
 
 export interface MatchState {

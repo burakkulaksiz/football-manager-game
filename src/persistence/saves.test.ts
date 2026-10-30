@@ -5,7 +5,7 @@ import { advance, createWorld, leaveClub, startUserMatch, stepMatch, takeJob, ty
 import { makeResult } from '../engine/testing';
 import { gameData } from '../gameData';
 import { db } from './db';
-import { autosave, careerIdOf, defaultSaveName, deleteSave, exportSlot, importSave, SAVE_FORMAT_VERSION, listSaves, loadGame, loadSavedMatch, saveGame } from './saves';
+import { AUTOSAVE_SLOTS, autosave, careerIdOf, defaultSaveName, deleteSave, exportSlot, importSave, SAVE_FORMAT_VERSION, listSaves, loadGame, loadSavedMatch, saveGame } from './saves';
 
 const START = '2026-07-01';
 
@@ -60,17 +60,21 @@ describe('kayıt sistemi', () => {
     expect((await loadGame(id)).date).toBe(world.date);
   });
 
-  it('otomatik kayıt kariyer başına tek slottur', async () => {
+  it('otomatik kayıt kariyer başına en çok AUTOSAVE_SLOTS dönüşümlü slottur; en eskisinin üzerine yazar', async () => {
     const a = createWorld(gameData, 4, 'trabzonspor', START);
     const b = createWorld(gameData, 5, 'trabzonspor', START);
-    await autosave(a);
-    playRounds(a, 1);
-    await autosave(a);
+    const dates: string[] = [];
+    for (let i = 0; i < AUTOSAVE_SLOTS + 2; i++) {
+      await autosave(a);
+      dates.push(a.date);
+      playRounds(a, 1);
+    }
     await autosave(b);
-    const autos = (await listSaves()).filter((s) => s.isAutosave);
-    expect(autos).toHaveLength(2);
-    const auto = autos.find((s) => s.careerId === careerIdOf(a))!;
-    expect(auto.gameDate).toBe(a.date);
+    const autos = (await listSaves()).filter((s) => s.isAutosave && s.careerId === careerIdOf(a));
+    expect(autos).toHaveLength(AUTOSAVE_SLOTS);
+    // En yeni önce: son AUTOSAVE_SLOTS kayıt kalır, ilk ikisinin üzerine yazılmıştır
+    expect(autos.map((s) => s.gameDate)).toEqual(dates.slice(-AUTOSAVE_SLOTS).reverse());
+    expect((await listSaves()).filter((s) => s.isAutosave && s.careerId === careerIdOf(b))).toHaveLength(1);
   });
 
   it('işsizken kaydedilir; kulüp değişse de kariyer kimliği ve otomatik kayıt slotu aynı kalır', async () => {
@@ -86,7 +90,7 @@ describe('kayıt sistemi', () => {
     expect(careerIdOf(world)).toBe(career);
     await autosave(world);
     await autosave(world);
-    expect((await listSaves()).filter((s) => s.isAutosave)).toHaveLength(1);
+    expect((await listSaves()).filter((s) => s.isAutosave && s.careerId === career)).toHaveLength(2);
   });
 
   it('maç ortasında alınan kayıt maçı kaldığı yerden yükler', async () => {
@@ -281,9 +285,8 @@ describe('kayıt dışa / içe aktarma', () => {
     await deleteSave((await listSaves())[0]!.id);
     const copy = await importSave(text);
     expect((await listSaves()).find((s) => s.id === copy)!.isAutosave).toBe(false);
-    await autosave(world);
-    await autosave(world);
-    expect((await listSaves()).filter((s) => s.isAutosave)).toHaveLength(1);
+    for (let i = 0; i < AUTOSAVE_SLOTS + 1; i++) await autosave(world);
+    expect((await listSaves()).filter((s) => s.isAutosave)).toHaveLength(AUTOSAVE_SLOTS);
   });
 
   it('eski biçimdeki (8) dosya içe aktarılırken dönüştürülür ve güncel biçimde yazılır', async () => {

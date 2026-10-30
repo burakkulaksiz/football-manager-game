@@ -186,9 +186,9 @@ export interface TransferTerms {
 
 /**
  * Bonservisli transferi gerçekleştirir: para, bütçeler, sözleşme, forma numarası, taktik ve haber.
- * Kontroller (bütçe, dönem) çağıran tarafta yapılır.
+ * Kontroller (bütçe, dönem) çağıran tarafta yapılır. `sellOn`: satıcıya verilen sonradan satış payı (%).
  */
-export function transferPlayer(world: GameWorld, player: Player, buyerId: string, fee: number, terms: TransferTerms): void {
+export function transferPlayer(world: GameWorld, player: Player, buyerId: string, fee: number, terms: TransferTerms, sellOn = 0): void {
   const sellerId = player.clubId;
   const buyerFin = world.finances[buyerId]!;
   addExpense(buyerFin, 'transfersOut', fee);
@@ -197,11 +197,30 @@ export function transferPlayer(world: GameWorld, player: Player, buyerId: string
   if (terms.signingBonus > 0) addExpense(buyerFin, 'signingBonuses', terms.signingBonus);
   if (agentFee > 0) addExpense(buyerFin, 'agentFees', agentFee);
   if (sellerId) {
+    // Eski kulübün satış payı bedelden düşer (oyuncuyu geri alıyorsa ödenmez)
+    const holder = player.sellOn && player.sellOn.clubId !== buyerId ? player.sellOn : null;
+    const cut = holder ? Math.round((fee * holder.percent) / 100) : 0;
+    if (holder && cut > 0) {
+      addIncome(world.finances[holder.clubId]!, 'transfersIn', cut);
+      world.finances[holder.clubId]!.transferBudget += cut * SALE_TO_BUDGET;
+    }
     const sellerFin = world.finances[sellerId]!;
-    addIncome(sellerFin, 'transfersIn', fee);
-    sellerFin.transferBudget += fee * SALE_TO_BUDGET;
+    addIncome(sellerFin, 'transfersIn', fee - cut);
+    sellerFin.transferBudget += (fee - cut) * SALE_TO_BUDGET;
     detachFromClub(world, player, sellerId);
+    if (holder && cut > 0 && (holder.clubId === world.playerClubId || sellerId === world.playerClubId)) {
+      addNews(world, {
+        category: 'transfer',
+        title: `Satış payı: ${player.firstName} ${player.lastName}`,
+        body: `${getClub(world, sellerId).name}, ${player.firstName} ${player.lastName} satışından sözleşmedeki %${holder.percent} payı (€${formatPlain(cut)}) ${getClub(world, holder.clubId).name} kulübüne ödedi.`,
+        important: true,
+        playerId: player.id,
+        clubId: holder.clubId,
+      });
+    }
   }
+  if (sellerId && sellOn > 0) player.sellOn = { clubId: sellerId, percent: sellOn };
+  else delete player.sellOn;
 
   recordMove(player, { date: world.date, kind: sellerId ? 'transfer' : 'free', fromClubId: sellerId, toClubId: buyerId, fee });
   player.clubId = buyerId;
@@ -232,7 +251,7 @@ export function transferPlayer(world: GameWorld, player: Player, buyerId: string
 }
 
 /** Kiralık: oyuncu sezon sonuna (30 Haziran) kadar kiralayan kulüpte oynar, maaşını o kulüp öder. */
-export function loanPlayer(world: GameWorld, player: Player, toClubId: string, fee: number): void {
+export function loanPlayer(world: GameWorld, player: Player, toClubId: string, fee: number, optionFee?: number): void {
   const fromClubId = player.clubId!;
   addExpense(world.finances[toClubId]!, 'transfersOut', fee);
   world.finances[toClubId]!.transferBudget = Math.max(0, world.finances[toClubId]!.transferBudget - fee);
@@ -243,7 +262,7 @@ export function loanPlayer(world: GameWorld, player: Player, toClubId: string, f
   player.clubId = toClubId;
   delete player.academy;
   delete player.listing;
-  player.loan = { fromClubId, until: makeDate(seasonEndYear(world.date), 6, 30) };
+  player.loan = { fromClubId, until: makeDate(seasonEndYear(world.date), 6, 30), ...(optionFee ? { optionFee } : {}) };
   player.squadNumber = freeSquadNumber(world, player, toClubId);
   cancelOffersFor(world, player.id);
 
@@ -252,7 +271,7 @@ export function loanPlayer(world: GameWorld, player: Player, toClubId: string, f
   addNews(world, {
     category: 'loan',
     title: `${player.firstName} ${player.lastName} kiralandı`,
-    body: `${to}, ${from} forması giyen ${player.firstName} ${player.lastName} oyuncusunu sezon sonuna kadar kiraladı.`,
+    body: `${to}, ${from} forması giyen ${player.firstName} ${player.lastName} oyuncusunu sezon sonuna kadar kiraladı${optionFee ? ` (€${formatPlain(optionFee)} satın alma opsiyonuyla)` : ''}.`,
     important: toClubId === world.playerClubId || fromClubId === world.playerClubId,
     playerId: player.id,
     clubId: toClubId,

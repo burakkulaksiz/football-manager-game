@@ -11,6 +11,7 @@ import {
   formatDateTR,
   getClub,
   isActive,
+  searchNews,
   listingPrice,
   marketValue,
   naturalPositions,
@@ -438,10 +439,13 @@ function ListingsTab() {
 function NewsTab() {
   const world = useWorld();
   const openPlayer = useGameStore((s) => s.openPlayer);
-  const news = [...world.news].reverse().slice(0, 100);
-  if (news.length === 0) return <div className="panel-body muted">Henüz haber yok.</div>;
+  const [query, setQuery] = useUiState('transfers.newsSearch', '');
+  // Aramada saklanan bütün haberlere bakılır; aramasız son 100
+  const news = query.trim() ? searchNews([...world.news].reverse(), query) : [...world.news].reverse().slice(0, 100);
   return (
     <div className="news-list">
+      <input className="search-input wide" type="search" placeholder="Haberlerde ara…" value={query} onChange={(e) => setQuery(e.target.value)} />
+      {news.length === 0 && <div className="panel-body muted">{query.trim() ? 'Aramaya uyan haber yok.' : 'Henüz haber yok.'}</div>}
       {news.map((n) => (
         <div key={n.id} className={`news-item${n.important ? ' important' : ''}`}>
           <div className="news-meta">

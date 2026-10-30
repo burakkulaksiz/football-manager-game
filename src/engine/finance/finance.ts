@@ -16,6 +16,7 @@ import type {
   Player,
 } from '../types';
 import type { GameDate } from '../date';
+import { fansAttendanceFactor, fansOf } from '../season/fans';
 
 export const TV_SHARE = 0.45;
 export const SPONSOR_SHARE = 0.3;
@@ -103,12 +104,12 @@ export function startNewMonth(world: GameWorld): void {
 
 /**
  * Taraftar kitlesi: itibarla üstel artar (itibar 92 → ~49 bin, 48 → ~9 bin).
- * Seyirci = min(kapasite, taraftar × rakibin çekiciliği).
+ * Seyirci = min(kapasite, taraftar × rakibin çekiciliği × `mood`); mood: kullanıcı kulübünde taraftar memnuniyeti çarpanı.
  */
-export function attendanceFor(home: Club, away: Club): number {
+export function attendanceFor(home: Club, away: Club, mood = 1): number {
   const fans = 2000 + (home.reputation / 100) ** 3 * 60000;
   const draw = 0.8 + (away.reputation / 100) * 0.3;
-  return Math.round(Math.min(home.capacity, fans * draw));
+  return Math.round(Math.min(home.capacity, fans * draw * mood));
 }
 
 /** Maç sonrası: ev sahibine bilet geliri, kazanana (ve berabere kalanlara) prim gideri. */
@@ -117,7 +118,7 @@ export function processMatchFinances(world: GameWorld, fixture: Fixture): void {
   if (!result) return;
   const home = world.clubs.find((c) => c.id === fixture.homeId)!;
   const away = world.clubs.find((c) => c.id === fixture.awayId)!;
-  const attendance = attendanceFor(home, away);
+  const attendance = attendanceFor(home, away, home.id === world.playerClubId ? fansAttendanceFactor(fansOf(world)) : 1);
   result.attendance = attendance;
   const homeFin = world.finances[home.id]!;
   addIncome(homeFin, 'tickets', attendance * homeFin.ticketPrice);

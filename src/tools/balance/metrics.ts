@@ -117,6 +117,9 @@ function economyMetrics(seasons: SeasonSnapshot[]): MetricResult[] {
     const t = list.reduce((a, s) => a + s.transfers.count, 0);
     return t === 0 ? NaN : list.reduce((a, s) => a + s.transfers.fee, 0) / t / M;
   };
+  // Yeteneğe göre düzeltilmiş bedel: bedel / piyasa değeri formülü (1500·exp(CA/17)), medyan
+  const feeIndex = (list: SeasonSnapshot[]) =>
+    median(list.flatMap((s) => s.transfers.fees.map((f, i) => f / (1500 * Math.exp(s.transfers.cas[i]! / 17)))));
   const counts = seasons.map((s) => s.transfers.count);
   const volumes = seasons.map((s) => s.transfers.fee / M);
   return [
@@ -137,9 +140,12 @@ function economyMetrics(seasons: SeasonSnapshot[]): MetricResult[] {
     metric(g, 'balanceDrift', 'Kasa medyanı: son sezon / ilk sezon', 'oran', medBalance(lastY) / (medBalance(first) || NaN), lastY.length, null, {
       note: 'Para şişmesi / kuruması için: tek başına hedefi yok, "Eğilimler" tablosuna bak.',
     }),
-    metric(g, 'feeDrift', 'Transfer başına bedel: son sezon / ilk sezon', 'oran', feePerTransfer(lastY) / feePerTransfer(first), lastY.length, [0.6, 1.8], {
-      tune: 'Piyasa değeri ve bonservis formülleri: src/engine/transfer/market.ts',
-      note: 'Sınır: uzun vadede transfer enflasyonu / deflasyonu.',
+    metric(g, 'feeDrift', 'Transfer başına bedel: son sezon / ilk sezon', 'oran', feePerTransfer(lastY) / feePerTransfer(first), lastY.length, null, {
+      note: 'Hedefsiz: transfer edilenlerin yeteneği arttıkça bedel de artar (başlangıç kadroları dengenin altında, ~7 sezonda yakınsar). Fiyat enflasyonu için bir alttaki ölçüye bak.',
+    }),
+    metric(g, 'feeIndexDrift', 'Yeteneğe göre düzeltilmiş bedel: son sezon / ilk sezon', 'oran', feeIndex(lastY) / feeIndex(first), lastY.length, [0.8, 1.25], {
+      tune: 'Piyasa değeri ve bonservis formülleri: src/engine/transfer/market.ts (askingPrice, marketValue)',
+      note: 'Sınır: aynı yetenekteki oyuncuya ödenen bedel uzun vadede şişiyor / sönüyor mu (bedel / 1500·exp(CA/17), medyan).',
     }),
   ];
 }

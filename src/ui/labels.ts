@@ -208,6 +208,29 @@ export function ratingClass(rating: number): string {
   return 'rating';
 }
 
+export const TALK_LABELS: Record<import('../engine').TeamTalk, string> = {
+  praise: 'Öv',
+  demand: 'Daha fazlasını iste',
+  calm: 'Sakinleştir',
+  angry: 'Sert çık',
+};
+
+export const TALK_HINTS: Record<import('../engine').TeamTalk, string> = {
+  praise: 'Öndeyken işe yarar; gerideyken rehavet yaratır.',
+  demand: 'Berabere ya da az farkla gerideyken kamçılar; öndeyken etkisiz.',
+  calm: 'Öndeyken odağı korur, ağır gerideyken baskıyı alır.',
+  angry: 'Gerideyken profesyonel oyuncuları ateşler, diğerlerini kırar; öndeyken geri teper.',
+};
+
+/** Sahadaki oyuncunun üzerine gelince çıkan bilgi: isim, mevki, kondisyon, maç puanı (maç başlamadan puan yok). */
+export function playerTip(p: Pick<Player, 'firstName' | 'lastName'>, ps: { slot: Position | null; condition: number; rating: number }, started: boolean): string {
+  const parts = [`${p.firstName} ${p.lastName}`];
+  if (ps.slot) parts.push(POSITION_LABELS[ps.slot]);
+  parts.push(`Kondisyon %${Math.round(ps.condition)}`);
+  if (started) parts.push(`Puan ${ps.rating.toFixed(1)}`);
+  return parts.join(' · ');
+}
+
 /** Takım talimatı seçenekleri: etiket + kısa açıklama (taktik ekranında ipucu olarak). */
 export const INSTRUCTION_OPTIONS = {
   passing: [
@@ -334,6 +357,7 @@ export const NEWS_CATEGORY_LABELS: Record<import('../engine').NewsCategory, stri
   europe: 'Avrupa',
   job: 'İş',
   international: 'Milli Takım',
+  media: 'Medya',
 };
 
 export const INCOME_LABELS: Record<import('../engine').IncomeCategory, string> = {

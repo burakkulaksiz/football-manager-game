@@ -18,6 +18,7 @@ import {
   europeFixtures,
   leagueClubs,
   leagueFixtures,
+  takeJob,
   topAssists,
   topScorers,
   type Fixture,
@@ -234,6 +235,15 @@ export function collectCareer(opts: CollectOptions): CareerLog {
       log.sacks.push(sack);
       // Kariyeri sürdür: kovulma kaydedildi, veri akışı kesilmesin
       world.gameOver = null;
+      world.board.confidence = 60;
+      continue;
+    }
+    // Görevden alınan menajer işsiz kalır (İş Merkezi); 365 gün sonra her gün "kariyer bitti" olur ve sezon sonu işlenmez.
+    // Kovulma kaydedilir, menajer eski kulübüne döner: kariyer eskisi gibi yapay sürer
+    if (world.unemployed) {
+      const { since, reason, lastClubId } = world.unemployed;
+      log.sacks.push({ career: opts.career, year: world.season.year, date: since, reason: `işsiz kaldı (${reason})`, clubId: lastClubId });
+      takeJob(world, lastClubId);
       world.board.confidence = 60;
       continue;
     }

@@ -122,7 +122,7 @@ Maç düzeyindeki ölçülerin tamamı hedef aralıkta: gol 2,74, ev galibiyeti 
     6 × 4 sezon: eksi kasalı kulüp %11,8 → %2,1; net nakit akışı +3,8 Mn €; maaş/gelir 0,53.
   - Yan etki düzeltildi: ilk denemede (yalnızca bütçe sınırı) `wageDemand`'ın eski maaşın ×1,1'i serbest oyuncuları bütçeye sığdırmıyor, kadrolar 19'a iniyordu; imzada adil maaşa geçilince çözüldü.
   - Transfer fiyatları için bir sonraki maddeye bak.
-- [ ] **Transfer fiyat enflasyonu (kısmen düzeltildi):** 3 × 10 sezonda transfer bedeli ortalaması 8,3 → 27,5 Mn €, medyan 4,8 → 16 Mn € (×3,3), hacim 159 → 1078 Mn €/sezon; transfer sayısı sabit (19–38).
+- [x] **Transfer fiyat enflasyonu (kapandı: fiyat hatası değil, yetenek yakınsaması):** 3 × 10 sezonda transfer bedeli ortalaması 8,3 → 27,5 Mn €, medyan 4,8 → 16 Mn € (×3,3), hacim 159 → 1078 Mn €/sezon; transfer sayısı sabit (19–38).
   - Tanı: bedel / piyasa değeri formülü oranı neredeyse sabit (0,88 → 1,09), yani fiyat formülü değil, **transfer edilen oyuncuların kalitesi** artıyor: ortalama CA 139 → 157 (exp(18/17) ≈ ×2,9 bedel artışını açıklıyor).
     İki itici güç: (1) kasa birikip transfer bütçesine (`club.budget + fazla × 0,3`) sınırsız akıyordu (medyan kalan bütçe 1 → 7 Mn €); (2) ligin üst seviyesinin yavaş yükselmesi (ilk 11 CA 137 → 146, en yüksek CA 171 → 184).
   - Düzeltme: `season/rollover.ts` → `seasonTransferBudget`: yıllık transfer bütçesi, transfer dışı yıllık gelirin yarısını (`TRANSFER_BUDGET_INCOME_CAP`) aşamaz, temel bütçenin altına da inmez (`finance.ts` → `trailingIncome`).
@@ -140,6 +140,18 @@ Maç düzeyindeki ölçülerin tamamı hedef aralıkta: gol 2,74, ev galibiyeti 
   - **Sonuç: sarmal değil, tek seferlik yakınsama.** 2 × 20 sezonluk koşuda ilk 11 ortalaması 137 → 145 (S9) sonra S10–S20 boyunca ~141–149'da yatay; en yüksek CA S12'den sonra 190–191,
     22 yaş altı ~142–148'de sabit. Başlangıçtaki gerçek kadrolar simülasyonun dengesinin ~8 CA altında başlıyor, ilk ~9 sezonda dengeye çıkıyor. Motor değişikliği gerekmiyor; istenirse
     başlangıç gücü ayarlanabilir (gerçek kadroların yetenek eşlemesi). Bu madde fiyat / hacim açısından da kapanabilir: bedeller yakınsamayla birlikte artıyor (yine de uzun koşuda 20–27 Mn €'da dalgalanıyor).
+  - Yeniden ölçüm (2026-10-30, 3 × 10 sezon, tohum 9000; 1. Lig, satış payı, taraftar eklendikten sonra): ortalama bedel 6,8 → 16,2 Mn € (×2,4),
+    transfer edilenlerin CA'sı 135 → 150 (exp(15/17) ≈ ×2,4: artışın tamamı), bedel / piyasa değeri formülü 0,87 → 0,95 (aynı yeteneğe ~%9 fazla).
+    İtici güç gençler: 22 yaş altı CA ortalaması 109 → 142 (S7'den sonra yatay; başlangıçtaki gerçek gençler altyapıdan gelenlerden zayıf),
+    aynı oyuncuların CA'sı yalnızca 123 → 129.
+  - Kapanış (kullanıcı kararı): fiyat formülü değişmedi. Raporda "Transfer başına bedel: son / ilk" hedefsiz bilgi oldu (yakınsama yüzünden her
+    uzun koşuda yanlış alarm veriyordu: 2,45); enflasyon ölçüsü artık **"Yeteneğe göre düzeltilmiş bedel: son / ilk"** (`feeIndexDrift`,
+    medyan bedel / 1500·exp(CA/17), sınır 0,8–1,25; bu koşuda 1,09). Başlangıç gençlerinin yeteneğini ayarlamak ayrı bir tasarım kararı (yapılmadı).
+- [x] **Denge koşusu kovulmadan sonra sürünüyordu (2026-10-30):** 3 × 10 koşu 55 dakikada bitmedi. Neden: İş Merkezi'nden beri kovulan menajer
+  `gameOver` yerine işsiz kalıyor; `collect.ts` yalnızca `gameOver`'ı yakalıyordu. 365 gün sonra her gün "kariyer bitti" oluyor, koşu sıfırlayıp
+  bir gün ilerliyor, sezon sonu işlenmiyordu (adım sınırına kadar günü gününe). Kovulmalar raporda da hiç görünmüyordu.
+  Düzeltme (`tools/balance/collect.ts`): işsiz kalınca kovulma kaydedilir (`işsiz kaldı (sebep)`), menajer eski kulübüne döner (`takeJob`).
+  Sonuç: 3 × 10 ≈ 3 dk, 14 kovulma kaydı. Not: düzeltmeden önceki uzun koşularda kovulmadan sonraki sezonlarda kullanıcı kulübü menajersizdi.
 - [ ] **Gol ortalaması uzun vadede yükseliyor (kısmen düzeltildi, neden tam bulunmadı):** 3 × 10 sezonda maç başına gol 2,7 (S1) → ~3,0 (S9–S10), 10 sezon ortalaması 2,85 (hedef 2,45–2,75).
   - Ölçüm: forvetlerin üst seviyesi kaleci ve savunmadan hızlı yükseliyor (her kulübün en iyi 3 forveti 137 → 149, en iyi kalecisi 136 → 142, en iyi 4 defansı 138 → 144);
     şut ve isabetli şut +%5, gol / isabetli şut dönüşümü sabit (~%28).
@@ -191,7 +203,11 @@ Maç düzeyindeki ölçülerin tamamı hedef aralıkta: gol 2,74, ev galibiyeti 
     kurulum karesi `PENALTY_SETUP_MS` (1.3 sn) sürer. Karardan vuruşa ~2.6 sn; süreler sahne zamanıyla birlikte maç hızına
     göre ölçeklenir, anında bitirme sahne kullanmadığı için etkilenmez.
   - Kanıt: pitchScene.test.ts "penaltı anlık değil" testi (yazıldı, koşulmadı: doğrulanmadı). Tarayıcıda elle denenmedi.
-- [ ] "Maça git"e tıkladığımda fikstüre mi gidiyor, ne oluyor; sonra "Devam" yazıyor, sonra bir daha "Maça git" yazıyor. Bu "Maça git" olayında bir sorun var gibi.
+- [x] "Maça git"e tıkladığımda fikstüre mi gidiyor, ne oluyor; sonra "Devam" yazıyor, sonra bir daha "Maça git" yazıyor. Bu "Maça git" olayında bir sorun var gibi.
+  - Neden: NavBar düğmesi bugün herhangi bir maç varsa "Maça Çık" diyordu (bizim maçımız olmasa da: elendiğimiz kupa turu,
+    başkalarının Avrupa gecesi). Tıklayınca o maçlar oynanıp Fikstür açılıyor, sonra "Devam", ertesi maç gününde yine "Maça Çık".
+  - Düzeltme (NavBar.tsx): "Maça Çık" yalnızca todaysUserFixture varsa; yalnızca başkalarının maçı varsa "Günün Maçları".
+    Gezinme çubuğundaki maç günü vurgusu da yalnızca bizim maçımızda. Kanıt: tip kontrolü; tarayıcıda denenmedi.
 - [x] Maç esnasında bazen herkes sabitken bir oyuncu çok uzaktan başka bir yere geçiş yapıyor.
   - Neden (pitchScene.ts, 40 maçlık tarama): şutun sonuç karesinde topu taşıyan kalmadığı için şutu çeken dizilişteki yerine
     dönüyordu (20–35 m, 0.5 sn; maç başına ~2 kez). Ayrıca kart dakikanın faulünden şuta taşınınca kartı gören topun yanına
@@ -201,6 +217,16 @@ Maç düzeyindeki ölçülerin tamamı hedef aralıkta: gol 2,74, ev galibiyeti 
     korneri kafayı vuran kullanmaz; duran topun kullanıcısı `SetPiece.takerId` ile sabit.
   - Kanıt: pitchScene.test.ts "ışınlanma yok" testi (eski kodda kırılıyor). Değişiklikte giren / kırmızı kartla çıkan
     oyuncunun kenara yürümesi bilinçli, değişmedi. Tarayıcıda elle denenmedi.
-- [ ] Oyuncu ve taktik değişikliği tam ekrandan çıkmadan da yapılabilmeli.
-- [ ] Maçtan sonra puan durumuna tıklayınca, maç Şampiyonlar Ligi ya da Türkiye Kupası maçı da olsa Süper Lig'e gidiyor.
-- [ ] Beşiktaş gibi takımların isimlerini siyah yazdığımız zaman bazı yerlerde okunurluk düşük oluyor (örneğin maç durumu baskı çubuğunda).
+- [x] Oyuncu ve taktik değişikliği tam ekrandan çıkmadan da yapılabilmeli.
+  - Düzeltme (MatchScreen.tsx): tam ekran şeridinde "Değişiklik" ve "Taktik" düğmeleri; sahanın sağında çekmece açılır (kullanıcının
+    kadro paneli / canlı taktik paneli, devre arasında konuşma da). Sahada kendi oyuncuna tıklamak onu seçer ve değişiklik çekmecesini
+    açar; yedeği çekmeceden seçersin. Seçim saha ve kadro panelleriyle ortak. Kanıt: tip kontrolü; tarayıcıda denenmedi.
+- [x] Maçtan sonra puan durumuna tıklayınca, maç Şampiyonlar Ligi ya da Türkiye Kupası maçı da olsa Süper Lig'e gidiyor.
+  - Düzeltme (MatchReportScreen.tsx): düğme maçın turnuvasına göre: lig → Puan Durumu; Avrupa → Fikstür > Avrupa, o maçın kupası
+    seçili ("Grup Tabloları" / "Eşleşmeler"); Türkiye Kupası'nda tablo yok, düğme gizli (eşleşmeler "Haftanın Sonuçları"nda).
+    "Haftanın Sonuçları" da Avrupa maçında o maçın kupasını açar. Kanıt: tip kontrolü; tarayıcıda denenmedi.
+- [x] Beşiktaş gibi takımların isimlerini siyah yazdığımız zaman bazı yerlerde okunurluk düşük oluyor (örneğin maç durumu baskı çubuğunda).
+  - Neden: baskı çubuğu (2D saha, sakin dakika) adları ve çubuğu forma rengiyle, "Son 10 dk" çubuğu birinci renkle boyuyordu; siyah koyu zeminde kayboluyor.
+  - Düzeltme: colors.ts teamColorsOn (şut haritasındaki seçim genelleştirildi): zeminde okunan ilk kulüp rengi, deplasman ev sahibine
+    benziyorsa diğer rengi, yoksa yedek renk. Baskı çubuğu ve son 10 dk koyu panel zemininde (DARK_PANEL) kullanır: Beşiktaş beyaz görünür.
+    Kanıt: colors.test.ts (koyu zeminde takım renkleri). Sahadaki oyuncu noktaları forma rengiyle kalır (forma gerçekten siyah).

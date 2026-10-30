@@ -1,6 +1,7 @@
 /** Maç motorunun oyun dünyasıyla bağlantısı: kurulum, arka plan maçları, sonucu işleme. */
 import { processMatchFinances } from '../finance/finance';
 import { boardAfterMatch } from '../season/board';
+import { pressAfterMatch } from '../season/press';
 import { reputationAfterMatch } from '../season/manager';
 import { processDiscipline } from '../squad/discipline';
 import { injurePlayer } from '../squad/injuries';
@@ -104,6 +105,7 @@ export function applyResult(world: GameWorld, fixture: Fixture, result: MatchRes
   payContractBonuses(world, result);
   learnFromMatch(world, fixture.homeId, fixture.awayId, result.players);
   boardAfterMatch(world, fixture);
+  pressAfterMatch(world, fixture);
   reputationAfterMatch(world, fixture);
   if (isCupFixture(fixture)) cupAfterMatch(world, fixture);
   if (isEuropeFixture(fixture)) europeAfterMatch(world, fixture);

@@ -23,6 +23,17 @@ Ayrıca: menajer pazarlığı (world.agents, sözleşme maddeleri, serbest kalma
   maaş bütçesinin %0.3'ü (beraberlik 1/3). Satışın %50'si transfer bütçesine eklenir.
 - Lig sıralaması ödülü / yayın payının performansa bağlanması 9. aşamada (sezon sonu).
 
+## Sözleşme maddeleri: satış payı, satın alma opsiyonu (yalnızca kullanıcının teklifinde)
+- **Sonradan satış payı** (TransferOffer.sellOn, %0–50, MAX_SELL_ON): satıcı istemi askingPrice × (1 − pay × 0,006) olur
+  (%20 → %12 indirim; karşı teklif de bu istem). İmzada Player.sellOn = { clubId: satıcı, percent }. Oyuncu sonra bonservisle
+  kim tarafından satılırsa satılsın (yapay zekâ arası dahil) bedelin payı sahibine gider, satıcı kalanını alır; pay bir kez
+  ödenir ve silinir (yeni transferde yeni madde yoksa). Pay sahibine geri satışta ödenmez. Kullanıcı ilgiliyse haber.
+- **Satın alma opsiyonu** (TransferOffer.optionFee → Loan.optionFee): satıcı opsiyon < askingPrice ise kiralığı reddeder
+  (notta en az bedel). exerciseOption: kiralık sürerken her zaman (dönem şartı yok; kiralık 30 Haz'da dönem dışında biter),
+  transfer bütçesi yeterliyse bedel kiralık veren kulübe gider, oyuncu mevcut sözleşmesi ve forma numarasıyla kalır.
+  Kiralık bitince opsiyon düşer. Arayüz: teklif penceresinde alanlar, profilde "Opsiyonu kullan" ve satış payı bilgisi.
+- İsteğe bağlı alanlar; kayıt sürümü artmadı. Yapay zekâ bu maddeleri kullanmaz (denge değişmez).
+
 ## Transfer / kiralık listesi kuralları
 - Player.listing = { kind: 'transfer' | 'loan', price: number | null (null = önerilen), since }.
 - Kullanıcı: kendi (kiralık olmayan) oyuncusunu listeler; transfer listesi moral −8 (bir kez). Önerilen bedel:

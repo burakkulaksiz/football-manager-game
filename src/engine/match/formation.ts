@@ -177,7 +177,7 @@ export function autoBench(available: readonly Player[], used: ReadonlySet<number
 }
 
 /** Kadro seçiminde yorgun oyuncuya ceza: 85+ kondisyon tam puan, altı orantılı düşer. */
-function conditionFactor(condition: number): number {
+export function conditionFactor(condition: number): number {
   return condition >= 85 ? 1 : 0.7 + 0.3 * (condition / 85);
 }
 

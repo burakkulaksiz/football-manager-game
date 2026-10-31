@@ -1,12 +1,13 @@
 /**
  * Taktikler: takım talimatları, bunların motora etkisi ve kullanıcının kadro düzeni.
  */
-import { isAvailable } from '../player';
-import type { Player } from '../types';
+import { isAvailable, primaryPosition } from '../player';
+import type { Player, Position } from '../types';
 import {
   assignToFormation,
   autoBench,
   BENCH_SIZE,
+  conditionFactor,
   DEFAULT_FORMATION_ID,
   FORMATIONS,
   moveCustomSpot,
@@ -611,9 +612,12 @@ export function lineupFits(t: Tactics, squad: readonly Player[]): (number | null
   });
 }
 
+/** Boşalan mevkiye aday puanı: mevki uyumu karesiyle ağır basar (bilmediği mevkideki iyi oyuncu o mevkinin oyuncusunu geçmesin). */
+const fillScore = (p: Player, slot: Position) => p.currentAbility * slotFit(p, slot) ** 2 * conditionFactor(p.condition);
+
 /**
- * Taktikten maç kadrosu: kulüpte olmayan ya da sakat oyuncular çıkarılır,
- * boş mevkiler en uygun oyuncuyla otomatik doldurulur. Yedek listesi boşsa otomatik seçilir.
+ * Taktikten maç kadrosu: kulüpte olmayan ya da sakat / cezalı oyuncular çıkarılır. Boş mevkiye önce yedeklerden o mevkiyi
+ * bilen en iyisi, yoksa bütün kadrodan en uygunu girer. Yedek listesi boşsa otomatik seçilir, eksildiyse kalanlardan tamamlanır.
  */
 export function resolveLineup(t: Tactics, squad: readonly Player[]): Lineup {
   const formation = slotsOf(t);
@@ -622,19 +626,20 @@ export function resolveLineup(t: Tactics, squad: readonly Player[]): Lineup {
   const lineup = t.lineup.map((id) => (id !== null && ok.has(id) ? id : null));
 
   const used = new Set(lineup.filter((id): id is number => id !== null));
-  const missing = lineup.map((id, i) => (id === null ? i : -1)).filter((i) => i !== -1);
-  if (missing.length > 0) {
-    const rest = available.filter((p) => !used.has(p.id) && !t.bench.includes(p.id));
-    const pool = rest.length >= missing.length ? rest : available.filter((p) => !used.has(p.id));
-    const fill = assignToFormation(pool, missing.map((i) => formation[i]!));
-    missing.forEach((slotIndex, k) => {
-      const id = fill[k] ?? null;
-      if (id !== null) {
-        lineup[slotIndex] = id;
-        used.add(id);
-      }
-    });
-  }
+  lineup.forEach((id, i) => {
+    if (id !== null) return;
+    const slot = formation[i]!;
+    const free = available.filter((p) => !used.has(p.id));
+    const bench = free.filter((p) => t.bench.includes(p.id) && p.positions[slot] !== undefined);
+    const best = (bench.length > 0 ? bench : free).reduce<Player | null>(
+      (a, p) => (a === null || fillScore(p, slot) > fillScore(a, slot) ? p : a),
+      null,
+    );
+    if (best) {
+      lineup[i] = best.id;
+      used.add(best.id);
+    }
+  });
 
   const starters = lineup.flatMap((playerId, i) => {
     if (playerId === null) return [];
@@ -643,5 +648,12 @@ export function resolveLineup(t: Tactics, squad: readonly Player[]): Lineup {
   });
   let bench = t.bench.filter((id) => ok.has(id) && !used.has(id));
   if (bench.length === 0) bench = autoBench(available, used);
+  else if (bench.length < t.bench.length) {
+    // İlk 11'e giren ya da sakatlanan yedeğin yeri kalanlardan dolar (yedek kaleci yoksa önce kaleci, varsa ikincisi alınmaz)
+    const keeper = (id: number) => primaryPosition(available.find((p) => p.id === id)!) === 'GK';
+    const hasKeeper = bench.some(keeper);
+    const extra = autoBench(available, new Set([...used, ...bench])).filter((id) => !hasKeeper || !keeper(id));
+    bench = [...bench, ...extra].slice(0, t.bench.length);
+  }
   return { starters, bench };
 }

@@ -19,6 +19,7 @@ import {
   stepMatch,
   teamHierarchy,
   substitute,
+  swapPositions,
   giveTeamTalk,
   type TeamTalk,
   type Competition,
@@ -113,6 +114,11 @@ interface GameState {
   /** Oynanmakta olan kendi maçımız (yoksa null). */
   liveMatch: MatchState | null;
   /**
+   * Canlı maçta geri alınabilir değişiklikler (her birinden önceki durum). Yalnızca `match` hâlâ `liveMatch` ise geçerli:
+   * maç adımı, devre arası konuşması, yeniden kurma ve yükleme yeni nesne verdiği için geri alma kendiliğinden düşer.
+   */
+  liveUndo: { match: MatchState; stack: MatchState[] } | null;
+  /**
    * Ekranların gezinmede korunan durumu (filtreler, sekmeler, seçimler): anahtar "<ekran>.<ad>". Oyuncu profiline gidip
    * geri dönünce korunur; menüden başka bir bölüme geçilince (setScreen) sıfırlanır.
    */
@@ -176,6 +182,10 @@ interface GameState {
   /** Canlı maç: bir adım (dakika) ilerlet. */
   stepLiveMatch: () => void;
   liveSubstitute: (outId: number, inId: number) => boolean;
+  /** Canlı maç: sahadaki iki oyuncunun yerini değiştir. */
+  liveSwap: (a: number, b: number) => boolean;
+  /** Canlı maç: son değişikliği (oyuncu, yer, taktik) geri al; maç o arada ilerlemediyse. */
+  undoLiveChange: () => void;
   /** Devre arası konuşması (bir kez; oyuncuların morali dünyada değişir). */
   liveTeamTalk: (talk: TeamTalk) => boolean;
   /** Kalan dakikaları anında oynat (değişiklikleri yapay zekâ yapar). */
@@ -188,6 +198,14 @@ interface GameState {
 export function userSide(state: MatchState, world: GameWorld): Side {
   return state.home.clubId === world.playerClubId ? 'home' : 'away';
 }
+
+/** Geri alınabilecek değişiklik sayısı (maç o arada ilerlediyse 0). */
+export function liveUndoCount(s: Pick<GameState, 'liveMatch' | 'liveUndo'>): number {
+  return s.liveMatch !== null && s.liveUndo?.match === s.liveMatch ? s.liveUndo.stack.length : 0;
+}
+
+/** Geri alma yığınının sınırı (her öğe maç durumunun bir kopyası). */
+const LIVE_UNDO_LIMIT = 20;
 
 function routeState(route: Route) {
   return { screen: route.screen, selectedPlayerId: route.playerId ?? null, selectedFixtureId: route.fixtureId ?? null };
@@ -208,6 +226,7 @@ function enterGame(world: GameWorld) {
     fixturesTab: 'club' as const,
     fixturesRound: 1,
     liveMatch: null,
+    liveUndo: null,
     revision: 0,
     savedRevision: 0,
     savedMatchSig: null,
@@ -237,6 +256,22 @@ const AUTOSAVE_DELAY_MS = 150;
 export const useGameStore = create<GameState>()((set, get) => {
   /** Dünya değişti: yeni referans (React yeniden çizsin) + kaydedilmemiş ilerleme. */
   const touch = (world: GameWorld) => set((s) => ({ world: { ...world }, revision: s.revision + 1 }));
+
+  /**
+   * Canlı maçta kullanıcı değişikliği: önceki durum geri alma yığınına girer. `fn` false dönerse (kural dışı) iz bırakmaz.
+   * Motor maçı yerinde değiştirir; kopya değişiklikten önce alınır.
+   */
+  const liveEdit = (fn: (match: MatchState, world: GameWorld) => boolean | void): boolean => {
+    const s = get();
+    const { world, liveMatch } = s;
+    if (!world || !liveMatch) return false;
+    const before = structuredClone(liveMatch);
+    if (fn(liveMatch, world) === false) return false;
+    const stack = liveUndoCount(s) > 0 ? s.liveUndo!.stack : [];
+    const next = { ...liveMatch };
+    set({ liveMatch: next, liveUndo: { match: next, stack: [...stack, before].slice(-LIVE_UNDO_LIMIT) } });
+    return true;
+  };
 
   /**
    * Maç günü sonrası otomatik kayıt (arka planda; hata olursa bildirim).
@@ -280,6 +315,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     fixturesTab: 'club',
     fixturesRound: 1,
     liveMatch: null,
+    liveUndo: null,
     ui: {},
     area: START_ROUTE.screen,
     decisionsOpen: false,
@@ -478,25 +514,20 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
 
     liveChangeTactics: (change) => {
-      const { world, liveMatch } = get();
-      if (!world || !liveMatch) return;
-      changeTactics(liveMatch, world.players, userSide(liveMatch, world), change);
-      set({ liveMatch: { ...liveMatch } });
+      liveEdit((m, w) => changeTactics(m, w.players, userSide(m, w), change));
     },
 
     liveSwitchPlan: (index) => {
-      const { world, liveMatch } = get();
-      const tactics = world?.tactics[world.playerClubId];
-      if (!world || !liveMatch || !tactics) return;
+      const tactics = get().world?.tactics[get().world!.playerClubId];
+      if (!tactics) return;
       const plan = tacticPlan(tactics, index);
-      changeTactics(liveMatch, world.players, userSide(liveMatch, world), {
+      liveEdit((m, w) => changeTactics(m, w.players, userSide(m, w), {
         formation: plan.formation,
         custom: plan.custom ?? null,
         instructions: { ...DEFAULT_INSTRUCTIONS, ...plan.instructions },
         orders: plan.orders ?? [],
         plan: index,
-      });
-      set({ liveMatch: { ...liveMatch } });
+      }));
     },
 
     stepLiveMatch: () => {
@@ -506,12 +537,16 @@ export const useGameStore = create<GameState>()((set, get) => {
       set({ liveMatch: { ...liveMatch } });
     },
 
-    liveSubstitute: (outId, inId) => {
-      const { world, liveMatch } = get();
-      if (!world || !liveMatch) return false;
-      const ok = substitute(liveMatch, world.players, userSide(liveMatch, world), outId, inId);
-      if (ok) set({ liveMatch: { ...liveMatch } });
-      return ok;
+    liveSubstitute: (outId, inId) => liveEdit((m, w) => substitute(m, w.players, userSide(m, w), outId, inId)),
+
+    liveSwap: (a, b) => liveEdit((m, w) => swapPositions(m, userSide(m, w), a, b)),
+
+    undoLiveChange: () => {
+      const s = get();
+      if (liveUndoCount(s) === 0) return;
+      const stack = s.liveUndo!.stack;
+      const previous = stack.at(-1)!;
+      set({ liveMatch: previous, liveUndo: { match: previous, stack: stack.slice(0, -1) } });
     },
 
     liveTeamTalk: (talk) => {

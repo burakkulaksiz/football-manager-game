@@ -4,9 +4,10 @@ import { gameData } from '../../gameData';
 import { playSeason } from '../testing';
 import { clubPlayers, createWorld, getClub } from '../generation/worldGenerator';
 import type { MatchResult } from '../types';
-import { buildResult, createMatch, simulateToEnd, stepMatch, substitute, type MatchSetup } from './engine';
+import { buildResult, createMatch, simulateToEnd, slotHolders, stepMatch, substitute, swapPositions, type MatchSetup } from './engine';
 import { autoSelectLineup, DEFAULT_FORMATION } from './formation';
 import { MAX_SUBS } from './state';
+import { DEFAULT_ORDERS } from './tactics';
 
 const START = '2026-07-01';
 const world = createWorld(gameData, 42, 'galatasaray', START);
@@ -81,6 +82,25 @@ describe('tek maç', () => {
       if (substitute(state, world.players, 'home', target, benchId)) made++;
     }
     expect(made).toBe(MAX_SUBS);
+  });
+
+  it('yer değiştirme: iki oyuncunun mevkisi ve dizilişteki yeri değişir, talimat mevkide kalır, hak harcanmaz', () => {
+    const state = createMatch(setup('galatasaray', 'goztepe', 3, true), world.players);
+    stepMatch(state, world.players);
+    const holders = slotHolders(state.home, state.players);
+    const [a, b] = [holders[2]!, holders[9]!];
+    const [slotA, slotB] = [state.players[a]!.slot, state.players[b]!.slot];
+    state.players[a]!.orders = { ...DEFAULT_ORDERS, duty: 'attack' };
+    expect(swapPositions(state, 'home', a, b)).toBe(true);
+    expect([state.players[a]!.slot, state.players[b]!.slot]).toEqual([slotB, slotA]);
+    const after = slotHolders(state.home, state.players);
+    expect([after[2], after[9]]).toEqual([b, a]);
+    expect(state.players[b]!.orders?.duty).toBe('attack');
+    expect(state.players[a]!.orders).toBeUndefined();
+    expect(state.home.subsUsed).toBe(0);
+    // Yedek ya da rakip oyuncuyla olmaz
+    expect(swapPositions(state, 'home', a, state.home.bench[0]!)).toBe(false);
+    expect(swapPositions(state, 'home', a, state.away.onPitch[3]!)).toBe(false);
   });
 });
 

@@ -1194,6 +1194,29 @@ export function substitute(state: MatchState, lookup: PlayerLookup, side: Side, 
   return ok;
 }
 
+/**
+ * Kullanıcı: sahadaki iki oyuncunun yerini değiştirir (değişiklik hakkı harcamaz). Bireysel talimat mevkide kalır, taktik
+ * ekranındaki gibi. Başarısızsa false.
+ */
+export function swapPositions(state: MatchState, side: Side, a: number, b: number): boolean {
+  const team = teamOf(state, side);
+  const pa = state.players[a];
+  const pb = state.players[b];
+  const ia = team.onPitch.indexOf(a);
+  const ib = team.onPitch.indexOf(b);
+  if (!pa || !pb || a === b || ia === -1 || ib === -1 || state.period === 'full') return false;
+  [pa.slot, pb.slot] = [pb.slot, pa.slot];
+  const [oa, ob] = [pa.orders, pb.orders];
+  if (ob) pa.orders = ob;
+  else delete pa.orders;
+  if (oa) pb.orders = oa;
+  else delete pb.orders;
+  // Aynı mevkiden birden çok oyuncu sahadaki sıraya göre yerleşir (slotHolders): sıra da değişsin
+  team.onPitch[ia] = b;
+  team.onPitch[ib] = a;
+  return true;
+}
+
 export function setMentality(state: MatchState, side: Side, mentality: Mentality): void {
   teamOf(state, side).instructions.mentality = mentality;
 }

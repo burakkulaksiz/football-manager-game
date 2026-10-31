@@ -21,6 +21,7 @@ import { DARK_PANEL, readableText, teamColorsOn } from '../colors';
 import { FormationPicker, InstructionsPanel, PlanPicker, SetPieceStyles } from '../components/InstructionsPanel';
 import { MatchStatRows } from '../components/MatchStatRows';
 import { AssistantPanel } from '../components/AssistantPanel';
+import { LiveLineup, UndoButton } from '../components/LiveLineup';
 import { MatchMaps } from '../components/MatchMaps';
 import { PitchView, type CameraMode } from '../components/PitchView';
 import { useHotkeys } from '../hotkeys';
@@ -454,7 +455,9 @@ function TeamPanel({ match, side, selectedOut, setSelectedOut }: {
         <span className="club-cell">
           <ClubBadge club={club} size={20} /> {club.name}
         </span>
-        <span className="title-extra">Değişiklik {team.subsUsed}/{MAX_SUBS}</span>
+        <span className="title-extra">
+          {isUser && <UndoButton />} Değişiklik {team.subsUsed}/{MAX_SUBS}
+        </span>
       </h2>
       <div className="lineup">
         {team.onPitch.map((id) => {
@@ -629,13 +632,15 @@ function LiveTactics({ match }: { match: MatchState }) {
         </span>
       </div>
       <div className="panel-body live-tactics-body">
+        <LiveLineup match={match} />
         <FormationPicker value={team.formation} custom={team.custom} onChange={(formation) => change({ formation, custom: null })} />
         <InstructionsPanel instructions={team.instructions} onChange={(instructions) => change({ instructions })} />
         <div className="sub-head">Duran Toplar</div>
         <SetPieceStyles instructions={team.instructions} onChange={(instructions) => change({ instructions })} />
         <div className="panel-note">
           Taktik setine geçince o setin dizilişi, talimatları ve bireysel talimatları uygulanır (Taktik ekranında hazırlanır).
-          Diziliş değişince sahadaki oyuncular yeni mevkilere en uygun şekilde dağıtılır. Değişiklikler hemen etkili olur.
+          Diziliş değişince sahadaki oyuncular yeni mevkilere en uygun şekilde dağıtılır. Değişiklikler hemen etkili olur;
+          maç ilerleyene kadar Geri Al ile son değişiklik (oyuncu, yer, taktik) geri alınır.
         </div>
       </div>
     </section>

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { advance, createWorld, startUserMatch, stepMatch } from '../engine';
 import { gameData } from '../gameData';
 import { db } from '../persistence/db';
-import { hasUnsavedProgress, matchSignature, useGameStore } from './gameStore';
+import { hasUnsavedProgress, liveUndoCount, matchSignature, useGameStore, userSide } from './gameStore';
 
 beforeEach(async () => {
   await db.saves.clear();
@@ -56,5 +56,37 @@ describe('maç ortasında kayıt (store)', () => {
     await useGameStore.getState().loadSave(id);
     expect(useGameStore.getState().liveMatch).toBeNull();
     expect(useGameStore.getState().screen).not.toBe('match');
+  });
+});
+
+describe('canlı maçta geri alma (store)', () => {
+  it('değişiklik ve yer değişimi maç ilerlemeden geri alınır; kural dışı olan iz bırakmaz; adım atılınca geri alınamaz', () => {
+    const { world } = openMidMatch();
+    const st = () => useGameStore.getState();
+    const side = userSide(st().liveMatch!, world);
+    const team = () => st().liveMatch![side];
+    const outfield = () => team().onPitch.filter((id) => st().liveMatch!.players[id]!.slot !== 'GK');
+    const out = outfield()[0]!;
+    const incoming = team().bench[0]!;
+    const original = JSON.stringify(st().liveMatch);
+
+    expect(st().liveSubstitute(out, incoming)).toBe(true);
+    const [a, b] = outfield().slice(1, 3);
+    expect(st().liveSwap(a!, b!)).toBe(true);
+    expect(liveUndoCount(st())).toBe(2);
+    st().undoLiveChange();
+    st().undoLiveChange();
+    expect(JSON.stringify(st().liveMatch)).toBe(original);
+    expect(liveUndoCount(st())).toBe(0);
+
+    // Yedekteki oyuncu sahadan çıkarılamaz
+    expect(st().liveSubstitute(incoming, out)).toBe(false);
+    expect(liveUndoCount(st())).toBe(0);
+
+    expect(st().liveSubstitute(out, incoming)).toBe(true);
+    st().stepLiveMatch();
+    expect(liveUndoCount(st())).toBe(0);
+    st().undoLiveChange();
+    expect(team().onPitch).toContain(incoming);
   });
 });

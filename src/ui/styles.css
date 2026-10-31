@@ -5338,3 +5338,56 @@ kbd {
   background: transparent;
   box-shadow: none;
 }
+
+/* Maç içi saha düzeni (taktik paneli ve tam ekran çekmecesi): Taktik ekranının sahası, daha küçük */
+.live-lineup-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  font-size: 13px;
+}
+
+.live-lineup .pitch-area {
+  padding: 6px 0 0;
+}
+
+.live-lineup .pitch {
+  max-width: 340px;
+  min-width: 220px;
+}
+
+.live-lineup .pitch-slot {
+  width: 76px;
+}
+
+.live-lineup .pitch-slot .cond-bar {
+  width: 30px;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.live-lineup .bench-side {
+  flex-basis: 120px;
+}
+
+@media (max-width: 560px) {
+  .live-lineup .pitch-area {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .live-lineup .pitch {
+    min-width: 0;
+  }
+
+  .live-lineup .bench-side {
+    flex-basis: auto;
+  }
+
+  .live-lineup .bench-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}

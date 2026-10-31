@@ -15,6 +15,11 @@
   temel bütçenin altına inmez. Nedeni: kasa birikip bütçeyi şişiriyor, kulüpler giderek daha pahalı oyuncu alıyordu (transfer edilenlerin ortalama CA'sı 139 → 157, bedeller ×3,3).
 - Yapay zekâ alım eşiği mevki grubuna göre (transfer/ai.ts `groupLevel`): aday CA'sı, alınacak grubun kadrodaki en iyi oyuncularının (kaleci 1, defans 4, orta saha 3, forvet 3)
   ortalamasının 8 altından düşük olamaz. Önceden tek eşik "ilk 11 ortalaması − 8" idi; CA ölçeği mevkiye göre farklı olduğundan kaleciler eşiğe zor ulaşıyordu.
+- Kaleci tabanı (transfer/ai.ts `MIN_AI_KEEPERS` = 2): kalecisi 2'nin altına inen yapay zekâ kulübü, kadrosu dolu olsa da ve transfer dönemi
+  dışında da (`aiTransferDay` → `fillAiDepth(world, true)`) serbest kaleci alır; aday kulübün kendi kaleci seviyesine göre, alt sınır ve maaş
+  bütçesi sınırı yok. Nedeni: kaleci CA ölçeği düşük olduğundan yedek kaleciler sözleşme yenilemede eleniyor, Süper Lig'de kaleci sayısı 63 → 33
+  iniyordu; kaleyi saha oyuncusunun tuttuğu maçlar bazı sezonlarda %14, o maçlarda yenen gol 1,4 → 3,4, maç başı gol 2,8 → 3,35.
+  Ölçüm (tohum 9000, 5 sezon, yurtdışı ligleriyle): kalecisiz maç %0, Süper Lig kaleci sayısı 50–63, tek kalecili kulüp yok, maç başı gol 2,62–2,94.
 - Performans (sonucu değiştirmeyen): `primaryPosition` yalnızca oyuncunun mevkilerini tarar (saha sırası eşitlik kuralı korunur), şutta `keeperUnit`, `teamUnits` ortalamaları
   toplam + sayıyla. Motor performans değişikliğinden sonra: bir sezonun skor + oyuncu CA + RNG durumu parmak izini önce / sonra karşılaştır (birebir aynı olmalı).
 - Kadro şablonundaki gençler (generateClubSquad, role 'youth') yıllık genç alımıyla (generateYouthPlayer) aynı model: seviye temel − `YOUTH_LEVEL_GAP` (4,5),

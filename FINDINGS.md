@@ -250,3 +250,8 @@ Maç düzeyindeki ölçülerin tamamı hedef aralıkta: gol 2,74, ev galibiyeti 
 - [x] Yanlış oyuncu değişikliği geri alınabilmeli (maç yeniden başlamadıysa).
   - Yapıldı: "↶ Geri Al" (değişiklik paneli başlığı ve saha düzeni): son değişiklik (oyuncu, yer, taktik) maç bir adım
     ilerleyene kadar geri alınır; hak da geri gelir. Kanıt: matchSave.test.ts "canlı maçta geri alma".
+- [x] Yapay zekâ kulüplerinde yedek kaleci kalmıyordu: kaleyi saha oyuncusu tutuyor, gol ortalaması şişiyordu (denge raporu).
+  - Neden: kaleci CA ölçeği düşük, yedek kaleciler sözleşme yenilemede eleniyordu (Süper Lig'de kaleci 63 → 33; kalecisiz maç bazı sezonlarda %14,
+    o maçlarda yenen gol 1,4 → 3,4, maç başı gol 2,8 → 3,35).
+  - Düzeltme (transfer/ai.ts `MIN_AI_KEEPERS` = 2): tabanın altındaki kulüp, kadro dolu olsa da ve transfer dönemi dışında da serbest kaleci alır.
+    Kanıt: depth.test.ts "yapay zekâ kaleci tabanı"; ölçüm (tohum 9000, 5 sezon): kalecisiz maç %0, kaleci 50–63, maç başı gol 2,62–2,94 (docs/balance.md).

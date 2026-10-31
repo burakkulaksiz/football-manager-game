@@ -4,7 +4,8 @@ import { totalWages } from '../finance/finance';
 import { clubPlayers, createWorld } from '../generation/worldGenerator';
 import { retirementChance } from '../season/rollover';
 import type { GameWorld, Player } from '../types';
-import { fillAiDepth, groupLevel, MIN_AI_SQUAD } from './ai';
+import { fillAiDepth, groupLevel, MIN_AI_KEEPERS, MIN_AI_SQUAD } from './ai';
+import { primaryPosition } from '../player';
 import { releasePlayer } from './market';
 
 const START = '2026-07-10';
@@ -113,5 +114,24 @@ describe('işsiz oyuncuların emekliliği', () => {
     expect(retirementChance(player(null, 120), 32)).toBeCloseTo(0.4, 5);
     expect(retirementChance(player('x', 120), 32)).toBe(0);
     expect(retirementChance(player('x', 120), 38)).toBe(1);
+  });
+});
+
+describe('yapay zekâ kaleci tabanı (MIN_AI_KEEPERS)', () => {
+  it('kalecisi tabanın altına inen kulüp, kadrosu dolu olsa da ve transfer dönemi dışında da serbest kaleci alır', () => {
+    const world = createWorld(gameData, 72, 'galatasaray', '2026-10-05');
+    const keepers = () => clubPlayers(world, 'trabzonspor').filter((p) => primaryPosition(p) === 'GK');
+    // İlk kaleci dışındakileri serbest bırak: kadro hâlâ MIN_AI_SQUAD üstünde, serbest havuzda kaleci var
+    for (const p of keepers().sort((a, b) => b.currentAbility - a.currentAbility).slice(1)) releasePlayer(world, p);
+    expect(keepers()).toHaveLength(1);
+    expect(clubPlayers(world, 'trabzonspor').length).toBeGreaterThanOrEqual(MIN_AI_SQUAD - 3);
+    const before = clubPlayers(world, 'trabzonspor').length;
+    for (let day = 5; day < 28 && keepers().length < MIN_AI_KEEPERS; day++) {
+      world.date = `2026-10-${String(day).padStart(2, '0')}`;
+      fillAiDepth(world, true);
+    }
+    expect(keepers().length).toBeGreaterThanOrEqual(MIN_AI_KEEPERS);
+    // Dönem dışında yalnızca kaleci alınır
+    expect(clubPlayers(world, 'trabzonspor').length - before).toBe(keepers().length - 1);
   });
 });

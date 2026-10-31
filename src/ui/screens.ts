@@ -31,7 +31,7 @@ export const MENU: MenuGroup[] = [
     ],
   },
   {
-    title: 'Süper Lig',
+    title: 'Lig',
     items: [
       { id: 'fixtures', label: 'Fikstür & Sonuçlar', stage: 3 },
       { id: 'table', label: 'Puan Durumu', stage: 3 },

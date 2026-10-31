@@ -11,6 +11,7 @@ export * from './generation/worldGenerator';
 export * from './league/schedule';
 export * from './league/standings';
 export * from './league/lowerLeague';
+export * from './league/leagues';
 export * from './season/fans';
 export * from './season/press';
 export * from './league/stats';

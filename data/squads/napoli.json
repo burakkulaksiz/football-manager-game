@@ -1,0 +1,32 @@
+{
+  "source": "Transfermarkt 2026/27",
+  "players": [
+    {"firstName":"Vanja","lastName":"Milinković-Savić","born":"1997-02-20","nationality":"SRB","positions":["GK"],"ability":15.7,"number":32,"foot":"right","joined":"2026-07-01","contractExpires":"2030-06-30","marketValue":15000000},
+    {"firstName":"Alex","lastName":"Meret","born":"1997-03-22","nationality":"ITA","positions":["GK"],"ability":15,"number":1,"foot":"left","joined":"2019-07-01","contractExpires":"2027-06-30","marketValue":8000000},
+    {"firstName":"Nikita","lastName":"Contini","born":"1996-05-21","nationality":"ITA","positions":["GK"],"ability":11.7,"number":14,"foot":"right","joined":"2015-07-01","contractExpires":"2031-06-30","marketValue":400000},
+    {"firstName":"Claudio","lastName":"Pugliese","born":"2008-04-15","nationality":"ITA","positions":["GK"],"ability":8.9,"number":12,"foot":"left","joined":"2026-07-01","marketValue":100000},
+    {"firstName":"Alessandro","lastName":"Buongiorno","born":"1999-06-06","nationality":"ITA","positions":["DC"],"ability":15.7,"number":4,"foot":"left","joined":"2024-07-13","contractExpires":"2029-06-30","marketValue":25000000},
+    {"firstName":"Sam","lastName":"Beukema","born":"1998-11-17","nationality":"NED","positions":["DC"],"ability":15.3,"number":31,"foot":"right","joined":"2025-07-20","contractExpires":"2030-06-30","marketValue":18000000},
+    {"firstName":"Rafa","lastName":"Marín","born":"2002-05-19","nationality":"ESP","positions":["DC"],"ability":15.2,"number":16,"foot":"right","joined":"2024-07-10","contractExpires":"2029-06-30","marketValue":16000000},
+    {"firstName":"Benoît","lastName":"Badiashile","born":"2001-03-26","nationality":"FRA","positions":["DC"],"ability":15.1,"number":5,"foot":"left","joined":"2026-08-22","contractExpires":"2027-06-30","marketValue":15000000},
+    {"firstName":"Amir","lastName":"Rrahmani","born":"1994-02-24","nationality":"KOS","positions":["DC"],"ability":15.4,"number":13,"foot":"right","joined":"2020-01-20","contractExpires":"2027-06-30","marketValue":10000000},
+    {"firstName":"Luca","lastName":"Marianucci","born":"2004-07-23","nationality":"ITA","positions":["DC"],"ability":13.9,"number":35,"foot":"right","joined":"2025-07-01","contractExpires":"2032-06-30","marketValue":7000000},
+    {"firstName":"Mathías","lastName":"Olivera","born":"1997-10-31","nationality":"URU","positions":["DL"],"ability":15,"number":17,"foot":"left","joined":"2022-07-01","contractExpires":"2030-06-30","marketValue":15000000},
+    {"firstName":"Leonardo","lastName":"Spinazzola","born":"1993-03-25","nationality":"ITA","positions":["DL"],"ability":14.2,"number":37,"foot":"right","joined":"2024-07-10","contractExpires":"2028-06-30","marketValue":3500000},
+    {"firstName":"Costantino","lastName":"Favasuli","born":"2004-04-26","nationality":"ITA","positions":["DR"],"ability":14.1,"number":2,"foot":"right","joined":"2026-08-19","contractExpires":"2027-06-30","marketValue":8000000},
+    {"firstName":"Giovanni Di","lastName":"Lorenzo","born":"1993-08-04","nationality":"ITA","positions":["DR"],"ability":14.9,"number":22,"foot":"right","joined":"2019-07-01","contractExpires":"2030-06-30","marketValue":7500000},
+    {"firstName":"Billy","lastName":"Gilmour","born":"2001-06-11","nationality":"SCO","positions":["DM"],"ability":15.2,"number":6,"foot":"right","joined":"2024-08-30","contractExpires":"2029-06-30","marketValue":20000000},
+    {"firstName":"Stanislav","lastName":"Lobotka","born":"1994-11-25","nationality":"SVK","positions":["DM"],"ability":14.8,"number":68,"foot":"right","joined":"2020-01-15","contractExpires":"2027-06-30","marketValue":10000000},
+    {"firstName":"Scott","lastName":"McTominay","born":"1996-12-08","nationality":"SCO","positions":["MC"],"ability":16,"number":8,"foot":"right","joined":"2024-08-30","contractExpires":"2028-06-30","marketValue":40000000},
+    {"firstName":"Frank","lastName":"Anguissa","born":"1995-11-16","nationality":"CMR","positions":["MC"],"ability":15.1,"number":99,"foot":"right","joined":"2022-07-01","contractExpires":"2027-06-30","marketValue":15000000},
+    {"firstName":"Antonio","lastName":"Vergara","born":"2003-01-16","nationality":"ITA","positions":["AMC"],"ability":15.2,"number":26,"foot":"left","joined":"2022-07-01","contractExpires":"2031-06-30","marketValue":20000000},
+    {"firstName":"Kevin De","lastName":"Bruyne","born":"1991-06-28","nationality":"BEL","positions":["AMC"],"ability":15.6,"number":11,"foot":"right","joined":"2025-07-01","contractExpires":"2027-06-30","marketValue":8000000},
+    {"firstName":"Alisson","lastName":"Santos","born":"2002-09-27","nationality":"BRA","positions":["AML"],"ability":15.2,"number":27,"foot":"right","joined":"2026-07-01","contractExpires":"2030-06-30","marketValue":28000000},
+    {"firstName":"Noa","lastName":"Lang","born":"1999-06-17","nationality":"NED","positions":["AML"],"ability":14.9,"number":70,"foot":"right","joined":"2025-07-17","contractExpires":"2030-06-30","marketValue":20000000},
+    {"firstName":"David","lastName":"Neres","born":"1997-03-03","nationality":"BRA","positions":["AMR"],"ability":14.7,"number":7,"foot":"left","joined":"2024-08-21","contractExpires":"2028-06-30","marketValue":18000000},
+    {"firstName":"Matteo","lastName":"Politano","born":"1993-08-03","nationality":"ITA","positions":["AMR"],"ability":13.9,"number":21,"foot":"left","joined":"2021-07-01","contractExpires":"2028-06-30","marketValue":5000000},
+    {"firstName":"Rasmus","lastName":"Højlund","born":"2003-02-04","nationality":"DEN","positions":["ST"],"ability":16.1,"number":19,"foot":"left","joined":"2026-07-01","contractExpires":"2030-06-30","marketValue":60000000},
+    {"firstName":"Lorenzo","lastName":"Lucca","born":"2000-09-10","nationality":"ITA","positions":["ST"],"ability":14.9,"number":20,"foot":"right","joined":"2026-01-22","contractExpires":"2030-06-30","marketValue":20000000},
+    {"firstName":"","lastName":"Giovane","born":"2003-11-24","nationality":"BRA","positions":["ST"],"ability":14.1,"number":23,"foot":"left","joined":"2026-01-24","contractExpires":"2030-06-30","marketValue":12000000}
+  ]
+}

@@ -68,7 +68,7 @@ export function CareerPanel({ player }: { player: Player }) {
     <section className="panel">
       <h2 className="panel-title">Kariyer</h2>
       {rows.length === 0 ? (
-        <div className="panel-body muted">Henüz Süper Lig maçına çıkmadı.</div>
+        <div className="panel-body muted">Henüz resmî maça çıkmadı.</div>
       ) : (
         <table className="data-table">
           <thead>
@@ -108,7 +108,7 @@ export function CareerPanel({ player }: { player: Player }) {
         </table>
       )}
       <div className="panel-note">
-        Süper Lig maçları. Maç: ilk 11 (oyuna sonradan girdiği) · MA: maçın adamı. Geçmiş oyunun başladığı sezondan itibaren tutulur.
+        Lig, kupa ve Avrupa maçları. Maç: ilk 11 (oyuna sonradan girdiği) · MA: maçın adamı. Geçmiş oyunun başladığı sezondan itibaren tutulur.
       </div>
     </section>
   );

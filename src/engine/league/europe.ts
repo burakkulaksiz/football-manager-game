@@ -186,6 +186,39 @@ export function turkishQualifiers(world: GameWorld): Record<EuropeCompetition, s
   return { cl, el };
 }
 
+/**
+ * Yurtdışından Avrupa kontenjanı (ülke → [ŞL, AL]): ŞL 14 + AL 13; kalan yerler Türkiye'nin (2 + 3). Veride olmayan ülkenin
+ * boş kalan yeri itibar sırasıyla (ülke sınırıyla) dolar.
+ */
+export const FOREIGN_EUROPE_SLOTS: Readonly<Record<string, readonly [number, number]>> = {
+  ENG: [3, 2], ESP: [3, 2], GER: [2, 2], ITA: [2, 2], FRA: [2, 2], POR: [1, 1], NED: [1, 1], BEL: [0, 1],
+};
+
+/** Yurtdışından katılanlar: her ülkeden geçen sezonun lig sırasıyla (ilk sezon itibar) kontenjan kadar; ŞL önce. */
+export function foreignQualifiers(world: GameWorld): Record<EuropeCompetition, string[]> {
+  const last = world.history[world.history.length - 1];
+  const tables = last && last.year === world.season.year - 1 ? last.leagues ?? [] : [];
+  const foreign = world.clubs.filter((c) => c.country !== undefined);
+  const order = (country: string) => {
+    const ranked = foreign.filter((c) => c.country === country).sort((a, b) => b.reputation - a.reputation).map((c) => c.id);
+    const table = tables.find((t) => t.league === country)?.table.map((r) => r.clubId).filter((id) => ranked.includes(id)) ?? [];
+    return [...table, ...ranked.filter((id) => !table.includes(id))];
+  };
+  const cl: string[] = [];
+  const el: string[] = [];
+  for (const country of new Set(foreign.map((c) => c.country!))) {
+    const [clSlots, elSlots] = FOREIGN_EUROPE_SLOTS[country] ?? [0, 0];
+    const ids = order(country);
+    cl.push(...ids.slice(0, clSlots));
+    el.push(...ids.slice(clSlots, clSlots + elSlots));
+  }
+  const byReputation = foreign.sort((a, b) => b.reputation - a.reputation).map((c) => c.id);
+  const turkish = turkishQualifiers(world);
+  cl.push(...pickWithCountryCap(world, byReputation.filter((id) => !cl.includes(id) && !el.includes(id)), EUROPE_TEAMS - turkish.cl.length - cl.length, [...turkish.cl, ...cl]));
+  el.push(...pickWithCountryCap(world, byReputation.filter((id) => !cl.includes(id) && !el.includes(id)), EUROPE_TEAMS - turkish.el.length - el.length, [...turkish.el, ...el]));
+  return { cl: cl.slice(0, EUROPE_TEAMS - turkish.cl.length), el: el.slice(0, EUROPE_TEAMS - turkish.el.length) };
+}
+
 function drawRng(world: GameWorld, comp: EuropeCompetition, round: number): Rng {
   const salt = Math.imul(world.season.year * 32 + round * 2 + (comp === 'cl' ? 0 : 1), 2654435761);
   return new Rng((world.seed ^ EUROPE_SEED_SALT ^ salt) >>> 0);
@@ -386,16 +419,7 @@ export function europeDay(world: GameWorld): void {
       const drawDate = makeDate(year, GROUP_DRAW[0], GROUP_DRAW[1]);
       if (world.date < drawDate || world.date > addDays(stageDate(year, comp, 1), -MIN_DAYS_TO_MATCH)) continue;
       const turkish = turkishQualifiers(world)[comp];
-      const foreign = world.clubs
-        .filter((c) => c.country !== undefined)
-        .sort((a, b) => b.reputation - a.reputation)
-        .map((c) => c.id);
-      const clTurkish = turkishQualifiers(world).cl;
-      const clForeign = pickWithCountryCap(world, foreign, EUROPE_TEAMS - clTurkish.length, clTurkish);
-      // ŞL: en güçlü yabancılar; AL: ŞL dışındaki en zayıf yabancılar (Türk kulüplerine yakın güçte)
-      const rest = foreign.filter((id) => !clForeign.includes(id)).reverse();
-      const pool = comp === 'cl' ? clForeign : pickWithCountryCap(world, rest, EUROPE_TEAMS - turkish.length, turkish);
-      drawGroups(world, comp, [...turkish, ...pool]);
+      drawGroups(world, comp, [...turkish, ...foreignQualifiers(world)[comp]]);
       continue;
     }
     const stage = Math.max(...fixtures.map((f) => f.round));

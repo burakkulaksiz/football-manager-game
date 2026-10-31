@@ -46,9 +46,26 @@ export interface PlayerSeasonStats {
 }
 
 /** Bir oyuncunun sezon istatistikleri (maç kayıtlarından). */
-export function playerSeasonStats(fixtures: readonly Fixture[], playerId: number): PlayerSeasonStats {
+export function playerSeasonStats(
+  fixtures: readonly Fixture[],
+  playerId: number,
+  /** Sonucu sıkıştırılan yurtdışı maçlarının sayaçları (Season.tallies). */
+  tallies?: Readonly<Record<string, number[]>>,
+): PlayerSeasonStats {
   const s: PlayerSeasonStats = { apps: 0, starts: 0, goals: 0, assists: 0, yellow: 0, red: 0, manOfTheMatch: 0, avgRating: null };
   let ratingSum = 0;
+  for (const [key, t] of Object.entries(tallies ?? {})) {
+    if (!key.startsWith(`${playerId}|`)) continue;
+    const [apps = 0, starts = 0, goals = 0, assists = 0, ratingTenths = 0, motm = 0, yellow = 0, red = 0] = t;
+    s.apps += apps;
+    s.starts += starts;
+    s.goals += goals;
+    s.assists += assists;
+    ratingSum += ratingTenths / 10;
+    s.manOfTheMatch += motm;
+    s.yellow += yellow;
+    s.red += red;
+  }
   for (const f of fixtures) {
     const r = f.result;
     if (!r) continue;

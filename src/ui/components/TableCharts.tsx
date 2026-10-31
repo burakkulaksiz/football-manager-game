@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { computeStandings, EUROPE, getClub, leagueClubs, type Club } from '../../engine';
+import { clubsInLeague, computeStandings, EUROPE, getClub, leagueFixturesOf, userLeague, type Club } from '../../engine';
 import { useUiState, useWorld } from '../../store/gameStore';
 import { formSeries, positionHistory, FORM_WINDOW } from '../chartData';
 import { formatDayMonth, MONTHS_SHORT, OUTCOME_LABELS } from '../labels';
@@ -24,11 +24,13 @@ function spacedTicks(indices: number[], n: number, minGap: number): { i: number;
 function PositionChart() {
   const world = useWorld();
   const [compare, setCompare] = useUiState<string[]>('table.compare', []);
-  const clubs = leagueClubs(world);
+  // Kullanıcının ligi (Süper Lig ya da yurtdışı ligi)
+  const league = userLeague(world);
+  const clubs = clubsInLeague(world, league);
   const ids = clubs.map((c) => c.id);
-  const fixtures = world.season.fixtures;
+  const fixtures = leagueFixturesOf(world.season.fixtures, league);
   // Dünya yerinde değişir: yeniden hesap, oynanan lig maçı sayısına bağlı
-  const playedLeague = fixtures.filter((f) => f.competition === undefined && f.result !== null).length;
+  const playedLeague = fixtures.filter((f) => f.result !== null).length;
   const history = useMemo(() => positionHistory(ids, fixtures), [playedLeague, world.season.year]); // eslint-disable-line react-hooks/exhaustive-deps
   const n = history.rounds.length;
   const total = clubs.length;

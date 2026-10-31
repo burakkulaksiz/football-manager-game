@@ -9,7 +9,7 @@ export default defineConfig({
     // Motor testleri saf TS; tarayıcı ortamına gerek yok.
     environment: 'node',
     include: ['src/**/*.test.ts'],
-    // İstatistik testleri binlerce maç oynatır; paralel koşarken 5 sn yetmeyebilir.
-    testTimeout: 30_000,
+    // İstatistik testleri binlerce maç oynatır, sezon testleri 8 yurtdışı ligini de oynatır; paralel koşarken uzun sürebilir.
+    testTimeout: 120_000,
   },
 });

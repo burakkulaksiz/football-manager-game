@@ -25,5 +25,5 @@ describe('tekrarlanabilirlik', () => {
     playUntil(b, '2027-08-20');
     expect(a.season.fixtures).toEqual(b.season.fixtures);
     expect(a.history).toEqual(b.history);
-  }, 120_000);
+  }, 400_000);
 });

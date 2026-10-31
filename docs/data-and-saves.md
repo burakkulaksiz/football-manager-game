@@ -47,6 +47,11 @@
   değeri formülünün tersi: CA = 17·ln(değer/1500), 29 yaş üstüne yıl başına +17·ln(1/0,82), gençte potansiyel payı düşülür;
   seviye = 1 + (CA − 1)·19/199 − 0,3. Değeri olmayan 150 bin € sayılır. İlk uyruk esas (bilinmiyorsa raporlanır).
   --info yeni kulüp için stadyum / kapasite / toplam değer yazdırır.
+  --foreign: 8 yurtdışı ligi (FOREIGN_LEAGUES: GB1, ES1, L1, IT1, FR1, PO1, NL1, BE1) lig sayfasından kulüpler (FOREIGN: TM kimliği →
+  [oyun kimliği, ad, kısa ad, şehir, renkler], renk / şehir Transfermarkt'ta yok, elle), kadro sayfasından kadro + stadyum /
+  kapasite; data/foreign_clubs.json yazılır (dosyada olan kulübün alanları korunur, yeni kulüp kadro değerinden: bkz. world.md).
+  DİKKAT (2026-10-31): sitenin değer birimleri "mil. €" / "bin €" iken "Mn €" / "Bin €" / "Mr €" oldu; parseValue ikisini de
+  okur. Eski ayrıştırıcıyla Donnarumma 45 € çıkıyordu (güç 7) ve yurtdışı ilk 11'leri 1. Lig'den zayıf kalıyordu.
   Denge düzeltmesi (ilk sürümde 3,25 gol/maç, %21,8 beraberlik, gol kralı ort. 34 çıktı): mevki payı POSITION_OFFSET
   (KL +1,4, STP +0,6, bek +0,45, orta saha +0,2, 10 numara +0,3, kanat/forvet −0,25 — piyasa değeri hücumcuyu pahalı gösterir)
   ve 12,5 çevresinde ×0,72 sıkıştırma (TM'de büyük-küçük farkı oyunun ölçeğinden geniş). Sonuç (~4600 maç): 2,70 gol,

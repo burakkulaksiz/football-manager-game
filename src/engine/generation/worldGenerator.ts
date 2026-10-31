@@ -4,6 +4,7 @@ import { ageOn, baseWage, computeCurrentAbility, primaryPosition, roundNice } fr
 import { Rng } from '../rng';
 import type { Club, GameWorld, Player, Position } from '../types';
 import { generateSeason } from '../league/schedule';
+import { generateForeignLeagues } from '../league/leagues';
 import { generateLowerLeague } from '../league/lowerLeague';
 import { initFinances } from '../finance/finance';
 import { defaultTactics } from '../match/tactics';
@@ -132,7 +133,7 @@ export function createWorld(
   managerName = 'Menajer',
   background: ManagerBackground = 'player',
 ): GameWorld {
-  if (!data.clubs.some((c) => c.id === playerClubId)) {
+  if (![...data.clubs, ...data.foreignClubs].some((c) => c.id === playerClubId)) {
     throw new Error(`Bilinmeyen kulüp: ${playerClubId}`);
   }
   const rng = new Rng(seed);
@@ -152,7 +153,8 @@ export function createWorld(
   }
 
   const season = generateSeason(rng, data.clubs.map((c) => c.id), Number(startDate.slice(0, 4)));
-  const userClub = clubs.find((c) => c.id === playerClubId)!;
+  // Yurtdışı kulübü seçildiyse kulüp (ve taktiği) yurtdışı kulüpleri eklenince kurulur
+  const source = [...clubs, ...data.foreignClubs].find((c) => c.id === playerClubId)!;
 
   const world: GameWorld = {
     seed,
@@ -163,14 +165,14 @@ export function createWorld(
     players,
     nextPlayerId: nextId,
     season,
-    tactics: { [playerClubId]: defaultTactics(Object.values(players).filter((p) => p.clubId === playerClubId)) },
+    tactics: {},
     training: { [playerClubId]: { ...DEFAULT_TRAINING } },
     finances: initFinances(clubs, startDate, players),
     offers: [],
     nextOfferId: 1,
     news: [],
     nextNewsId: 1,
-    board: initialBoard(userClub),
+    board: initialBoard(source),
     history: [],
     seasonState: 'running',
     gameOver: null,
@@ -190,8 +192,13 @@ export function createWorld(
   };
   fillAcademies(world, data, new Rng((seed ^ ACADEMY_SEED_SALT) >>> 0));
   addForeignClubs(world, data, new Rng((seed ^ FOREIGN_SEED_SALT) >>> 0));
+  const userClub = getClub(world, playerClubId);
+  // Yurtdışı kulübünü kullanıcı yönetiyorsa onun da U19'u olur (ayrı akış: diğer altyapılar değişmez)
+  if (userClub.country !== undefined) fillAcademies(world, data, new Rng((seed ^ ACADEMY_SEED_SALT ^ 1) >>> 0), [userClub]);
+  world.tactics[playerClubId] = defaultTactics(clubPlayers(world, playerClubId));
   const lower = generateLowerLeague(world, season.year);
   if (lower) world.season.lower = lower;
+  generateForeignLeagues(world, season.year);
   recordGrowth(world);
   refreshAiListings(world);
   createInternational(world, data, startDate);
@@ -391,8 +398,32 @@ export function leagueClubs(world: GameWorld): Club[] {
   return world.clubs.filter((c) => divisionOf(c) === 1);
 }
 
-/** Bir kulübün A takım oyuncuları (altyapı / U19 hariç). */
+/**
+ * Maç günü dizini: `withSquadIndex` süresince kulüp → A takım (oyuncu sırası Object.values ile aynı). Günün maçları oynanırken
+ * kimse kulüp değiştirmez (transferler günlük işlerde); her maçta iki takım için 5000+ oyuncuyu taramak pahalıydı.
+ */
+let squadIndex: { players: GameWorld['players']; byClub: Map<string, Player[]> } | null = null;
+
+export function withSquadIndex<T>(world: GameWorld, fn: () => T): T {
+  if (squadIndex) return fn();
+  const byClub = new Map<string, Player[]>();
+  for (const p of Object.values(world.players)) {
+    if (p.clubId === null || p.academy) continue;
+    const list = byClub.get(p.clubId);
+    if (list) list.push(p);
+    else byClub.set(p.clubId, [p]);
+  }
+  squadIndex = { players: world.players, byClub };
+  try {
+    return fn();
+  } finally {
+    squadIndex = null;
+  }
+}
+
+/** Bir kulübün A takım oyuncuları (altyapı / U19 hariç). Yeni dizi (çağıran sıralayabilir). */
 export function clubPlayers(world: GameWorld, clubId: string): Player[] {
+  if (squadIndex?.players === world.players) return [...(squadIndex.byClub.get(clubId) ?? [])];
   return Object.values(world.players).filter((p) => p.clubId === clubId && !p.academy);
 }
 
@@ -400,12 +431,11 @@ export function clubPlayers(world: GameWorld, clubId: string): Player[] {
 export const INITIAL_ACADEMY_SIZE: readonly [number, number] = [7, 9];
 
 /**
- * Her kulübe U19 kadrosu üretir (15–18 yaş). Ayrı bir rng ile: aynı tohumla ana dünya
- * (kadrolar, fikstür) altyapı eklenmeden önceki hâliyle birebir aynı kalır.
+ * Her Türkiye kulübüne (ya da verilen kulüplere) U19 kadrosu üretir (15–18 yaş). Ayrı bir rng ile: aynı tohumla ana dünya
+ * (kadrolar, fikstür) altyapı eklenmeden önceki hâliyle birebir aynı kalır. Yurtdışı kulüplerinin U19'u yok (kullanıcınınki hariç).
  */
-export function fillAcademies(world: GameWorld, data: GameData, rng: Rng): void {
-  for (const club of world.clubs) {
-    if (club.country !== undefined) continue; // yurtdışı kulüplerinin U19'u yok
+export function fillAcademies(world: GameWorld, data: GameData, rng: Rng, only?: readonly Club[]): void {
+  for (const club of only ?? world.clubs.filter((c) => c.country === undefined)) {
     // Gerçek kadrodan U19'a inen gençler sayıya dahil
     const existing = Object.values(world.players).filter((p) => p.clubId === club.id && p.academy).length;
     const count = Math.max(0, rng.int(INITIAL_ACADEMY_SIZE[0], INITIAL_ACADEMY_SIZE[1]) - existing);

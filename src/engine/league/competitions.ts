@@ -2,6 +2,7 @@
 import type { Fixture } from '../types';
 import { CUP_NAME, cupRoundName } from './cup';
 import { EUROPE, isEuropeCompetition, stageName } from './europe';
+import { leagueName } from './leagues';
 
 export const LEAGUE_NAME = 'Süper Lig';
 
@@ -9,7 +10,7 @@ export const LEAGUE_NAME = 'Süper Lig';
 export function competitionName(f: Fixture): string {
   if (f.competition === 'cup') return CUP_NAME;
   if (isEuropeCompetition(f.competition)) return EUROPE[f.competition].name;
-  return LEAGUE_NAME;
+  return leagueName(f.league);
 }
 
 /** Aşama: "5. Hafta", "Son 16", "A Grubu, 3. Maç", "Çeyrek Final rövanş". */
@@ -19,7 +20,7 @@ export function stageLabel(f: Fixture): string {
   return `${f.round}. Hafta`;
 }
 
-/** "Süper Lig · 5. Hafta" / "Türkiye Kupası · Son 16" / "Şampiyonlar Ligi · A Grubu, 3. Maç". */
+/** "Süper Lig · 5. Hafta" / "Premier League · 5. Hafta" / "Türkiye Kupası · Son 16" / "Şampiyonlar Ligi · A Grubu, 3. Maç". */
 export function fixtureLabel(f: Fixture): string {
   return `${competitionName(f)} · ${stageLabel(f)}`;
 }

@@ -84,7 +84,7 @@ export function CompareDialog({ ids, onClose }: { ids: number[]; onClose: () => 
   const toggleCompare = useGameStore((s) => s.toggleCompare);
   const players = ids.map((id) => world.players[id]).filter((p): p is Player => p !== undefined);
   const byId = new Map(players.map((p) => [p.id, p]));
-  const stats = players.map((p) => playerSeasonStats(world.season.fixtures, p.id));
+  const stats = players.map((p) => playerSeasonStats(world.season.fixtures, p.id, world.season.tallies));
   // Tanımadığımız oyuncuda özellikler aralık; karşılaştırma aralığın ortasıyla
   const knowledge = players.map((p) => knowledgeOf(world, p));
   const est = (i: number, k: AttributeKey) => attributeEstimate(world, players[i]!, k, knowledge[i]);

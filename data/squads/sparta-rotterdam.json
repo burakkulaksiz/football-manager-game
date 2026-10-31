@@ -1,0 +1,30 @@
+{
+  "source": "Transfermarkt 2026/27",
+  "players": [
+    {"firstName":"Michael","lastName":"Brouwer","born":"1993-01-21","nationality":"NED","positions":["GK"],"ability":11.8,"foot":"right","joined":"2026-09-01","contractExpires":"2028-06-30","marketValue":250000},
+    {"firstName":"Filip","lastName":"Bednarek","born":"1992-09-26","nationality":"POL","positions":["GK"],"ability":11.6,"foot":"right","joined":"2025-07-01","contractExpires":"2027-06-30","marketValue":200000},
+    {"firstName":"Pascal","lastName":"Kuiper","born":"2004-03-17","nationality":"NED","positions":["GK"],"ability":9.3,"foot":"right","joined":"2025-07-03","contractExpires":"2027-06-30","marketValue":75000},
+    {"firstName":"Rik","lastName":"Suur","born":"2006-11-14","nationality":"NED","positions":["GK"],"ability":9.6,"joined":"2026-07-01","contractExpires":"2028-06-30"},
+    {"firstName":"Marvin","lastName":"Young","born":"2005-10-02","nationality":"NED","positions":["DC"],"ability":13.4,"foot":"right","joined":"2024-11-01","contractExpires":"2029-06-30","marketValue":5000000},
+    {"firstName":"Teo","lastName":"Quintero","born":"1999-03-02","nationality":"VEN","positions":["DC"],"ability":12.3,"foot":"left","joined":"2024-07-01","contractExpires":"2027-06-30","marketValue":1300000},
+    {"firstName":"Nick","lastName":"Verschuren","born":"2005-01-13","nationality":"NED","positions":["DC"],"ability":11.6,"foot":"right","joined":"2026-07-01","contractExpires":"2030-06-30","marketValue":1000000},
+    {"firstName":"Bruno Martins","lastName":"Indi","born":"1992-02-08","nationality":"NED","positions":["DC"],"ability":11.7,"foot":"left","joined":"2025-07-15","contractExpires":"2027-06-30","marketValue":300000},
+    {"firstName":"Max de","lastName":"Ligt","born":"2004-07-20","nationality":"NED","positions":["DC"],"ability":8.6,"foot":"right","joined":"2025-07-01","contractExpires":"2027-06-30","marketValue":75000},
+    {"firstName":"Bas","lastName":"Kuipers","born":"1994-08-17","nationality":"NED","positions":["DL"],"ability":12.1,"foot":"left","joined":"2026-07-01","contractExpires":"2028-06-30","marketValue":800000},
+    {"firstName":"Giannino","lastName":"Vianello","born":"2007-06-10","nationality":"NED","positions":["DL"],"ability":9.7,"foot":"left","joined":"2025-09-01","contractExpires":"2029-06-30","marketValue":300000},
+    {"firstName":"Lushendry","lastName":"Martes","born":"2008-05-06","nationality":"NED","positions":["DR"],"ability":12.8,"foot":"right","joined":"2026-01-01","contractExpires":"2030-06-30","marketValue":5000000},
+    {"firstName":"Boyd","lastName":"Reith","born":"1999-05-05","nationality":"NED","positions":["DR"],"ability":10.6,"foot":"right","joined":"2024-07-01","contractExpires":"2027-06-30","marketValue":350000},
+    {"firstName":"Julian","lastName":"Baas","born":"2002-04-16","nationality":"NED","positions":["DM"],"ability":11.7,"foot":"right","joined":"2024-07-01","contractExpires":"2027-06-30","marketValue":1000000},
+    {"firstName":"Cedric","lastName":"Hatenboer","born":"2005-03-19","nationality":"NED","positions":["MC"],"ability":12.2,"foot":"right","joined":"2026-08-31","contractExpires":"2030-06-30","marketValue":2000000},
+    {"firstName":"Alwande","lastName":"Roaldsøy","born":"2004-06-09","nationality":"NOR","positions":["MC"],"ability":11.2,"foot":"right","joined":"2026-01-20","contractExpires":"2030-06-30","marketValue":800000},
+    {"firstName":"Shunsuke","lastName":"Mito","born":"2002-09-28","nationality":"JPN","positions":["AMC"],"ability":12.5,"foot":"right","joined":"2024-01-01","contractExpires":"2028-06-30","marketValue":2000000},
+    {"firstName":"Isaac","lastName":"Babadi","born":"2005-04-06","nationality":"NED","positions":["AMC"],"ability":11.9,"foot":"right","joined":"2026-09-02","contractExpires":"2027-06-30","marketValue":1500000},
+    {"firstName":"Robin van","lastName":"Cruijsen","born":"2006-02-20","nationality":"NED","positions":["AMC"],"ability":11.5,"foot":"left","joined":"2026-07-30","contractExpires":"2030-06-30","marketValue":1200000},
+    {"firstName":"Jens","lastName":"Toornstra","born":"1989-04-04","nationality":"NED","positions":["AMC"],"ability":11.7,"foot":"right","joined":"2025-07-01","contractExpires":"2027-06-30","marketValue":200000},
+    {"firstName":"Joel","lastName":"Ideho","born":"2003-07-17","nationality":"NED","positions":["AML"],"ability":9.8,"foot":"right","joined":"2025-02-04","contractExpires":"2028-06-30","marketValue":300000},
+    {"firstName":"Mitchell van","lastName":"Bergen","born":"1999-08-27","nationality":"NED","positions":["AMR"],"ability":11.8,"foot":"right","joined":"2025-08-18","contractExpires":"2029-06-30","marketValue":1500000},
+    {"firstName":"Casper","lastName":"Terho","born":"2003-06-24","nationality":"FIN","positions":["AMR"],"ability":11.3,"foot":"left","joined":"2026-07-01","contractExpires":"2030-06-30","marketValue":1000000},
+    {"firstName":"Andrej","lastName":"Kostić","born":"2007-01-16","nationality":"MNE","positions":["ST"],"ability":12.5,"foot":"right","joined":"2026-08-19","contractExpires":"2027-06-30","marketValue":5000000},
+    {"firstName":"Milan","lastName":"Zonneveld","born":"2003-10-08","nationality":"NED","positions":["ST"],"ability":10.9,"foot":"right","joined":"2026-02-03","contractExpires":"2029-06-30","marketValue":800000}
+  ]
+}

@@ -1,4 +1,4 @@
-import { formatDateTR, getClub, seasonLabel } from '../../engine';
+import { formatDateTR, getClub, leagueName, seasonLabel, userLeague } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { readableText } from '../colors';
@@ -34,7 +34,7 @@ export function Header() {
       <div className="header-club">
         <div className="header-club-text">
           <div className="header-club-name">{club ? club.name : 'İşsiz'}</div>
-          <div className="header-club-season">{world.manager.name} · Süper Lig {seasonLabel(world.season.year)}</div>
+          <div className="header-club-season">{world.manager.name} · {leagueName(userLeague(world))} {seasonLabel(world.season.year)}</div>
         </div>
         {club && <ClubBadge club={club} size={34} />}
       </div>

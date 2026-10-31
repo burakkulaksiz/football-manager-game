@@ -59,7 +59,7 @@ describe('işsizlik', () => {
     // Kariyer sonu: işsizlik sınırında
     expect(world.gameOver?.reason).toMatch(/iş bulamadın/);
     expect(world.gameOver!.date >= addDays(START, UNEMPLOYMENT_LIMIT_DAYS)).toBe(true);
-  }, 120_000);
+  }, 400_000);
 
   it('istifa: menajer işsiz kalır, itibar 3 düşer, sezon "istifa" olarak yazılır', () => {
     const world = createWorld(gameData, 62, 'goztepe', START);
@@ -88,7 +88,7 @@ describe('işe geçiş', () => {
     let guard = 0;
     while (!todaysUserFixture(world) && guard++ < 200) advance(world, gameData, { autoPlayUserMatch: false });
     expect(todaysUserFixture(world)).not.toBeNull();
-  }, 60_000);
+  }, 200_000);
 
   it('görevdeyken başka kulübe geçiş: eski kulübün koltuğu boşalır, sezon "ayrıldı" olarak yazılır', () => {
     const world = createWorld(gameData, 64, 'goztepe', START);
@@ -107,7 +107,7 @@ describe('işe geçiş', () => {
     expect(world.facilities.projects[0]!.clubId).toBe('goztepe');
     playUntil(world, addDays(START, 35));
     expect(world.facilities.levels.goztepe!.training).toBe(level + 1);
-  }, 60_000);
+  }, 200_000);
 });
 
 describe('başvurular ve teklifler', () => {

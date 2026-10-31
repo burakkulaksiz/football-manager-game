@@ -1,0 +1,32 @@
+{
+  "source": "Transfermarkt 2026/27",
+  "players": [
+    {"firstName":"Matthieu","lastName":"Epolo","born":"2005-01-15","nationality":"COD","positions":["GK"],"ability":14.9,"number":1,"foot":"right","joined":"2021-07-01","contractExpires":"2029-06-30","marketValue":10000000},
+    {"firstName":"Lucas","lastName":"Pirard","born":"1995-03-10","nationality":"BEL","positions":["GK"],"ability":11.8,"number":21,"foot":"right","joined":"2025-07-01","contractExpires":"2028-06-30","marketValue":350000},
+    {"firstName":"Belmin","lastName":"Dizdarevic","born":"2001-08-09","nationality":"BIH","positions":["GK"],"ability":9.9,"number":35,"foot":"right","joined":"2026-01-30","contractExpires":"2027-06-30","marketValue":100000},
+    {"firstName":"Ibrahim","lastName":"Karamoko","born":"2001-07-23","nationality":"FRA","positions":["DC"],"ability":13.8,"number":20,"foot":"right","joined":"2025-01-07","contractExpires":"2030-06-30","marketValue":5000000},
+    {"firstName":"Ibe","lastName":"Hautekiet","born":"2002-04-13","nationality":"BEL","positions":["DC"],"ability":13.6,"number":25,"foot":"right","joined":"2023-01-31","contractExpires":"2029-06-30","marketValue":4000000},
+    {"firstName":"Josué","lastName":"Homawoo","born":"1997-11-12","nationality":"TOG","positions":["DC"],"ability":12.8,"number":24,"foot":"left","joined":"2025-07-01","contractExpires":"2027-06-30","marketValue":2000000},
+    {"firstName":"Dimitri","lastName":"Lavalée","born":"1997-01-13","nationality":"BEL","positions":["DC"],"ability":12.4,"number":4,"foot":"left","joined":"2026-07-01","contractExpires":"2028-06-30","marketValue":1500000},
+    {"firstName":"Daan","lastName":"Dierckx","born":"2003-02-24","nationality":"BEL","positions":["DC"],"ability":12.1,"number":29,"foot":"right","joined":"2024-07-01","contractExpires":"2028-06-30","marketValue":1200000},
+    {"firstName":"Noah","lastName":"Sy","born":"2007-03-25","nationality":"BEL","positions":["DC"],"ability":9.4,"number":34,"joined":"2026-07-01","contractExpires":"2027-06-30","marketValue":200000},
+    {"firstName":"Gustav","lastName":"Mortensen","born":"2004-03-19","nationality":"DEN","positions":["DL"],"ability":13.4,"number":3,"foot":"left","joined":"2026-01-15","contractExpires":"2030-06-30","marketValue":4500000},
+    {"firstName":"Henry","lastName":"Lawrence","born":"2001-09-21","nationality":"ENG","positions":["DR"],"ability":13.5,"number":18,"foot":"right","joined":"2024-07-01","contractExpires":"2029-06-30","marketValue":4000000},
+    {"firstName":"Marlon","lastName":"Fossey","born":"1998-09-09","nationality":"USA","positions":["DR"],"ability":13.3,"number":13,"foot":"right","joined":"2022-09-06","contractExpires":"2027-06-30","marketValue":3500000},
+    {"firstName":"Ryan","lastName":"Fosso","born":"2002-06-17","nationality":"CMR","positions":["DM"],"ability":12.5,"number":80,"foot":"right","joined":"2026-08-14","contractExpires":"2029-06-30","marketValue":2000000},
+    {"firstName":"Marco","lastName":"Ilaimaharitra","born":"1995-07-26","nationality":"MAD","positions":["DM"],"ability":11.6,"number":23,"foot":"right","joined":"2025-07-01","contractExpires":"2027-06-30","marketValue":800000},
+    {"firstName":"Laurens","lastName":"Goemaere","born":"2006-04-07","nationality":"BEL","positions":["DM"],"ability":10.6,"number":6,"foot":"right","joined":"2026-07-01","contractExpires":"2030-06-30","marketValue":600000},
+    {"firstName":"Rayan","lastName":"Touzghar","born":"2003-10-27","nationality":"MAR","positions":["MC"],"ability":12.8,"number":84,"foot":"left","joined":"2026-07-17","contractExpires":"2029-06-30","marketValue":3000000},
+    {"firstName":"Alexis","lastName":"Trouillet","born":"2000-12-23","nationality":"FRA","positions":["MC"],"ability":12.5,"number":26,"foot":"right","joined":"2026-07-11","contractExpires":"2028-06-30","marketValue":2000000},
+    {"firstName":"Casper","lastName":"Nielsen","born":"1994-04-29","nationality":"DEN","positions":["MC"],"ability":12.8,"number":94,"foot":"right","joined":"2025-07-02","contractExpires":"2028-06-30","marketValue":1500000},
+    {"firstName":"Tobias","lastName":"Mohr","born":"1995-08-24","nationality":"GER","positions":["ML"],"ability":11.6,"number":7,"foot":"left","joined":"2025-07-01","contractExpires":"2028-06-30","marketValue":800000},
+    {"firstName":"Mohammed El","lastName":"Hankouri","born":"1997-07-01","nationality":"MAR","positions":["AMC"],"ability":11.5,"number":27,"foot":"right","joined":"2025-08-01","contractExpires":"2027-06-30","marketValue":800000},
+    {"firstName":"Salieu","lastName":"Drammeh","born":"2003-03-28","nationality":"GAM","positions":["AML"],"ability":12.1,"number":15,"foot":"right","joined":"2026-07-15","contractExpires":"2029-06-30","marketValue":2000000},
+    {"firstName":"Sylvester","lastName":"Jasper","born":"2001-09-13","nationality":"BUL","positions":["AML"],"ability":12,"number":19,"foot":"right","joined":"2026-07-31","contractExpires":"2029-06-30","marketValue":1800000},
+    {"firstName":"Adnane","lastName":"Abid","born":"2003-08-23","nationality":"BEL","positions":["AMR"],"ability":13.3,"number":11,"foot":"right","joined":"2025-07-01","contractExpires":"2029-06-30","marketValue":6000000},
+    {"firstName":"Bernard","lastName":"Nguene","born":"2006-08-04","nationality":"CMR","positions":["ST"],"ability":11.9,"number":17,"foot":"right","joined":"2026-02-02","contractExpires":"2029-06-30","marketValue":3000000},
+    {"firstName":"Bruny","lastName":"Nsimba","born":"2000-04-05","nationality":"BEL","positions":["ST"],"ability":12.4,"number":77,"foot":"right","joined":"2026-07-01","contractExpires":"2029-06-30","marketValue":2500000},
+    {"firstName":"Andi","lastName":"Zeqiri","born":"1999-06-22","nationality":"SUI","positions":["ST"],"ability":12.2,"number":9,"foot":"left","joined":"2026-09-01","contractExpires":"2027-06-30","marketValue":2000000},
+    {"firstName":"Dennis Eckert","lastName":"Ayensa","born":"1997-01-09","nationality":"IRN","positions":["ST"],"ability":12.2,"number":10,"foot":"right","joined":"2025-07-01","contractExpires":"2028-06-30","marketValue":2000000}
+  ]
+}

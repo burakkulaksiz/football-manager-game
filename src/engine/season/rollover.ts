@@ -7,6 +7,7 @@ import { addDays, makeDate } from '../date';
 import { clubPlayers, getClub, leagueClubs } from '../generation/worldGenerator';
 import { academyIntake, manageAcademies, renewAcademyContracts } from '../squad/academy';
 import { generateSeason, seasonLabel } from '../league/schedule';
+import { clubsInLeague, generateForeignLeagues } from '../league/leagues';
 import { generateLowerLeague } from '../league/lowerLeague';
 import { addNews } from '../news';
 import { foreignFinanceShares, foreignIntake, isForeign } from '../generation/foreign';
@@ -14,7 +15,7 @@ import { pruneKnowledge } from '../transfer/scouting';
 import { trailingIncome } from '../finance/finance';
 import { ageOn } from '../player';
 import type { Rng } from '../rng';
-import type { Club, GameWorld, Player } from '../types';
+import type { Club, GameWorld, Player, SeasonSummary } from '../types';
 import {
   aiRenewalWage,
   contractExpiry,
@@ -159,17 +160,22 @@ function applyLeagueChanges(world: GameWorld): void {
   const summary = world.history[world.history.length - 1];
   if (!summary) return;
   const clampRep = (n: number) => Math.max(30, Math.min(99, n));
-  const repRank = [...leagueClubs(world)].sort((a, b) => b.reputation - a.reputation).map((c) => c.id);
-
-  summary.table.forEach((row, i) => {
-    const club = getClub(world, row.clubId);
-    const position = i + 1;
-    const expected = repRank.indexOf(club.id) + 1;
-    let delta = position === 1 ? 3 : position <= 4 ? 1 : 0;
-    if (position <= expected - 3) delta += 1;
-    if (position >= expected + 3) delta -= 1;
-    club.reputation = clampRep(club.reputation + delta);
-  });
+  /** İtibar: şampiyon +3, ilk 4 +1; itibar sırasından 3+ iyi +1, 3+ kötü −1. */
+  const adjust = (table: SeasonSummary['table'], clubs: Club[], clamp: (n: number) => number) => {
+    const repRank = [...clubs].sort((a, b) => b.reputation - a.reputation).map((c) => c.id);
+    table.forEach((row, i) => {
+      const club = getClub(world, row.clubId);
+      const position = i + 1;
+      const expected = repRank.indexOf(club.id) + 1;
+      let delta = position === 1 ? 3 : position <= 4 ? 1 : 0;
+      if (position <= expected - 3) delta += 1;
+      if (position >= expected + 3) delta -= 1;
+      club.reputation = clamp(club.reputation + delta);
+    });
+  };
+  adjust(summary.table, leagueClubs(world), clampRep);
+  // Yurtdışı ligleri: aynı kural, devlerin itibarı 125'e kadar
+  for (const league of summary.leagues ?? []) adjust(league.table, clubsInLeague(world, league.league), (n) => Math.max(30, Math.min(125, n)));
 
   const scale = (club: Club, wage: number, budget: number) => {
     club.wageBudget = Math.round(club.wageBudget * wage);
@@ -213,6 +219,8 @@ function newSeasonFinances(world: GameWorld): void {
       foreignFinanceShares(fin);
       fin.sponsorIncome = Math.round(fin.wageBudget * 0.3);
       fin.transferBudget = seasonTransferBudget(club, fin);
+      const inLeague = clubsInLeague(world, club.country).sort((a, b) => b.reputation - a.reputation);
+      club.fanExpectation = expectationForRank(inLeague.indexOf(club) + 1);
       continue;
     }
     fin.tvIncome = Math.round(fin.wageBudget * (top ? 0.45 : 0.3));
@@ -245,6 +253,7 @@ export function startNewSeason(world: GameWorld, rng: Rng, data: GameData): void
   world.season = generateSeason(rng, leagueClubs(world).map((c) => c.id), year);
   const lower = generateLowerLeague(world, year);
   if (lower) world.season.lower = lower;
+  generateForeignLeagues(world, year);
   world.seasonState = 'running';
 
   if (isUnemployed(world)) return; // işsiz menajere yeni sezon hedefi / bütçe haberi yok

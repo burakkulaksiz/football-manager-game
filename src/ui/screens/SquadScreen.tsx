@@ -220,7 +220,7 @@ export function SquadScreen() {
     stats: (p) => {
       let s = statsCache.get(p.id);
       if (!s) {
-        s = playerSeasonStats(world.season.fixtures, p.id);
+        s = playerSeasonStats(world.season.fixtures, p.id, world.season.tallies);
         statsCache.set(p.id, s);
       }
       return s;

@@ -5,6 +5,8 @@
 import type { GameData } from './data';
 import { processDay } from './daily';
 import { addDays, makeDate, type GameDate } from './date';
+import { withSquadIndex } from './generation/worldGenerator';
+import { compactResult, leaguesRng, tallyResult, userLeague } from './league/leagues';
 import { playLowerLeague } from './league/lowerLeague';
 import { buildResult } from './match/engine';
 import { applyResult, drawMatchSeed, playFixture, startFixture } from './match/simulate';
@@ -29,11 +31,19 @@ export function todaysUserFixture(world: GameWorld): Fixture | null {
   return todaysFixtures(world).find((f) => f.homeId === id || f.awayId === id) ?? null;
 }
 
-/** Bugün veya sonrasındaki ilk oynanmamış maçın tarihi; sezon bittiyse null. */
+/**
+ * Kullanıcının izlediği maç: kendi liginin maçı, kupa ya da Avrupa. Başka bir yurtdışı liginin maçı Devam'ı durdurmaz
+ * (arka planda oynanıp geçilir).
+ */
+export function followedFixture(world: GameWorld, f: Fixture): boolean {
+  return f.competition !== undefined || f.league === userLeague(world);
+}
+
+/** Bugün veya sonrasındaki ilk oynanmamış (izlenen) maçın tarihi; sezon bittiyse null. */
 export function nextMatchDate(world: GameWorld): GameDate | null {
   let next: GameDate | null = null;
   for (const f of world.season.fixtures) {
-    if (f.result === null && f.date >= world.date && (next === null || f.date < next)) next = f.date;
+    if (f.result === null && f.date >= world.date && (next === null || f.date < next) && followedFixture(world, f)) next = f.date;
   }
   return next;
 }
@@ -64,12 +74,31 @@ function advanceOneDay(world: GameWorld, data: GameData, stopOn: (n: NewsItem) =
   return world.news.filter((n) => n.id >= before && n.important && stopOn(n));
 }
 
-/** Bugünkü (kalan) tüm maçları arka planda oynatır. */
+/**
+ * Bugünkü (kalan) tüm maçları arka planda oynatır. Yurtdışı lig maçları kendi rastgelelik akışıyla (ana akış, yani Türkiye'nin
+ * sonuçları, onlar yüzünden kaymaz); kullanıcının liginde olmayanların sonucu etkileri işlendikten sonra sıkıştırılır.
+ */
 export function playTodaysMatches(world: GameWorld): Fixture[] {
+  return withSquadIndex(world, () => playTodaysFixtures(world));
+}
+
+function playTodaysFixtures(world: GameWorld): Fixture[] {
   const fixtures = todaysFixtures(world);
   const rng = Rng.fromState(world.rngState);
-  for (const f of fixtures) applyResult(world, f, playFixture(world, f, rng), rng);
+  for (const f of fixtures) if (f.league === undefined) applyResult(world, f, playFixture(world, f, rng), rng);
   world.rngState = rng.getState();
+  const abroad = fixtures.filter((f) => f.league !== undefined);
+  if (abroad.length > 0) {
+    const leaguesRandom = leaguesRng(world);
+    const own = userLeague(world);
+    for (const f of abroad) {
+      applyResult(world, f, playFixture(world, f, leaguesRandom), leaguesRandom);
+      if (f.league !== own) {
+        tallyResult(world.season, f.result!);
+        f.result = compactResult(f.result!);
+      }
+    }
+  }
   playLowerLeague(world, world.date);
   return fixtures;
 }
@@ -96,8 +125,8 @@ export function finishUserMatch(world: GameWorld, state: MatchState): Fixture[] 
   applyResult(world, fixture, buildResult(state), rng);
   world.rngState = rng.getState();
   playTodaysMatches(world);
-  // Aynı haftanın (kupada aynı turun) maçları
-  return world.season.fixtures.filter((f) => f.round === fixture.round && f.competition === fixture.competition);
+  // Aynı haftanın (kupada aynı turun) maçları, maçın kendi liginden
+  return world.season.fixtures.filter((f) => f.round === fixture.round && f.competition === fixture.competition && f.league === fixture.league);
 }
 
 /**
@@ -120,17 +149,20 @@ export function advance(
   if (userFixture && !options.autoPlayUserMatch) return { kind: 'userMatch', fixture: userFixture };
 
   const today = todaysFixtures(world);
-  if (today.length > 0) {
-    const fixtures = playTodaysMatches(world);
-    return { kind: 'played', round: fixtures[0]!.round, competition: fixtures[0]!.competition, fixtures };
+  const followed = today.filter((f) => followedFixture(world, f));
+  if (followed.length > 0) {
+    playTodaysMatches(world);
+    return { kind: 'played', round: followed[0]!.round, competition: followed[0]!.competition, fixtures: followed };
   }
-  // Sezon arasında bir sonraki durak yeni sezonun başlangıcıdır (1 Temmuz).
+  // Yalnızca başka liglerin maçı varsa sessizce oynanır; Devam bir sonraki izlenen maç gününe (sezon arasında 1 Temmuz'a) gider
+  if (today.length > 0) playTodaysMatches(world);
   const next = nextMatchDate(world) ?? makeDate(world.season.year + 1, 7, 1);
   let days = 0;
   let news: NewsItem[] = [];
   do {
     news = advanceOneDay(world, data, options.stopOn ?? (() => true));
     days++;
+    if (world.date < next && todaysFixtures(world).length > 0) playTodaysMatches(world);
   } while (news.length === 0 && !world.gameOver && world.date < next);
   return { kind: 'moved', days, news };
 }

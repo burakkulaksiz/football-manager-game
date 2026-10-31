@@ -1,42 +1,53 @@
-import { computeStandings, getClub, goalDifference, leagueClubs, lowerStandings, seasonLabel } from '../../engine';
+import { activeForeignLeagues, FOREIGN_EUROPE_SLOTS, getClub, goalDifference, leagueName, leagueTable, lowerStandings, seasonLabel, userLeague } from '../../engine';
 import { useUiState, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { OutcomeBox } from '../components/OutcomeBox';
 import { TableCharts } from '../components/TableCharts';
 
-/** Sıraya göre bölge: Avrupa kupaları ve küme düşme hattı (1. Lig'de ilk üç çıkar). */
-function zoneClass(position: number, total: number, lower: boolean): string {
+/** Sıraya göre bölge: Avrupa kupaları ve küme düşme hattı (1. Lig'de ilk üç çıkar; yurtdışında ülke kontenjanı, küme düşme yok). */
+function zoneClass(position: number, total: number, lower: boolean, league: string | undefined): string {
   if (lower) return position <= 3 ? 'zone-cl' : '';
+  if (league !== undefined) {
+    const [cl, el] = FOREIGN_EUROPE_SLOTS[league] ?? [0, 0];
+    return position <= cl ? 'zone-cl' : position <= cl + el ? 'zone-el' : '';
+  }
   if (position <= 2) return 'zone-cl';
   if (position <= 4) return 'zone-el';
   if (position > total - 3) return 'zone-rel';
   return '';
 }
 
+/** Sekme: 'table' Süper Lig, 'lower' 1. Lig, 'charts' grafikler, diğerleri yurtdışı liginin ülke kodu. */
 export function TableScreen() {
-  const [view, setView] = useUiState<'table' | 'lower' | 'charts'>('table.view', 'table');
+  const world = useWorld();
+  const own = userLeague(world);
+  const [view, setView] = useUiState<string>('table.view', own ?? 'table');
+  const tab = (key: string, label: string) => (
+    <button key={key} className={`tab${view === key ? ' active' : ''}`} onClick={() => setView(key)}>{label}</button>
+  );
   return (
     <div className="screen">
       <div className="tabs" role="tablist">
-        <button className={`tab${view === 'table' ? ' active' : ''}`} onClick={() => setView('table')}>Süper Lig</button>
-        <button className={`tab${view === 'lower' ? ' active' : ''}`} onClick={() => setView('lower')}>1. Lig</button>
-        <button className={`tab${view === 'charts' ? ' active' : ''}`} onClick={() => setView('charts')}>Grafikler</button>
+        {tab('table', 'Süper Lig')}
+        {tab('lower', '1. Lig')}
+        {activeForeignLeagues(world).map((l) => tab(l, leagueName(l)))}
+        {tab('charts', 'Grafikler')}
       </div>
-      {view === 'charts' ? <TableCharts /> : <StandingsTable lower={view === 'lower'} />}
+      {view === 'charts' ? <TableCharts /> : <StandingsTable lower={view === 'lower'} league={view === 'table' || view === 'lower' ? undefined : view} />}
     </div>
   );
 }
 
-function StandingsTable({ lower }: { lower: boolean }) {
+function StandingsTable({ lower, league }: { lower: boolean; league: string | undefined }) {
   const world = useWorld();
-  const table = lower ? lowerStandings(world) : computeStandings(leagueClubs(world).map((c) => c.id), world.season.fixtures);
+  const table = lower ? lowerStandings(world) : leagueTable(world, league);
 
   if (lower && !world.season.lower) {
     return <section className="panel"><div className="panel-body muted">1. Lig bu sezon oynanmıyor (eski kayıt); gelecek sezondan itibaren oynanır.</div></section>;
   }
   return (
     <section className="panel">
-      <h2 className="panel-title">Puan Durumu — {lower ? '1. Lig' : 'Süper Lig'} {seasonLabel(world.season.year)}</h2>
+      <h2 className="panel-title">Puan Durumu — {lower ? '1. Lig' : leagueName(league)} {seasonLabel(world.season.year)}</h2>
       <table className="data-table">
         <thead>
           <tr>
@@ -57,7 +68,7 @@ function StandingsTable({ lower }: { lower: boolean }) {
           {table.map((row, i) => {
             const club = getClub(world, row.clubId);
             const gd = goalDifference(row);
-            const classes = [zoneClass(i + 1, table.length, lower), row.clubId === world.playerClubId ? 'own-row' : '']
+            const classes = [zoneClass(i + 1, table.length, lower, league), row.clubId === world.playerClubId ? 'own-row' : '']
               .filter(Boolean)
               .join(' ');
             return (
@@ -88,6 +99,12 @@ function StandingsTable({ lower }: { lower: boolean }) {
       </table>
       {lower ? (
         <div className="legend"><span><i className="zone-mark zone-cl" /> Süper Lig&apos;e çıkış</span></div>
+      ) : league !== undefined ? (
+        <div className="legend">
+          <span><i className="zone-mark zone-cl" /> Şampiyonlar Ligi</span>
+          <span><i className="zone-mark zone-el" /> Avrupa Ligi</span>
+          <span className="muted">Küme düşme yok (alt ligler oyunda değil)</span>
+        </div>
       ) : (
         <div className="legend">
           <span><i className="zone-mark zone-cl" /> Şampiyonlar Ligi</span>

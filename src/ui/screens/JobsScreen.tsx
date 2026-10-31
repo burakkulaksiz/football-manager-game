@@ -4,6 +4,7 @@ import {
   applyForJob,
   daysBetween,
   divisionOf,
+  leagueName,
   fitsClub,
   formatDateTR,
   getClub,
@@ -151,7 +152,7 @@ export function JobsScreen() {
                 return (
                   <tr key={v.clubId}>
                     <td className="strong"><span className="club-cell"><ClubBadge club={club} size={18} /> {club.name}</span></td>
-                    <td>{divisionOf(club) === 1 ? 'Süper Lig' : '1. Lig'}</td>
+                    <td>{divisionOf(club) === 2 ? '1. Lig' : leagueName(club.country)}</td>
                     <td className="num">{club.reputation}</td>
                     <td className={`num${fits ? ' pos' : ' neg'}`}>{requiredReputation(club)}</td>
                     <td className="muted">

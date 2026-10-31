@@ -45,6 +45,12 @@ const DEPTH_BELOW = 30;
 const DEPTH_ABOVE = 6;
 /** İhtiyaç duyulan mevki grubundaki adaya verilen puan bonusu (CA cinsinden). */
 const DEPTH_GROUP_BONUS = 8;
+/**
+ * Yapay zekâ kulübünde en az bu kadar kaleci: altına düşen kulüp kadro büyüklüğünden bağımsız (dönem dışında da) serbest kaleci alır.
+ * Denge raporu: kaleci CA ölçeği düşük olduğundan yedek kaleciler sözleşme yenilemede elenip lig 63 → 33 kaleciye iniyordu;
+ * kaleyi saha oyuncusunun tuttuğu maçlarda (bazı sezonlarda %14) yenen gol 1,4 → 3,4, maç başı gol 2,8 → 3,35.
+ */
+export const MIN_AI_KEEPERS = 2;
 
 /** Günlük alım girişimi olasılığı (yaz / devre arası). */
 const BUY_CHANCE = { summer: 0.05, winter: 0.03 };
@@ -227,8 +233,10 @@ function dayRng(world: GameWorld): Rng {
  * Kadrosu `MIN_AI_SQUAD`'ın altındaki yapay zekâ kulüpleri serbest oyunculardan (bedelsiz) yedek alır:
  * kulübün seviyesine uygun ve maaş bütçesine sığan en iyi oyuncu. En çok ihtiyaç duyulan mevki grubu öncelikli sayılır
  * (puan bonusu); o grupta serbest oyuncu yoksa başka gruptan da alınır (aksi hâlde kadro takılı kalır).
+ * Kalecisi `MIN_AI_KEEPERS`'ın altındaki kulüp kadrosu dolu olsa da kaleci alır (yalnızca kaleci, kendi kaleci seviyesine göre).
+ * `keepersOnly`: transfer dönemi dışında yalnızca kaleci tabanı (serbest oyuncu her zaman imzalanabilir).
  */
-export function fillAiDepth(world: GameWorld): void {
+export function fillAiDepth(world: GameWorld, keepersOnly = false): void {
   const squads = new Map<string, Player[]>();
   const free: Player[] = [];
   for (const p of Object.values(world.players)) {
@@ -241,20 +249,25 @@ export function fillAiDepth(world: GameWorld): void {
   for (const club of world.clubs) {
     if (club.id === world.playerClubId) continue;
     const squad = squads.get(club.id) ?? [];
-    if (squad.length >= MIN_AI_SQUAD) continue;
+    const needKeeper = squad.filter((p) => primaryPosition(p) === 'GK').length < MIN_AI_KEEPERS;
+    if (!needKeeper && (keepersOnly || squad.length >= MIN_AI_SQUAD)) continue;
     if (!rng.chance(DEPTH_CHANCE * (club.country !== undefined ? 0.5 : 1))) continue;
 
-    const group = neededGroup(rng, squad);
-    const level = topElevenAverage(squad);
+    const group = needKeeper ? 'GK' : neededGroup(rng, squad);
+    // Kalecinin CA ölçeği saha oyuncularından düşük: kaleci adayı kulübün kendi kaleci seviyesine göre
+    const level = needKeeper ? groupLevel(squad, 'GK', topElevenAverage(squad) - 10) : topElevenAverage(squad);
     const fin = world.finances[club.id]!;
     const wageRoom = fin.wageBudget - totalWages(squad, club.id);
     let best: { player: Player; wage: number; score: number } | null = null;
     for (const p of free) {
       if (p.clubId) continue;
+      if (needKeeper && primaryPosition(p) !== 'GK') continue;
       if (ageOn(p.birthDate, world.date) > 34) continue;
-      if (p.currentAbility < level - DEPTH_BELOW || p.currentAbility > level + DEPTH_ABOVE) continue;
+      // Yedek kalecinin birinciye yakın olması gerekmez: kaleci tabanında alt sınır yok (uygun olanların en iyisi)
+      if ((!needKeeper && p.currentAbility < level - DEPTH_BELOW) || p.currentAbility > level + DEPTH_ABOVE) continue;
       const wage = aiSigningWage(world, p, club.id);
-      if (wage > wageRoom) continue;
+      // Kalecisiz kalmak maaş bütçesinden pahalı: acil kalecide bütçe sınırı yok
+      if (wage > wageRoom && !needKeeper) continue;
       const score = p.currentAbility + (groupOf(primaryPosition(p)) === group ? DEPTH_GROUP_BONUS : 0) + rng.float(0, 4);
       if (!best || score > best.score) best = { player: p, wage, score };
     }
@@ -270,7 +283,10 @@ export function fillAiDepth(world: GameWorld): void {
 /** Transfer dönemindeki günlük yapay zekâ hamleleri. */
 export function aiTransferDay(world: GameWorld, rng: Rng): void {
   const window = transferWindow(world.date);
-  if (!window.open) return;
+  if (!window.open) {
+    fillAiDepth(world, true);
+    return;
+  }
   const season = window.name === 'Yaz' ? 'summer' : 'winter';
   let ctx: DayContext | null = null;
   for (const club of world.clubs) {

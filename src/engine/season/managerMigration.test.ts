@@ -20,5 +20,5 @@ describe('kayıt dönüşümü (biçim 14 → 15)', () => {
     expect(migrated.manager.reputation).toBeGreaterThanOrEqual(35);
     expect(migrated.manager.seasons).toEqual([expect.objectContaining({ year: 2026, clubId: 'besiktas', position: world.history[0]!.userPosition })]);
     expect(migrated.manager.reputationHistory).toHaveLength(1);
-  }, 60_000);
+  }, 200_000);
 });

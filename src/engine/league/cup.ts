@@ -44,9 +44,9 @@ export function isCupFixture(f: Fixture): boolean {
   return f.competition === 'cup';
 }
 
-/** Lig maçları (puan durumu, lig istatistikleri, ödüller). */
+/** Süper Lig maçları (puan durumu, lig istatistikleri, ödüller); başka lig için leagues.ts leagueFixturesOf. */
 export function leagueFixtures(fixtures: readonly Fixture[]): Fixture[] {
-  return fixtures.filter((f) => f.competition === undefined);
+  return fixtures.filter((f) => f.competition === undefined && f.league === undefined);
 }
 
 export function cupRoundName(round: number): string {

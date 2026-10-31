@@ -49,6 +49,13 @@ Ara ara buradan seçip devam ediyoruz. Yapılanlar `[x]` ile işaretlenir; ayrı
 ## Transfer
 - [x] Gözlemci sistemi (bilinmeyen oyuncuların özellikleri gizli, gözlemciyle açılır)
 - [x] Yurtdışı ligleri ve yabancı kulüplerden transfer (maç oynanmayan 40 kulüp, 8 ülke)
+- [x] Diğer liglerin bütün takımları ve oyuncuları; ligler maç yapsın; her ligden kulüp seçilebilsin (2026-10-31)
+  - Yapıldı: 8 ülkenin birinci ligi (150 kulüp, gerçek 2026/27 kadroları, Transfermarkt `--foreign`), pazar takvimiyle tam motorla
+    oynanır (ayrı rng; başka ligin sonucu sıkıştırılır, oyuncu sayaçları tutulur), puan durumu / haftalar / istatistik ekranlarında
+    lig seçimi, sezon sonu tabloları, Avrupa'ya lig sırasıyla katılım, yeni oyunda ve İş Merkezi'nde yurtdışı kulüpleri.
+    Kanıt: `league/leagues.test.ts` (takvim, fikstür, Devam, sıkıştırma = sayaç, Avrupa kontenjanı, yurtdışı kullanıcı: yeni oyun,
+    canlı maç, sezon sonu, kayıt dönüşümü), `season/season.test.ts` (yeni sezonda yurtdışı fikstürü ve tablolar). Arayüz tarayıcıda
+    elle denenmedi. Ayrıntı: docs/world.md > "Yurtdışı ligleri".
 - [x] Satın alma opsiyonlu kiralık, sonradan satış payı gibi sözleşme maddeleri (kullanıcı alıcıyken; satarken pay isteme yok)
   - Kanıt: `transfer/transfer.test.ts` > sözleşme maddeleri (payla düşen istem, satışta pay ödemesi, opsiyon reddi ve kullanımı). Arayüzde elle denenmedi.
 - [x] Menajer pazarlığı / oyuncu ajanları (menajerlerin oyuncu önermesi hariç)

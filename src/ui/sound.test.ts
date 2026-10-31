@@ -10,7 +10,7 @@ const ev = (type: MatchEvent['type'], side: MatchEvent['side'] = null): MatchEve
 /** Web Audio'nun kullanılan kısmı kadar sahte bağlam: oluşturulan düğümleri ve başlatılan kaynakları sayar. */
 function fakeContext() {
   const created: string[] = [];
-  const started: { loop: boolean; length?: number }[] = [];
+  const started: { loop: boolean; length?: number; buffer: unknown }[] = [];
   const param = () => ({
     value: 0,
     setValueAtTime() {},
@@ -21,10 +21,10 @@ function fakeContext() {
     created.push(kind);
     const n = {
       gain: param(), threshold: param(), knee: param(), ratio: param(),
-      buffer: null, loop: false, loopStart: 0, loopEnd: 0, onended: null as null | (() => void),
+      buffer: null as unknown, loop: false, loopStart: 0, loopEnd: 0, onended: null as null | (() => void),
       connect: (x: unknown) => x,
       start(_when?: number, _offset?: number, length?: number) {
-        started.push({ loop: n.loop, length });
+        started.push({ loop: n.loop, length, buffer: n.buffer });
       },
       stop() {},
     };
@@ -38,7 +38,8 @@ function fakeContext() {
     createGain: () => node('gain'),
     createBufferSource: () => node('source'),
     createDynamicsCompressor: () => node('limiter'),
-    decodeAudioData: async () => buffer,
+    // her dosya ayrı bir kayıt (varyantlar ayırt edilsin)
+    decodeAudioData: async () => ({ ...buffer }),
     resume: async () => {},
     suspend: async () => {},
   };
@@ -117,11 +118,13 @@ describe('maç sesleri', () => {
     player.crowd(true, ON);
     await flush();
     expect(made).toBe(1);
-    expect(loads).toBe(12);
+    expect(loads).toBe(33); // 7 kayıt × 4 varyant + 5 tekli
     expect(fake.started.filter((s) => s.loop)).toHaveLength(1);
 
     player.play('whistleHalf', ON);
-    expect(fake.started.filter((s) => !s.loop)).toHaveLength(2); // iki kısa düdük
+    const halves = fake.started.filter((s) => !s.loop);
+    expect(halves).toHaveLength(2); // iki kısa düdük, farklı varyant
+    expect(halves[0]?.buffer).not.toBe(halves[1]?.buffer);
     player.play('whistleHalf', ON);
     expect(fake.started.filter((s) => !s.loop)).toHaveLength(2);
     // Kesilen kayıt (gol 9 sn) kaydın kendi süresini (2 sn) aşmaz
@@ -132,7 +135,15 @@ describe('maç sesleri', () => {
     expect(fake.started.filter((s) => s.loop)).toHaveLength(1);
     player.crowd(false, ON);
     player.crowd(true, ON);
-    expect(fake.started.filter((s) => s.loop)).toHaveLength(2);
+    const loops = fake.started.filter((s) => s.loop);
+    expect(loops).toHaveLength(2);
+    expect(loops[0]?.buffer).not.toBe(loops[1]?.buffer); // yeni maçta başka uğultu
+    // Dört varyant dönünce baştakine gelinir
+    for (let i = 0; i < 3; i++) {
+      player.crowd(false, ON);
+      player.crowd(true, ON);
+    }
+    expect(fake.started.filter((s) => s.loop).at(-1)?.buffer).toBe(loops[0]?.buffer);
   });
 
   it('kayıt inmezse ya da çözülemezse hata fırlatmaz, sessiz kalır; Sesi dene false', async () => {

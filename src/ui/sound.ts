@@ -11,24 +11,28 @@ export type SoundId =
   | 'click' | 'notify' | 'offer' | 'sign' | 'trophy' | 'sacked';
 export type SoundSettings = Pick<Settings, 'sound' | 'soundVolume' | 'menuSound'>;
 
+/** Dört varyantlı kayıt: `ad.mp3`, `ad-2.mp3` … `ad-4.mp3`. */
+const variants = (name: string) => [`${name}.mp3`, `${name}-2.mp3`, `${name}-3.mp3`, `${name}-4.mp3`];
+
 /**
  * Kayıtlar. Çözülünce tepe değeri 1'e normalize edilir; `gain` sesler arası göreli düzey. `duration` (sn) uzun kaydı keser
- * (sonu sönümlenir). Düzeyler dalga biçimine bakılarak seçildi, kulakla ölçülmedi.
+ * (sonu sönümlenir). Birden çok dosya varyanttır: her çalışta sıradaki çalar. Düzeyler dalga biçimine bakılarak seçildi,
+ * kulakla ölçülmedi.
  */
 const FILES = {
-  whistleLong: { file: 'whistle-long.mp3', gain: 0.4 },
-  whistleShort: { file: 'whistle-short.mp3', gain: 0.4 },
-  whistleEnd: { file: 'whistle-end.mp3', gain: 0.4 },
-  cheer: { file: 'crowd-goal.mp3', gain: 1, duration: 9 },
-  ahh: { file: 'crowd-ahh.mp3', gain: 0.75 },
-  boo: { file: 'crowd-boo.mp3', gain: 0.6, duration: 4 },
-  ambience: { file: 'crowd-ambience.mp3', gain: 0.22 },
-  click: { file: 'click.mp3', gain: 0.12 },
-  notify: { file: 'notify.mp3', gain: 0.3 },
-  offer: { file: 'offer.mp3', gain: 0.35 },
-  sign: { file: 'sign.mp3', gain: 0.5 },
-  fanfare: { file: 'fanfare.mp3', gain: 0.45 },
-} satisfies Record<string, { file: string; gain: number; duration?: number }>;
+  whistleLong: { files: variants('whistle-long'), gain: 0.4 },
+  whistleShort: { files: variants('whistle-short'), gain: 0.4 },
+  whistleEnd: { files: variants('whistle-end'), gain: 0.4 },
+  cheer: { files: variants('crowd-goal'), gain: 1, duration: 9 },
+  ahh: { files: variants('crowd-ahh'), gain: 0.75 },
+  boo: { files: variants('crowd-boo'), gain: 0.6, duration: 4 },
+  ambience: { files: variants('crowd-ambience'), gain: 0.22 },
+  click: { files: ['click.mp3'], gain: 0.12 },
+  notify: { files: ['notify.mp3'], gain: 0.3 },
+  offer: { files: ['offer.mp3'], gain: 0.35 },
+  sign: { files: ['sign.mp3'], gain: 0.5 },
+  fanfare: { files: ['fanfare.mp3'], gain: 0.45 },
+} satisfies Record<string, { files: string[]; gain: number; duration?: number }>;
 type FileKey = keyof typeof FILES;
 
 /** Bir ses: katmanlar [kayıt, gecikme sn, kazanç çarpanı]; `gap`: aynı ses bu kadar saniyeden sık başlamaz. */
@@ -172,7 +176,9 @@ export function createSoundPlayer(makeContext: () => AudioContext, load: (file: 
   let ctx: AudioContext | null = null;
   let master: GainNode | null = null;
   let loading: Promise<void> | null = null;
-  const buffers = new Map<FileKey, { buffer: AudioBuffer; norm: number }>();
+  const buffers = new Map<FileKey, { buffer: AudioBuffer; norm: number }[]>();
+  /** Kayıt başına çalınan sayısı: sıradaki varyantı seçer (aynı varyant art arda gelmez). */
+  const turns = new Map<FileKey, number>();
   const lastStart = new Map<SoundId, number>();
   let active = 0;
   let crowd: { src: AudioBufferSourceNode; gain: GainNode } | null = null;
@@ -181,18 +187,20 @@ export function createSoundPlayer(makeContext: () => AudioContext, load: (file: 
   /** Bütün kayıtları bir kez indirip çözer; inmeyen / çözülemeyen kayıt atlanır. */
   function loadAll(c: AudioContext): Promise<void> {
     loading ??= Promise.all(
-      (Object.keys(FILES) as FileKey[]).map(async (key) => {
-        try {
-          const buffer = await c.decodeAudioData(await load(FILES[key].file));
-          let peak = 0;
-          for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
-            for (const v of buffer.getChannelData(ch)) peak = Math.max(peak, Math.abs(v));
+      (Object.keys(FILES) as FileKey[]).flatMap((key) =>
+        FILES[key].files.map(async (file) => {
+          try {
+            const buffer = await c.decodeAudioData(await load(file));
+            let peak = 0;
+            for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+              for (const v of buffer.getChannelData(ch)) peak = Math.max(peak, Math.abs(v));
+            }
+            if (peak > 0) buffers.set(key, [...(buffers.get(key) ?? []), { buffer, norm: 1 / peak }]);
+          } catch {
+            // ses yoksa oyun sessiz sürer (varyant yoksa diğerleri çalar)
           }
-          if (peak > 0) buffers.set(key, { buffer, norm: 1 / peak });
-        } catch {
-          // ses yoksa oyun sessiz sürer
-        }
-      }),
+        }),
+      ),
     ).then(() => {
       if (wantCrowd) startCrowd();
     });
@@ -230,8 +238,11 @@ export function createSoundPlayer(makeContext: () => AudioContext, load: (file: 
 
   /** Kaydı `when` anında çalar; kayıt yüklenmediyse hiçbir şey yapmaz. */
   function voice(c: AudioContext, key: FileKey, when: number, mul: number, loop = false): { src: AudioBufferSourceNode; gain: GainNode } | null {
-    const b = buffers.get(key);
-    if (!b) return null;
+    const list = buffers.get(key);
+    if (!list) return null;
+    const turn = turns.get(key) ?? 0;
+    turns.set(key, turn + 1);
+    const b = list[turn % list.length]!;
     const def: { gain: number; duration?: number } = FILES[key];
     const src = c.createBufferSource();
     src.buffer = b.buffer;

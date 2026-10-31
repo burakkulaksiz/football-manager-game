@@ -10,3 +10,6 @@ reports/
 
 # Paralel ajanlar için git worktree klasörleri
 .claude/worktrees/
+
+# ElevenLabs ham ses dosyaları ve kesilmiş varyantlar (oyundakiler public/sounds/ altında)
+sounds-elevenlabs/

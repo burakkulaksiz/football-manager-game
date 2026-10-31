@@ -29,7 +29,7 @@ export function generateLowerLeague(world: GameWorld, year: number): LowerFixtur
   // shortcut: tek sayıda kulüpte (bay gerekir) 1. Lig oynanmaz, çıkanlar rastgele seçilir; veri tek sayı olursa bay ekle
   if (ids.length < 2 || ids.length % 2 !== 0) return undefined;
   const { fixtures } = generateSeason(new Rng((world.seed ^ LOWER_SEED_SALT ^ year) >>> 0), ids, year);
-  const days = [...new Set(world.season.fixtures.filter((f) => f.competition === undefined).map((f) => f.date))].sort();
+  const days = [...new Set(world.season.fixtures.filter((f) => f.competition === undefined && f.league === undefined).map((f) => f.date))].sort();
   const rounds = fixtures[fixtures.length - 1]!.round;
   return fixtures.map((f) => ({
     id: f.id,

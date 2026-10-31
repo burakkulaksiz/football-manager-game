@@ -41,7 +41,7 @@ export interface Club {
   colors: { primary: string; secondary: string };
   /** 1 = Süper Lig, 2 = (kurgusal) 1. Lig. JSON'da yoksa 1 sayılır. Yurtdışı kulübünde anlamsız. */
   division?: 1 | 2;
-  /** Yurtdışı kulübü: ülke kodu (nations.json). Yoksa Türkiye. Yurtdışı kulüpleri maç oynamaz. */
+  /** Yurtdışı kulübü: ülke kodu (nations.json). Yoksa Türkiye. Yurtdışı kulübü ülkesinin liginde oynar (league/leagues.ts). */
   country?: string;
 }
 
@@ -398,6 +398,8 @@ export interface Fixture {
   result: MatchResult | null;
   /** Kupa ya da Avrupa maçı; yoksa lig maçı. */
   competition?: Competition;
+  /** Yurtdışı lig maçı: ülke kodu (Club.country). Lig maçında yoksa Süper Lig. */
+  league?: string;
   /** Avrupa grup aşaması: grup harfi ('A'–'D'). */
   group?: string;
 }
@@ -411,6 +413,11 @@ export interface Season {
   fixtures: Fixture[];
   /** 1. Lig fikstürü (yalnızca skor; league/lowerLeague.ts). Eski kayıtta yok: o sezon çıkanlar rastgele seçilir. */
   lower?: LowerFixture[];
+  /**
+   * Sonucu sıkıştırılan yurtdışı maçlarının oyuncu sayaçları (kariyer / sezon istatistiği; leagues.ts tallyResult):
+   * anahtar "oyuncuId|kulüpId", değer [maç, ilk 11, gol, asist, puan toplamı ×10, maçın adamı, sarı, kırmızı].
+   */
+  tallies?: Record<string, number[]>;
 }
 
 /** Oyunun tüm durumu — ileride kayıt dosyasına bu yazılacak. */
@@ -540,4 +547,14 @@ export interface SeasonSummary {
   /** Avrupa kupaları şampiyonları (oynandıysa). */
   clWinnerName?: string;
   elWinnerName?: string;
+  /** Yurtdışı ligleri (oynandıysa): final tabloları; Avrupa katılımı ve geçmiş için. */
+  leagues?: LeagueSummary[];
+}
+
+export interface LeagueSummary {
+  /** Ülke kodu (Fixture.league). */
+  league: string;
+  table: SeasonSummary['table'];
+  championId: string;
+  championName: string;
 }

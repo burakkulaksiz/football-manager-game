@@ -1,8 +1,8 @@
 /**
- * Yurtdışı kulüpleri (data/foreign_clubs.json): maç oynamazlar, puan tablosu yoktur. Kadroları yaşlanır,
- * gelişir; transfer pazarına alıcı ve satıcı olarak katılırlar (yapay zekâ alımları, kullanıcıya teklifler).
- * İtibar 100'ü geçebilir (devler ~120): kadro gücü ve oyuncuların Türkiye'ye gelme isteği buna göre.
- * Altyapıları (U19) yoktur; her yaz A takıma birkaç genç (17–18) katılır.
+ * Yurtdışı kulüpleri (data/foreign_clubs.json, gerçek 2026/27 birinci ligleri): ülkelerinin liginde oynarlar
+ * (league/leagues.ts); kullanıcı da yönetebilir. Kadroları yaşlanır, gelişir; transfer pazarına alıcı ve satıcı olarak
+ * katılırlar. İtibar 100'ü geçebilir (devler ~120): kadro gücü ve oyuncuların Türkiye'ye gelme isteği buna göre.
+ * Altyapıları (U19) yoktur (kullanıcının kulübü hariç); her yaz A takıma birkaç genç (17–18) katılır.
  */
 import type { GameData } from '../data';
 import { initFinance, payMonthly } from '../finance/finance';
@@ -14,10 +14,11 @@ import { generateClubSquad, generateYouthPlayer, getClub } from './worldGenerato
 /** Yurtdışı kadrolarının ayrı rng'si: Türkiye dünyası (kadrolar, fikstür) bunlar eklenmeden önceki hâliyle aynı kalır. */
 export const FOREIGN_SEED_SALT = 0xf0e16a;
 /**
- * Maç geliri olmayan yabancı kulübün yayın + sponsor geliri maaş bütçesini aşağı yukarı karşılar
- * (yayın %75 + sponsor %30); yoksa kasa her ay erirdi.
+ * Yabancı kulübün yayın payı (maaş bütçesinin oranı; sponsor %30, bilet geliri ligde). Ligler oynanmadan önce 0,75'ti
+ * (bilet yoktu). Ölçüm (bir sezon, 0,75'te): kasa maaş bütçesinin ort. +%72'si kadar arttı, Türkiye kulüplerinde +%52;
+ * 0,20 düşük yayın payı farkı kapatır (lig başına İngiltere +%31 … Hollanda +%115: küçük maaşlı ligde bilet ağır basıyor).
  */
-export const FOREIGN_TV_SHARE = 0.75;
+export const FOREIGN_TV_SHARE = 0.55;
 /** Her yaz yabancı kulübün A takımına katılan genç sayısı. */
 export const FOREIGN_INTAKE: readonly [number, number] = [2, 3];
 
@@ -55,9 +56,10 @@ export function addForeignClubs(world: GameWorld, data: GameData, rng: Rng): voi
   }
 }
 
-/** 1 Temmuz: yabancı kulüplerin A takımına gençler katılır (altyapı yerine; kadrolar zamanla erimesin). */
+/** 1 Temmuz: yabancı kulüplerin A takımına gençler katılır (altyapı yerine; kadrolar zamanla erimesin). Kullanıcının kulübünün altyapısı var. */
 export function foreignIntake(world: GameWorld, rng: Rng, data: GameData): void {
   for (const club of foreignClubs(world)) {
+    if (club.id === world.playerClubId) continue;
     const count = rng.int(FOREIGN_INTAKE[0], FOREIGN_INTAKE[1]);
     for (let i = 0; i < count; i++) {
       const youth = generateYouthPlayer(rng, data, club, world.date, world.nextPlayerId++, [17, 18]);

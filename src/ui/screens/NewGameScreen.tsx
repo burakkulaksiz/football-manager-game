@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { gameData } from '../../gameData';
-import { BACKGROUND_ORDER, MANAGER_BACKGROUNDS, type ManagerBackground } from '../../engine';
+import { BACKGROUND_ORDER, leagueName, MANAGER_BACKGROUNDS, type ManagerBackground } from '../../engine';
 import { useGameStore } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { EXPECTATION_LABELS, formatMoney, formatNumber } from '../labels';
@@ -13,8 +13,12 @@ export function NewGameScreen() {
   const [managerName, setManagerName] = useState('');
   const [background, setBackground] = useState<ManagerBackground>('player');
 
-  const clubs = [...gameData.clubs].sort((a, b) => b.reputation - a.reputation);
-  const selectedClub = clubs.find((c) => c.id === selected);
+  // Lig sekmesi: '' = Süper Lig, diğerleri yurtdışı liginin ülke kodu (veri sırasıyla)
+  const [league, setLeague] = useState('');
+  const leagues = ['', ...new Set(gameData.foreignClubs.map((c) => c.country!))];
+  const all = [...gameData.clubs, ...gameData.foreignClubs];
+  const clubs = all.filter((c) => (c.country ?? '') === league).sort((a, b) => b.reputation - a.reputation);
+  const selectedClub = all.find((c) => c.id === selected);
   const nameOk = managerName.trim().length > 0;
   const start = (clubId: string) => nameOk && startNewGame(clubId, managerName, background);
 
@@ -52,7 +56,16 @@ export function NewGameScreen() {
           ))}
         </div>
         <section className="panel">
-          <h2 className="panel-title">Süper Lig Kulüpleri</h2>
+          <div className="panel-title panel-title-row">
+            <span>{leagueName(league || undefined)} Kulüpleri</span>
+            <span className="tabs" role="tablist" aria-label="Lig">
+              {leagues.map((l) => (
+                <button key={l} role="tab" aria-selected={l === league} className={`tab${l === league ? ' active' : ''}`} onClick={() => setLeague(l)}>
+                  {leagueName(l || undefined)}
+                </button>
+              ))}
+            </span>
+          </div>
           <table className="data-table clickable">
             <thead>
               <tr>
@@ -81,7 +94,7 @@ export function NewGameScreen() {
                   <td>{c.stadium}</td>
                   <td className="num">{formatNumber(c.capacity)}</td>
                   <td className="num">
-                    <span className="rep-bar"><i style={{ width: `${c.reputation}%` }} /></span>
+                    <span className="rep-bar"><i style={{ width: `${Math.min(100, c.reputation)}%` }} /></span>
                     {c.reputation}
                   </td>
                   <td className="num value">{formatMoney(c.budget)}</td>

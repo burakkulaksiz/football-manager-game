@@ -1,7 +1,7 @@
-import { divisionOf, foreignCountries, type GameWorld } from '../../engine';
+import { divisionOf, foreignCountries, leagueName, type GameWorld } from '../../engine';
 import { nationName } from '../labels';
 
-/** Kulüp seçicisinin seçenekleri: Süper Lig, 1. Lig, sonra yurtdışı ülke ülke. */
+/** Kulüp seçicisinin seçenekleri: Süper Lig, 1. Lig, sonra yurtdışı ligleri (ülke · lig). */
 export function ClubOptions({ world, exclude }: { world: GameWorld; exclude?: string }) {
   const clubs = world.clubs.filter((c) => c.id !== exclude);
   const byName = (list: typeof clubs) => [...list].sort((a, b) => a.name.localeCompare(b.name, 'tr'));
@@ -15,7 +15,7 @@ export function ClubOptions({ world, exclude }: { world: GameWorld; exclude?: st
     <>
       {group('Süper Lig', clubs.filter((c) => divisionOf(c) === 1))}
       {group('1. Lig', clubs.filter((c) => divisionOf(c) === 2))}
-      {foreignCountries(world).map((code) => group(nationName(code), clubs.filter((c) => c.country === code)))}
+      {foreignCountries(world).map((code) => group(`${nationName(code)} · ${leagueName(code)}`, clubs.filter((c) => c.country === code)))}
     </>
   );
 }

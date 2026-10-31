@@ -1,0 +1,31 @@
+{
+  "source": "Transfermarkt 2026/27",
+  "players": [
+    {"firstName":"Unai","lastName":"Simón","born":"1997-06-11","nationality":"ESP","positions":["GK"],"ability":16.2,"number":1,"foot":"right","joined":"2018-07-01","contractExpires":"2029-06-30","marketValue":22000000},
+    {"firstName":"Álex","lastName":"Padilla","born":"2003-09-01","nationality":"MEX","positions":["GK"],"ability":13.6,"number":13,"foot":"right","joined":"2024-07-01","contractExpires":"2029-06-30","marketValue":3000000},
+    {"firstName":"Dani","lastName":"Vivian","born":"1999-07-05","nationality":"ESP","positions":["DC"],"ability":15.5,"number":3,"foot":"right","joined":"2020-08-01","contractExpires":"2032-06-30","marketValue":20000000},
+    {"firstName":"Aymeric","lastName":"Laporte","born":"1994-05-27","nationality":"ESP","positions":["DC"],"ability":15.1,"number":14,"foot":"left","joined":"2025-09-01","contractExpires":"2028-06-30","marketValue":8000000},
+    {"firstName":"Aitor","lastName":"Paredes","born":"2000-04-29","nationality":"ESP","positions":["DC"],"ability":14.3,"number":4,"foot":"right","joined":"2022-07-01","contractExpires":"2029-06-30","marketValue":7500000},
+    {"firstName":"Yeray","lastName":"Álvarez","born":"1995-01-24","nationality":"ESP","positions":["DC"],"ability":12.3,"number":5,"foot":"right","joined":"2016-07-01","contractExpires":"2028-06-30","marketValue":900000},
+    {"firstName":"Unai","lastName":"Egiluz","born":"2002-03-19","nationality":"ESP","positions":["DC"],"ability":10.9,"foot":"right","joined":"2024-07-01","contractExpires":"2028-06-30","marketValue":400000},
+    {"firstName":"Johaneko","lastName":"Louis-Jean","born":"2004-06-28","nationality":"FRA","positions":["DL"],"ability":12.5,"number":31,"joined":"2026-07-01","contractExpires":"2028-06-30","marketValue":2000000},
+    {"firstName":"Yuri","lastName":"Berchiche","born":"1990-02-10","nationality":"ESP","positions":["DL"],"ability":13.5,"number":17,"foot":"left","joined":"2018-07-02","contractExpires":"2027-06-30","marketValue":1000000},
+    {"firstName":"Jesús","lastName":"Areso","born":"1999-07-02","nationality":"ESP","positions":["DR"],"ability":13.7,"number":12,"foot":"right","joined":"2025-07-22","contractExpires":"2031-06-30","marketValue":5000000},
+    {"firstName":"Hugo","lastName":"Rincón","born":"2003-01-27","nationality":"ESP","positions":["DR"],"ability":13.3,"number":15,"foot":"right","joined":"2024-07-01","contractExpires":"2028-06-30","marketValue":3500000},
+    {"firstName":"Mikel","lastName":"Jauregizar","born":"2003-11-13","nationality":"ESP","positions":["MC"],"ability":15.3,"number":18,"foot":"right","joined":"2024-07-01","contractExpires":"2031-06-30","marketValue":25000000},
+    {"firstName":"Beñat","lastName":"Prados","born":"2001-02-08","nationality":"ESP","positions":["MC"],"ability":14.6,"number":6,"foot":"right","joined":"2022-07-01","contractExpires":"2031-06-30","marketValue":12000000},
+    {"firstName":"Alejandro","lastName":"Rego","born":"2003-06-11","nationality":"ESP","positions":["MC"],"ability":13.5,"number":20,"foot":"right","joined":"2025-07-01","contractExpires":"2030-06-30","marketValue":5000000},
+    {"firstName":"Beñat","lastName":"Gerenabarrena","born":"2003-03-29","nationality":"ESP","positions":["MC"],"ability":13.5,"number":24,"foot":"right","joined":"2025-07-01","contractExpires":"2029-06-30","marketValue":5000000},
+    {"firstName":"Iñigo Ruiz de","lastName":"Galarreta","born":"1993-08-06","nationality":"ESP","positions":["MC"],"ability":13.2,"number":16,"foot":"right","joined":"2023-07-01","contractExpires":"2027-06-30","marketValue":2000000},
+    {"firstName":"Oihan","lastName":"Sancet","born":"2000-04-25","nationality":"ESP","positions":["AMC"],"ability":15.5,"number":8,"foot":"right","joined":"2020-08-04","contractExpires":"2032-06-30","marketValue":25000000},
+    {"firstName":"Peio","lastName":"Canales","born":"2005-01-17","nationality":"ESP","positions":["AMC"],"ability":14.1,"number":28,"foot":"right","joined":"2025-07-01","contractExpires":"2029-06-30","marketValue":10000000},
+    {"firstName":"Nico","lastName":"Williams","born":"2002-07-12","nationality":"ESP","positions":["AML"],"ability":15.6,"number":10,"foot":"right","joined":"2021-07-01","contractExpires":"2035-06-30","marketValue":40000000},
+    {"firstName":"Álex","lastName":"Berenguer","born":"1995-07-04","nationality":"ESP","positions":["AML"],"ability":13.2,"number":7,"foot":"right","joined":"2020-10-02","contractExpires":"2027-06-30","marketValue":4000000},
+    {"firstName":"Álvaro","lastName":"Djaló","born":"1999-08-16","nationality":"GNB","positions":["AML"],"ability":13,"number":25,"foot":"right","joined":"2024-07-01","contractExpires":"2029-06-30","marketValue":4000000},
+    {"firstName":"Robert","lastName":"Navarro","born":"2002-04-12","nationality":"ESP","positions":["AMR"],"ability":13.6,"number":23,"foot":"right","joined":"2025-07-01","contractExpires":"2030-06-30","marketValue":7000000},
+    {"firstName":"Nico","lastName":"Serrano","born":"2003-03-05","nationality":"ESP","positions":["AMR"],"ability":11.8,"number":22,"foot":"left","joined":"2022-07-01","contractExpires":"2028-06-30","marketValue":1500000},
+    {"firstName":"Iñaki","lastName":"Williams","born":"1994-06-15","nationality":"GHA","positions":["ST"],"ability":14.5,"number":9,"foot":"right","joined":"2015-07-01","contractExpires":"2028-06-30","marketValue":8000000},
+    {"firstName":"Gorka","lastName":"Guruzeta","born":"1996-09-12","nationality":"ESP","positions":["ST"],"ability":13.2,"number":11,"foot":"right","joined":"2022-07-03","contractExpires":"2028-06-30","marketValue":5000000},
+    {"firstName":"Maroan","lastName":"Sannadi","born":"2001-02-01","nationality":"MAR","positions":["ST"],"ability":12.6,"number":21,"foot":"right","joined":"2025-02-01","contractExpires":"2029-06-30","marketValue":3000000}
+  ]
+}

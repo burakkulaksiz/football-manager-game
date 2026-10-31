@@ -1,7 +1,7 @@
 # CLAUDE.md
 
-FM 2005 tarzında, tarayıcıda oynanan Türkçe bir futbol menajerlik oyunu (Süper Lig, 1. Lig, Türkiye Kupası, Avrupa kupaları,
-milli takımlar; gerçek 2026/27 kadroları). Saf TypeScript oyun motoru + React arayüzü; sunucu yok, kayıtlar tarayıcıda
+FM 2005 tarzında, tarayıcıda oynanan Türkçe bir futbol menajerlik oyunu (Süper Lig, 1. Lig, 8 yurtdışı birinci ligi,
+Türkiye Kupası, Avrupa kupaları, milli takımlar; gerçek 2026/27 kadroları; her ligden kulüp seçilebilir). Saf TypeScript oyun motoru + React arayüzü; sunucu yok, kayıtlar tarayıcıda
 (IndexedDB). Kişisel proje. Kod yorumları, arayüz metinleri, hata mesajları ve commit mesajları Türkçe.
 
 Kapsamın kendisi: `FM_Agent_Prompt.md`. Genel tanıtım: `README.md`. Fikirler: `IDEAS.md`, oynarken bulunan eksikler: `FINDINGS.md`.
@@ -13,7 +13,7 @@ Kapsamın kendisi: `FM_Agent_Prompt.md`. Genel tanıtım: `README.md`. Fikirler:
 | `npm run dev` | Vite geliştirme sunucusu (http://localhost:5173) | — |
 | `npm run build` | `tsc --noEmit` + üretim derlemesi (`dist/`) | — |
 | `npm run typecheck` | Yalnızca TypeScript kontrolü | saniyeler |
-| `npm test` | Bütün testler (Vitest, node ortamı) | ~1,5 dk (en uzunu motor istatistik testi) |
+| `npm test` | Bütün testler (Vitest, node ortamı) | ~5,5 dk (sezon testleri 8 yurtdışı ligini de oynatır; önceden ~1,5 dk) |
 | `npm run test:watch` | İzleme modunda Vitest | — |
 | `npm run balance` | Denge raporu (`vitest.balance.config.ts`; çıktı `reports/balance/latest.md`) | varsayılan 6 kariyer × 4 sezon ≈ 2 dk, 1 sezon ≈ 5–6 sn |
 
@@ -44,7 +44,8 @@ src/tools/         Geliştirici araçları (pakete girmez): denge raporu
   birebir aynı sonuç. Durum tek sayı: `world.rngState` (`rng.getState()` / `Rng.fromState()`), kayda yazılır. Oyunun tohumu yalnızca
   yeni oyunda store'da bir kez `Date.now()` ile seçilir.
 - **Ayrı rastgelelik akışları**: yan sistemler ana akışı kaydırmamak için `new Rng((seed ^ X_SEED_SALT) >>> 0)` kullanır
-  (`AGENT_`, `ACADEMY_`, `FOREIGN_`, `CUP_`, `EUROPE_`, `INTL_`, `JOBS_`, `DEPTH_SEED_SALT`). Yeni yan sistem eklerken yeni bir tuz aç;
+  (`AGENT_`, `ACADEMY_`, `FOREIGN_`, `CUP_`, `EUROPE_`, `INTL_`, `JOBS_`, `DEPTH_`, `LEAGUES_SEED_SALT`; yurtdışı lig maçları
+  günün `leaguesRng`'siyle). Yeni yan sistem eklerken yeni bir tuz aç;
   ana `Rng`'den çekiliş eklemek mevcut tüm sonuçları değiştirir.
 - **Dünya düz veridir** (`GameWorld`: JSON'a yazılabilir, `structuredClone` ile kopyalanır; sınıf / fonksiyon / `Map` yok).
   **Motor dünyayı yerinde değiştirir.** Store'da motor çağrısını `worldAction(fn)` içinde yap (o da iç `touch(world)` ile yeni referans

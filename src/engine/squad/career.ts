@@ -37,7 +37,12 @@ const emptyStats = (): PlayerSeasonStats => ({ apps: 0, starts: 0, goals: 0, ass
  * Fikstürdeki maç kayıtlarından oyuncu × kulüp istatistikleri (tek geçiş).
  * `onlyPlayer` verilirse yalnızca o oyuncunun satırları.
  */
-export function seasonStatsByClub(fixtures: readonly Fixture[], onlyPlayer?: number): Map<number, Map<string, PlayerSeasonStats>> {
+export function seasonStatsByClub(
+  fixtures: readonly Fixture[],
+  onlyPlayer?: number,
+  /** Sonucu sıkıştırılan yurtdışı maçlarının sayaçları (Season.tallies). */
+  tallies?: Readonly<Record<string, number[]>>,
+): Map<number, Map<string, PlayerSeasonStats>> {
   const out = new Map<number, Map<string, PlayerSeasonStats>>();
   const ratingSums = new Map<string, number>();
   const statsFor = (playerId: number, clubId: string) => {
@@ -68,6 +73,21 @@ export function seasonStatsByClub(fixtures: readonly Fixture[], onlyPlayer?: num
       else s.red++;
     }
   }
+  for (const [key, t] of Object.entries(tallies ?? {})) {
+    const [id, clubId] = key.split('|') as [string, string];
+    const playerId = Number(id);
+    if (onlyPlayer !== undefined && playerId !== onlyPlayer) continue;
+    const s = statsFor(playerId, clubId);
+    const [apps = 0, starts = 0, goals = 0, assists = 0, ratingTenths = 0, motm = 0, yellow = 0, red = 0] = t;
+    s.apps += apps;
+    s.starts += starts;
+    s.goals += goals;
+    s.assists += assists;
+    s.manOfTheMatch += motm;
+    s.yellow += yellow;
+    s.red += red;
+    ratingSums.set(key, (ratingSums.get(key) ?? 0) + ratingTenths / 10);
+  }
   for (const [playerId, byClub] of out) {
     for (const [clubId, s] of byClub) {
       const sum = ratingSums.get(`${playerId}|${clubId}`);
@@ -80,7 +100,7 @@ export function seasonStatsByClub(fixtures: readonly Fixture[], onlyPlayer?: num
 /** Sezon sonu: oynanan sezonun satırlarını oyuncuların kariyerine yazar (yalnızca forma giyilen kulüpler). */
 export function recordSeasonCareers(world: GameWorld): void {
   const year = world.season.year;
-  for (const [playerId, byClub] of seasonStatsByClub(world.season.fixtures)) {
+  for (const [playerId, byClub] of seasonStatsByClub(world.season.fixtures, undefined, world.season.tallies)) {
     const p = world.players[playerId];
     if (!p) continue;
     p.career ??= [];
@@ -97,7 +117,7 @@ export function recordSeasonCareers(world: GameWorld): void {
 export function currentSeasonRows(world: GameWorld, p: Player): CareerSeason[] {
   const year = world.season.year;
   if (p.career?.some((c) => c.year === year)) return [];
-  const byClub = seasonStatsByClub(world.season.fixtures, p.id).get(p.id);
+  const byClub = seasonStatsByClub(world.season.fixtures, p.id, world.season.tallies).get(p.id);
   if (!byClub) return [];
   return [...byClub].map(([clubId, s]) => ({ ...s, year, clubId, ...(p.loan && p.clubId === clubId ? { loan: true } : {}) }));
 }

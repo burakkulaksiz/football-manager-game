@@ -17,14 +17,15 @@ const top11 = (w: GameWorld, id: string) =>
   clubPlayers(w, id).map((p) => p.currentAbility).sort((a, b) => b - a).slice(0, 11).reduce((a, b) => a + b, 0) / 11;
 
 describe('yurtdışı kulüpleri', () => {
-  it('8 ülkeden ~40 kulüp, Süper Lig ve 1. Lig dışında; U19 yok, 25 kişilik kadro', () => {
+  it('8 ülkenin birinci ligi (150 kulüp), Süper Lig ve 1. Lig dışında; U19 yok, gerçek kadro (en az 25)', () => {
     const foreign = foreignClubs(world);
     expect(foreign.length).toBe(gameData.foreignClubs.length);
+    expect(foreign.length).toBeGreaterThanOrEqual(140);
     expect(foreignCountries(world)).toHaveLength(8);
     expect(leagueClubs(world).some((c) => c.country)).toBe(false);
     for (const c of foreign) {
       expect(divisionOf(c)).toBe(0);
-      expect(clubPlayers(world, c.id)).toHaveLength(25);
+      expect(clubPlayers(world, c.id).length).toBeGreaterThanOrEqual(25);
       expect(academyPlayers(world, c.id)).toHaveLength(0);
       expect(world.finances[c.id]).toBeDefined();
     }
@@ -33,7 +34,8 @@ describe('yurtdışı kulüpleri', () => {
   it('kadrolar kendi ülkesi ağırlıklı; Türk oyuncu az ama olabilir', () => {
     const ps = foreignClubs(world).flatMap((c) => clubPlayers(world, c.id).map((p) => ({ p, c })));
     const home = ps.filter(({ p, c }) => p.nationality === c.country).length / ps.length;
-    expect(home).toBeGreaterThan(0.4);
+    // Gerçek kadrolarda (2026/27) ~%40
+    expect(home).toBeGreaterThan(0.3);
     expect(home).toBeLessThan(0.75);
     expect(ps.filter(({ p }) => p.nationality === HOME_NATION).length / ps.length).toBeLessThan(0.05);
   });
@@ -48,7 +50,9 @@ describe('yurtdışı kulüpleri', () => {
 
   it('Türkiye dünyası yurtdışı eklenmeden önceki hâliyle aynı (ayrı rng): kadrolar ve fikstür', () => {
     const again = createWorld({ ...gameData, foreignClubs: [] }, 404, 'goztepe', START);
-    expect(again.season).toEqual(world.season);
+    // Süper Lig ve 1. Lig fikstürü aynı; yurtdışı ligleri sonradan eklenir (kendi tohumlarıyla)
+    expect(again.season).toEqual({ ...world.season, fixtures: world.season.fixtures.filter((f) => f.league === undefined) });
+    expect(world.season.fixtures.some((f) => f.league === 'ENG')).toBe(true);
     for (const p of Object.values(again.players)) expect(world.players[p.id]).toMatchObject({ firstName: p.firstName, currentAbility: p.currentAbility });
   });
 
@@ -88,7 +92,7 @@ describe('yurtdışı kulüpleri', () => {
     const old = createWorld({ ...gameData, foreignClubs: [] }, 407, 'goztepe', START);
     const m = migrateWorld(old, 10, gameData);
     expect(foreignClubs(m)).toHaveLength(gameData.foreignClubs.length);
-    expect(clubPlayers(m, 'ajax')).toHaveLength(25);
+    expect(clubPlayers(m, 'ajax').length).toBeGreaterThanOrEqual(25);
     expect(m.finances.ajax!.tvIncome).toBeGreaterThan(m.finances.ajax!.wageBudget * 0.5);
   });
 });

@@ -1,4 +1,5 @@
 import {
+  activeForeignLeagues,
   aggregateScore,
   CUP_NAME,
   CUP_ROUNDS,
@@ -20,6 +21,8 @@ import {
   GROUPS,
   groupTable,
   isCupFixture,
+  leagueFixturesOf,
+  leagueName,
   QUARTER_FIRST,
   QUARTER_SECOND,
   scoreLine,
@@ -29,6 +32,7 @@ import {
   stageDate,
   tieWinner,
   turkishQualifiers,
+  userLeague,
   type EuropeCompetition,
   type Fixture,
   type GameWorld,
@@ -116,21 +120,28 @@ function RoundFixtures() {
   const round = useGameStore((s) => s.fixturesRound);
   const setFixturesView = useGameStore((s) => s.setFixturesView);
   const openReport = useGameStore((s) => s.openReport);
-  const fixtures = world.season.fixtures.filter((f) => f.round === round && !isCupFixture(f));
-  const go = (r: number) => setFixturesView('round', Math.max(1, Math.min(ROUNDS, r)));
+  // Lig: '' = Süper Lig, diğerleri yurtdışı liginin ülke kodu; varsayılan kullanıcının ligi
+  const [league, setLeague] = useUiState<string>('fixtures.league', userLeague(world) ?? '');
+  const leagueFx = leagueFixturesOf(world.season.fixtures, league || undefined);
+  const rounds = leagueFx.reduce((max, f) => Math.max(max, f.round), 0) || ROUNDS;
+  const fixtures = leagueFx.filter((f) => f.round === round);
+  const go = (r: number) => setFixturesView('round', Math.max(1, Math.min(rounds, r)));
 
   return (
     <>
       <div className="round-nav">
+        <select value={league} onChange={(e) => setLeague(e.target.value)} aria-label="Lig">
+          {['', ...activeForeignLeagues(world)].map((l) => <option key={l} value={l}>{leagueName(l || undefined)}</option>)}
+        </select>
         <button className="btn" disabled={round <= 1} onClick={() => go(round - 1)}>◀</button>
         <select value={round} onChange={(e) => go(Number(e.target.value))}>
-          {Array.from({ length: ROUNDS }, (_, i) => (
+          {Array.from({ length: rounds }, (_, i) => (
             <option key={i + 1} value={i + 1}>
               {i + 1}. Hafta
             </option>
           ))}
         </select>
-        <button className="btn" disabled={round >= ROUNDS} onClick={() => go(round + 1)}>▶</button>
+        <button className="btn" disabled={round >= rounds} onClick={() => go(round + 1)}>▶</button>
         <span className="round-date">{fixtures[0] && formatDayMonth(fixtures[0].date)}</span>
       </div>
       <table className="data-table round-table">

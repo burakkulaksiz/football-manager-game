@@ -30,7 +30,7 @@ describe('sezon kariyeri', () => {
     expect(regular.career!.filter((c) => c.year === 2026)).toHaveLength(1);
     expect(currentSeasonRows(w, regular)).toEqual([]);
     // Tam sezon simülasyonu: yük altında 30 sn'lik varsayılanı aşabiliyor (bkz. FINDINGS.md, test süreleri)
-  }, 120_000);
+  }, 400_000);
 
   it('sezon ortasında kulüp değiştiren oyuncunun iki satırı olur; toplam ikisini birleştirir', () => {
     const w = createWorld(gameData, 92, 'goztepe', START);

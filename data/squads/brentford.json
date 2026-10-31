@@ -1,0 +1,33 @@
+{
+  "source": "Transfermarkt 2026/27",
+  "players": [
+    {"firstName":"Caoimhín","lastName":"Kelleher","born":"1998-11-23","nationality":"IRL","positions":["GK"],"ability":16.6,"number":1,"foot":"right","joined":"2025-07-01","contractExpires":"2030-06-30","marketValue":32000000},
+    {"firstName":"Hákon","lastName":"Valdimarsson","born":"2001-10-13","nationality":"ISL","positions":["GK"],"ability":13.6,"number":12,"foot":"right","joined":"2024-01-26","contractExpires":"2030-06-30","marketValue":2500000},
+    {"firstName":"Ellery","lastName":"Balcombe","born":"1999-10-15","nationality":"ENG","positions":["GK"],"ability":11.5,"number":31,"foot":"right","joined":"2018-07-01","contractExpires":"2029-06-30","marketValue":400000},
+    {"firstName":"Sepp van den","lastName":"Berg","born":"2001-12-20","nationality":"NED","positions":["DC"],"ability":16,"number":4,"foot":"right","joined":"2024-08-22","contractExpires":"2029-06-30","marketValue":32000000},
+    {"firstName":"Nathan","lastName":"Collins","born":"2001-04-30","nationality":"IRL","positions":["DC"],"ability":15.9,"number":22,"foot":"right","joined":"2023-07-04","contractExpires":"2029-06-30","marketValue":30000000},
+    {"firstName":"Kristoffer","lastName":"Ajer","born":"1998-04-17","nationality":"NOR","positions":["DC"],"ability":15.7,"number":20,"foot":"right","joined":"2021-07-21","contractExpires":"2030-06-30","marketValue":25000000},
+    {"firstName":"Jannik","lastName":"Schuster","born":"2006-05-16","nationality":"AUT","positions":["DC"],"ability":15.1,"number":44,"foot":"right","joined":"2026-07-01","contractExpires":"2031-06-30","marketValue":22000000},
+    {"firstName":"Benjamin","lastName":"Fredrick","born":"2005-05-28","nationality":"NGA","positions":["DC"],"ability":11.1,"number":48,"foot":"right","joined":"2026-07-10","contractExpires":"2030-06-30","marketValue":600000},
+    {"firstName":"El Hadji Malick","lastName":"Diouf","born":"2004-12-29","nationality":"SEN","positions":["DL"],"ability":15.7,"number":25,"foot":"left","joined":"2026-08-28","contractExpires":"2031-06-30","marketValue":35000000},
+    {"firstName":"Keane","lastName":"Lewis-Potter","born":"2001-02-22","nationality":"ENG","positions":["DL"],"ability":15.8,"number":23,"foot":"right","joined":"2022-07-12","contractExpires":"2031-06-30","marketValue":30000000},
+    {"firstName":"Rico","lastName":"Henry","born":"1997-07-08","nationality":"JAM","positions":["DL"],"ability":14.5,"number":3,"foot":"left","joined":"2016-08-31","contractExpires":"2027-06-30","marketValue":10000000},
+    {"firstName":"Michael","lastName":"Kayode","born":"2004-07-10","nationality":"ITA","positions":["DR"],"ability":15.9,"number":33,"foot":"right","joined":"2025-07-01","contractExpires":"2032-06-30","marketValue":40000000},
+    {"firstName":"Aaron","lastName":"Hickey","born":"2002-06-10","nationality":"SCO","positions":["DR"],"ability":15.4,"number":2,"joined":"2022-07-09","contractExpires":"2028-06-30","marketValue":20000000},
+    {"firstName":"Vitaly","lastName":"Janelt","born":"1998-05-10","nationality":"GER","positions":["DM"],"ability":15.2,"number":27,"foot":"left","joined":"2020-10-03","contractExpires":"2030-06-30","marketValue":20000000},
+    {"firstName":"Mamadou","lastName":"Sangaré","born":"2002-06-26","nationality":"MLI","positions":["MC"],"ability":16.2,"number":18,"foot":"left","joined":"2026-08-01","contractExpires":"2031-06-30","marketValue":50000000},
+    {"firstName":"Yegor","lastName":"Yarmolyuk","born":"2004-03-01","nationality":"UKR","positions":["MC"],"ability":15.6,"number":6,"foot":"right","joined":"2023-07-01","contractExpires":"2031-06-30","marketValue":32000000},
+    {"firstName":"Mathias","lastName":"Jensen","born":"1996-01-01","nationality":"DEN","positions":["MC"],"ability":14.3,"number":8,"foot":"right","joined":"2019-07-10","contractExpires":"2027-06-30","marketValue":8000000},
+    {"firstName":"Josh","lastName":"Dasilva","born":"1998-10-23","nationality":"ENG","positions":["MC"],"ability":12.2,"number":10,"foot":"left","joined":"2025-10-23","contractExpires":"2027-06-30","marketValue":1500000},
+    {"firstName":"Mikkel","lastName":"Damsgaard","born":"2000-07-03","nationality":"DEN","positions":["AMC"],"ability":15.7,"number":24,"foot":"right","joined":"2022-08-10","contractExpires":"2030-06-30","marketValue":30000000},
+    {"firstName":"Antoni","lastName":"Milambo","born":"2005-04-03","nationality":"NED","positions":["AMC"],"ability":14.6,"number":17,"foot":"right","joined":"2025-07-03","contractExpires":"2030-06-30","marketValue":15000000},
+    {"firstName":"Fábio","lastName":"Carvalho","born":"2002-08-30","nationality":"POR","positions":["AMC"],"ability":14.1,"number":14,"foot":"right","joined":"2024-08-12","contractExpires":"2029-06-30","marketValue":8000000},
+    {"firstName":"Kevin","lastName":"Schade","born":"2001-11-27","nationality":"GER","positions":["AML"],"ability":15.9,"number":7,"foot":"right","joined":"2023-07-01","contractExpires":"2028-06-30","marketValue":50000000},
+    {"firstName":"Jaidon","lastName":"Anthony","born":"1999-12-01","nationality":"ENG","positions":["AML"],"ability":14.9,"number":19,"foot":"right","joined":"2026-07-07","contractExpires":"2030-06-30","marketValue":20000000},
+    {"firstName":"Gustavo","lastName":"Nunes","born":"2005-11-20","nationality":"BRA","positions":["AML"],"ability":13,"number":39,"foot":"right","joined":"2024-08-28","contractExpires":"2030-06-30","marketValue":6000000},
+    {"firstName":"Dango","lastName":"Ouattara","born":"2002-02-11","nationality":"BFA","positions":["AMR"],"ability":15.5,"number":11,"foot":"left","joined":"2025-08-16","contractExpires":"2030-06-30","marketValue":35000000},
+    {"firstName":"Igor","lastName":"Thiago","born":"2001-06-26","nationality":"BRA","positions":["ST"],"ability":16.2,"number":9,"foot":"right","joined":"2024-07-01","contractExpires":"2031-06-30","marketValue":65000000},
+    {"firstName":"Kaye","lastName":"Furo","born":"2007-02-06","nationality":"BEL","positions":["ST"],"ability":13.1,"number":47,"foot":"right","joined":"2026-01-11","contractExpires":"2031-06-30","marketValue":8000000},
+    {"firstName":"Callum","lastName":"Wilson","born":"1992-02-27","nationality":"ENG","positions":["ST"],"ability":14.1,"number":13,"foot":"right","joined":"2026-07-09","contractExpires":"2027-06-30","marketValue":4000000}
+  ]
+}

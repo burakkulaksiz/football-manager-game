@@ -190,12 +190,21 @@ export function lineupStrength(squad: readonly Player[], lineup: Lineup): number
   }, 0);
 }
 
-/** Yapay zekâ: kadrosuna en uygun dizilişi seçer. */
+/**
+ * Yapay zekâ: kadrosuna en uygun dizilişi seçer (ilk 11'in CA × mevki verimi toplamı; lineupStrength(autoSelectLineup) ile
+ * aynı sonuç, yedekler kurulmadan: her maçta iki kez çağrılıyor).
+ */
 export function chooseFormation(squad: readonly Player[]): FormationId {
+  const available = squad.filter(isAvailable);
+  const byId = new Map(available.map((p) => [p.id, p]));
   let best = DEFAULT_FORMATION_ID;
   let bestScore = -1;
   for (const id of AI_FORMATION_IDS) {
-    const score = lineupStrength(squad, autoSelectLineup(squad, FORMATIONS[id]));
+    const slots = FORMATIONS[id];
+    const score = assignToFormation(available, slots).reduce<number>((sum, playerId, i) => {
+      const p = playerId === null ? undefined : byId.get(playerId);
+      return p ? sum + p.currentAbility * slotFit(p, slots[i]!) : sum;
+    }, 0);
     if (score > bestScore) {
       best = id;
       bestScore = score;

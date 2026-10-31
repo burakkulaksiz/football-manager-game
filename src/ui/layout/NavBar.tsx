@@ -1,4 +1,4 @@
-import { daysBetween, getClub, nextFixtureFor, todaysFixtures, todaysUserFixture, UNEMPLOYMENT_LIMIT_DAYS, type GameWorld } from '../../engine';
+import { daysBetween, followedFixture, getClub, nextFixtureFor, todaysFixtures, todaysUserFixture, UNEMPLOYMENT_LIMIT_DAYS, type GameWorld } from '../../engine';
 import { useGameStore, useWorld } from '../../store/gameStore';
 import { formatDayMonth } from '../labels';
 
@@ -25,7 +25,8 @@ export function NavBar({ onMenu }: { onMenu: () => void }) {
   const canForward = useGameStore((s) => s.historyIndex < s.history.length - 1);
   // "Maça Çık" yalnızca bugün bizim maçımız varsa; yalnızca başkalarının maçı varsa Devam onları oynatıp sonuçları gösterir
   const isMatchDay = todaysUserFixture(world) !== null;
-  const othersPlay = !isMatchDay && todaysFixtures(world).length > 0;
+  // Başka bir yurtdışı liginin maçları Devam'ı durdurmaz (arka planda oynanır)
+  const othersPlay = !isMatchDay && todaysFixtures(world).some((f) => followedFixture(world, f));
   const liveMatch = useGameStore((s) => s.liveMatch);
   const onMatchScreen = useGameStore((s) => s.screen === 'match');
   // Canlı maç sürerken Devam maça döndürür; maç ekranındayken kontroller oradadır.

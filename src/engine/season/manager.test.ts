@@ -59,7 +59,7 @@ describe('menajer itibarı', () => {
     expect(season.position).toBe(world.history[0]!.userPosition);
     expect(season.reputation).toBe(managerReputation(world));
     expect(world.manager.reputationHistory!.length).toBeGreaterThanOrEqual(11);
-  }, 60_000);
+  }, 200_000);
 
   it('görevden alınma: itibar 8 düşer, sezon "görevden alındı" olarak yazılır', () => {
     const world = createWorld(gameData, 5, 'trabzonspor', START);

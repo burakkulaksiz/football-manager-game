@@ -3,6 +3,8 @@
 //   node scripts/transfermarkt.mjs              → tüm kulüpler (Süper Lig + 1. Lig)
 //   node scripts/transfermarkt.mjs galatasaray  → yalnızca verilen kulüp(ler)
 //   node scripts/transfermarkt.mjs --info       → yeni kulüpler için stadyum / kapasite / kadro değeri (clubs.json'a elle)
+//   node scripts/transfermarkt.mjs --foreign    → yurtdışı ligleri (8 ülke): kadrolar + data/foreign_clubs.json
+//   node scripts/transfermarkt.mjs --foreign arsenal → yalnızca o kulübün kadrosu (kulüp listesi yine yazılır)
 //
 // İndirilen sayfalar scripts/.cache/ altında saklanır (24 saat); istekler arasında birkaç saniye beklenir.
 // Güç (ability, 1–20) piyasa değeri ve yaştan tahmin edilir: oyunun piyasa değeri formülünün tersi (player.ts marketValue).
@@ -30,6 +32,182 @@ const CLUBS = {
   48913: 'manisa', 3173: 'vanspor', 2378: 'muglaspor', 3209: 'pendikspor', 20760: 'bandirmaspor',
   24245: 'umraniyespor', 68377: 'mardin', 518: 'sariyer', 12388: 'keciorengucu', 3207: 'boluspor',
 };
+
+/** Yurtdışı ligleri (Transfermarkt kodu → nations.json ülke kodu): `--foreign` ile çekilir. */
+const FOREIGN_LEAGUES = { GB1: 'ENG', ES1: 'ESP', L1: 'GER', IT1: 'ITA', FR1: 'FRA', PO1: 'POR', NL1: 'NED', BE1: 'BEL' };
+
+/**
+ * Yurtdışı kulüpleri: Transfermarkt kimliği → [oyundaki kimlik, ad, kısa ad, şehir, birinci renk, ikinci renk].
+ * Renkler ve şehirler Transfermarkt'ta yok, elle. data/foreign_clubs.json'da zaten olan kulübün adı, şehri, renkleri,
+ * stadyumu, itibarı ve bütçeleri korunur (elle ayarlandı); yalnızca yeni kulüpler bu tablodan ve kadro değerinden kurulur.
+ */
+const FOREIGN = {
+  // İngiltere
+  281: ['man-city', 'Manchester City', 'MCI', 'Manchester', '#6CABDD', '#FFFFFF'],
+  11: ['arsenal', 'Arsenal', 'ARS', 'Londra', '#EF0107', '#FFFFFF'],
+  631: ['chelsea', 'Chelsea', 'CHE', 'Londra', '#034694', '#FFFFFF'],
+  31: ['liverpool', 'Liverpool', 'LIV', 'Liverpool', '#C8102E', '#FFFFFF'],
+  985: ['man-utd', 'Manchester United', 'MUN', 'Manchester', '#DA291C', '#000000'],
+  148: ['tottenham', 'Tottenham Hotspur', 'TOT', 'Londra', '#FFFFFF', '#132257'],
+  762: ['newcastle', 'Newcastle United', 'NEW', 'Newcastle', '#241F20', '#FFFFFF'],
+  1237: ['brighton', 'Brighton & Hove Albion', 'BHA', 'Brighton', '#0057B8', '#FFFFFF'],
+  1148: ['brentford', 'Brentford', 'BRE', 'Londra', '#E30613', '#FFFFFF'],
+  405: ['aston-villa', 'Aston Villa', 'AVL', 'Birmingham', '#670E36', '#95BFE5'],
+  989: ['bournemouth', 'Bournemouth', 'BOU', 'Bournemouth', '#DA291C', '#000000'],
+  873: ['crystal-palace', 'Crystal Palace', 'CRY', 'Londra', '#1B458F', '#C4122E'],
+  703: ['nottingham-forest', 'Nottingham Forest', 'NFO', 'Nottingham', '#DD0000', '#FFFFFF'],
+  289: ['sunderland', 'Sunderland', 'SUN', 'Sunderland', '#EB172B', '#FFFFFF'],
+  399: ['leeds', 'Leeds United', 'LEE', 'Leeds', '#FFFFFF', '#1D428A'],
+  29: ['everton', 'Everton', 'EVE', 'Liverpool', '#003399', '#FFFFFF'],
+  931: ['fulham', 'Fulham', 'FUL', 'Londra', '#FFFFFF', '#000000'],
+  677: ['ipswich', 'Ipswich Town', 'IPS', 'Ipswich', '#3A64A3', '#FFFFFF'],
+  990: ['coventry', 'Coventry City', 'COV', 'Coventry', '#59CBE8', '#FFFFFF'],
+  3008: ['hull', 'Hull City', 'HUL', 'Hull', '#F5A12D', '#000000'],
+  // İspanya
+  418: ['real-madrid', 'Real Madrid', 'RMA', 'Madrid', '#FFFFFF', '#FEBE10'],
+  131: ['barcelona', 'Barcelona', 'BAR', 'Barselona', '#A50044', '#004D98'],
+  13: ['atletico-madrid', 'Atlético Madrid', 'ATM', 'Madrid', '#CB3524', '#FFFFFF'],
+  1050: ['villarreal', 'Villarreal', 'VIL', 'Villarreal', '#FFE667', '#005187'],
+  681: ['real-sociedad', 'Real Sociedad', 'RSO', 'San Sebastián', '#0067B1', '#FFFFFF'],
+  150: ['real-betis', 'Real Betis', 'BET', 'Sevilla', '#00954C', '#FFFFFF'],
+  621: ['athletic-bilbao', 'Athletic Bilbao', 'ATH', 'Bilbao', '#EE2523', '#FFFFFF'],
+  940: ['celta-vigo', 'Celta Vigo', 'CEL', 'Vigo', '#8AC3EE', '#FFFFFF'],
+  368: ['sevilla', 'Sevilla', 'SEV', 'Sevilla', '#FFFFFF', '#D81E05'],
+  1049: ['valencia', 'Valencia', 'VAL', 'Valencia', '#FFFFFF', '#000000'],
+  714: ['espanyol', 'Espanyol', 'ESP', 'Barselona', '#007FC8', '#FFFFFF'],
+  897: ['deportivo', 'Deportivo La Coruña', 'DEP', 'A Coruña', '#1B5BA6', '#FFFFFF'],
+  630: ['racing-santander', 'Racing Santander', 'RAC', 'Santander', '#FFFFFF', '#00843D'],
+  367: ['rayo-vallecano', 'Rayo Vallecano', 'RAY', 'Madrid', '#FFFFFF', '#E53027'],
+  3709: ['getafe', 'Getafe', 'GET', 'Getafe', '#005999', '#FFFFFF'],
+  3368: ['levante', 'Levante', 'LEV', 'Valencia', '#004D98', '#B4053F'],
+  331: ['osasuna', 'Osasuna', 'OSA', 'Pamplona', '#D91A21', '#0A346F'],
+  1531: ['elche', 'Elche', 'ELC', 'Elche', '#FFFFFF', '#05642C'],
+  1108: ['alaves', 'Alavés', 'ALA', 'Vitoria-Gasteiz', '#0761AF', '#FFFFFF'],
+  1084: ['malaga', 'Málaga', 'MAL', 'Málaga', '#0B5CAA', '#FFFFFF'],
+  // Almanya
+  27: ['bayern', 'Bayern Münih', 'FCB', 'Münih', '#DC052D', '#FFFFFF'],
+  16: ['dortmund', 'Borussia Dortmund', 'BVB', 'Dortmund', '#FDE100', '#000000'],
+  15: ['leverkusen', 'Bayer Leverkusen', 'B04', 'Leverkusen', '#E32221', '#000000'],
+  23826: ['leipzig', 'RB Leipzig', 'RBL', 'Leipzig', '#FFFFFF', '#DD0741'],
+  79: ['stuttgart', 'VfB Stuttgart', 'VFB', 'Stuttgart', '#FFFFFF', '#E32219'],
+  24: ['frankfurt', 'Eintracht Frankfurt', 'SGE', 'Frankfurt', '#E1000F', '#000000'],
+  533: ['hoffenheim', 'Hoffenheim', 'TSG', 'Sinsheim', '#1C63B7', '#FFFFFF'],
+  60: ['freiburg', 'SC Freiburg', 'SCF', 'Freiburg', '#E2001A', '#000000'],
+  167: ['augsburg', 'Augsburg', 'FCA', 'Augsburg', '#BA3733', '#FFFFFF'],
+  39: ['mainz', 'Mainz 05', 'M05', 'Mainz', '#C3141E', '#FFFFFF'],
+  3: ['koln', 'Köln', 'KOE', 'Köln', '#FFFFFF', '#ED1C24'],
+  41: ['hamburg', 'Hamburger SV', 'HSV', 'Hamburg', '#FFFFFF', '#0A3F86'],
+  18: ['gladbach', 'Borussia Mönchengladbach', 'BMG', 'Mönchengladbach', '#FFFFFF', '#00B140'],
+  86: ['werder-bremen', 'Werder Bremen', 'SVW', 'Bremen', '#1D9053', '#FFFFFF'],
+  89: ['union-berlin', 'Union Berlin', 'FCU', 'Berlin', '#EB1923', '#FFFFFF'],
+  33: ['schalke', 'Schalke 04', 'S04', 'Gelsenkirchen', '#004D9D', '#FFFFFF'],
+  64: ['elversberg', 'Elversberg', 'SVE', 'Spiesen-Elversberg', '#000000', '#FFFFFF'],
+  127: ['paderborn', 'Paderborn', 'SCP', 'Paderborn', '#005CA9', '#000000'],
+  // İtalya
+  46: ['inter', 'Inter', 'INT', 'Milano', '#0068A8', '#000000'],
+  506: ['juventus', 'Juventus', 'JUV', 'Torino', '#000000', '#FFFFFF'],
+  1047: ['como', 'Como', 'COM', 'Como', '#1E3D7B', '#FFFFFF'],
+  5: ['milan', 'Milan', 'MIL', 'Milano', '#FB090B', '#000000'],
+  12: ['roma', 'Roma', 'ROM', 'Roma', '#8E1F2F', '#F0BC42'],
+  800: ['atalanta', 'Atalanta', 'ATA', 'Bergamo', '#1E71B8', '#000000'],
+  6195: ['napoli', 'Napoli', 'NAP', 'Napoli', '#12A0D7', '#FFFFFF'],
+  430: ['fiorentina', 'Fiorentina', 'FIO', 'Floransa', '#482E92', '#FFFFFF'],
+  398: ['lazio', 'Lazio', 'LAZ', 'Roma', '#87D8F7', '#FFFFFF'],
+  1025: ['bologna', 'Bologna', 'BOL', 'Bologna', '#1A2F48', '#A21C26'],
+  6574: ['sassuolo', 'Sassuolo', 'SAS', 'Sassuolo', '#00A752', '#000000'],
+  416: ['torino', 'Torino', 'TOR', 'Torino', '#881F19', '#FFFFFF'],
+  252: ['genoa', 'Genoa', 'GEN', 'Cenova', '#A31F28', '#002856'],
+  410: ['udinese', 'Udinese', 'UDI', 'Udine', '#000000', '#FFFFFF'],
+  130: ['parma', 'Parma', 'PAR', 'Parma', '#FFD200', '#1C4B9C'],
+  1390: ['cagliari', 'Cagliari', 'CAG', 'Cagliari', '#A01F31', '#00305C'],
+  607: ['venezia', 'Venezia', 'VEN', 'Venedik', '#000000', '#F47920'],
+  8970: ['frosinone', 'Frosinone', 'FRO', 'Frosinone', '#FFE200', '#0047AB'],
+  2919: ['monza', 'Monza', 'MON', 'Monza', '#E30613', '#FFFFFF'],
+  1005: ['lecce', 'Lecce', 'LEC', 'Lecce', '#FFED00', '#E30613'],
+  // Fransa
+  583: ['psg', 'Paris Saint-Germain', 'PSG', 'Paris', '#004170', '#DA291C'],
+  162: ['monaco', 'Monaco', 'ASM', 'Monaco', '#E7192F', '#FFFFFF'],
+  667: ['strasbourg', 'Strasbourg', 'RCS', 'Strazburg', '#009FE3', '#FFFFFF'],
+  1041: ['lyon', 'Lyon', 'OL', 'Lyon', '#FFFFFF', '#1F3E8C'],
+  273: ['rennes', 'Rennes', 'REN', 'Rennes', '#E13327', '#000000'],
+  1082: ['lille', 'Lille', 'LIL', 'Lille', '#E01E13', '#20325F'],
+  826: ['lens', 'Lens', 'RCL', 'Lens', '#FFE600', '#E2001A'],
+  10004: ['paris-fc', 'Paris FC', 'PFC', 'Paris', '#1B2D5B', '#8BB8E8'],
+  244: ['marseille', 'Marsilya', 'OM', 'Marsilya', '#FFFFFF', '#2FAEE0'],
+  417: ['nice', 'Nice', 'NIC', 'Nice', '#E30613', '#000000'],
+  415: ['toulouse', 'Toulouse', 'TFC', 'Toulouse', '#6A2C91', '#FFFFFF'],
+  1158: ['lorient', 'Lorient', 'FCL', 'Lorient', '#F58113', '#000000'],
+  290: ['auxerre', 'Auxerre', 'AJA', 'Auxerre', '#FFFFFF', '#004C97'],
+  3911: ['brest', 'Brest', 'SB29', 'Brest', '#E30613', '#FFFFFF'],
+  1420: ['angers', 'Angers', 'SCO', 'Angers', '#000000', '#FFFFFF'],
+  738: ['le-havre', 'Le Havre', 'HAC', 'Le Havre', '#87CEEB', '#1D3557'],
+  1095: ['troyes', 'Troyes', 'EST', 'Troyes', '#005BAC', '#FFFFFF'],
+  1164: ['le-mans', 'Le Mans', 'LMF', 'Le Mans', '#E2001A', '#FFD700'],
+  // Portekiz
+  720: ['porto', 'Porto', 'FCP', 'Porto', '#003893', '#FFFFFF'],
+  294: ['benfica', 'Benfica', 'SLB', 'Lizbon', '#E10E1A', '#FFFFFF'],
+  336: ['sporting', 'Sporting', 'SCP', 'Lizbon', '#008057', '#FFFFFF'],
+  1075: ['braga', 'Braga', 'SCB', 'Braga', '#E3001B', '#FFFFFF'],
+  3329: ['famalicao', 'Famalicão', 'FAM', 'Vila Nova de Famalicão', '#003D7C', '#FFFFFF'],
+  2420: ['vitoria-guimaraes', 'Vitória Guimarães', 'VSC', 'Guimarães', '#FFFFFF', '#000000'],
+  2521: ['alverca', 'Alverca', 'ALV', 'Alverca do Ribatejo', '#E30613', '#003DA5'],
+  2431: ['estrela-amadora', 'Estrela Amadora', 'EAM', 'Amadora', '#E30613', '#00A651'],
+  1465: ['estoril', 'Estoril', 'EST', 'Estoril', '#FFE600', '#0055A4'],
+  2425: ['rio-ave', 'Rio Ave', 'RAV', 'Vila do Conde', '#00843D', '#FFFFFF'],
+  8024: ['arouca', 'Arouca', 'ARO', 'Arouca', '#FFE600', '#003DA5'],
+  3268: ['casa-pia', 'Casa Pia', 'CPI', 'Lizbon', '#000000', '#FFFFFF'],
+  979: ['moreirense', 'Moreirense', 'MOR', 'Moreira de Cónegos', '#00843D', '#FFFFFF'],
+  2424: ['gil-vicente', 'Gil Vicente', 'GIL', 'Barcelos', '#E30613', '#003DA5'],
+  2423: ['santa-clara', 'Santa Clara', 'SCL', 'Ponta Delgada', '#E30613', '#FFFFFF'],
+  982: ['nacional', 'Nacional', 'NAC', 'Funchal', '#000000', '#FFFFFF'],
+  7788: ['academico-viseu', 'Académico Viseu', 'AVI', 'Viseu', '#000000', '#FFFFFF'],
+  1301: ['maritimo', 'Marítimo', 'MAR', 'Funchal', '#E30613', '#00843D'],
+  // Hollanda
+  383: ['psv', 'PSV', 'PSV', 'Eindhoven', '#ED1C24', '#FFFFFF'],
+  234: ['feyenoord', 'Feyenoord', 'FEY', 'Rotterdam', '#E10600', '#FFFFFF'],
+  610: ['ajax', 'Ajax', 'AJA', 'Amsterdam', '#FFFFFF', '#D2122E'],
+  1090: ['az', 'AZ Alkmaar', 'AZ', 'Alkmaar', '#E30613', '#FFFFFF'],
+  317: ['twente', 'Twente', 'TWE', 'Enschede', '#E30613', '#FFFFFF'],
+  200: ['utrecht', 'Utrecht', 'UTR', 'Utrecht', '#E30613', '#FFFFFF'],
+  467: ['nec', 'NEC Nijmegen', 'NEC', 'Nijmegen', '#E30613', '#00843D'],
+  306: ['heerenveen', 'Heerenveen', 'HEE', 'Heerenveen', '#0057A8', '#FFFFFF'],
+  202: ['groningen', 'Groningen', 'GRO', 'Groningen', '#00843D', '#FFFFFF'],
+  468: ['sparta-rotterdam', 'Sparta Rotterdam', 'SPA', 'Rotterdam', '#E30613', '#FFFFFF'],
+  1269: ['pec-zwolle', 'PEC Zwolle', 'PEC', 'Zwolle', '#005CA9', '#FFFFFF'],
+  1435: ['go-ahead-eagles', 'Go Ahead Eagles', 'GAE', 'Deventer', '#E30613', '#FFE600'],
+  403: ['willem-ii', 'Willem II', 'WIL', 'Tilburg', '#E30613', '#003DA5'],
+  798: ['excelsior', 'Excelsior', 'EXC', 'Rotterdam', '#E30613', '#000000'],
+  1268: ['ado-den-haag', 'ADO Den Haag', 'ADO', 'Lahey', '#FFE600', '#00843D'],
+  385: ['fortuna-sittard', 'Fortuna Sittard', 'FOR', 'Sittard', '#FFE600', '#00843D'],
+  133: ['cambuur', 'Cambuur', 'CAM', 'Leeuwarden', '#FFE600', '#005CA9'],
+  1434: ['telstar', 'Telstar', 'TEL', 'Velsen', '#FFFFFF', '#003DA5'],
+  // Belçika
+  2282: ['club-brugge', 'Club Brugge', 'CLU', 'Brugge', '#005BAB', '#000000'],
+  1184: ['genk', 'Genk', 'GNK', 'Genk', '#005BAB', '#FFFFFF'],
+  3948: ['union-sg', 'Union Saint-Gilloise', 'USG', 'Brüksel', '#FFE600', '#003DA5'],
+  58: ['anderlecht', 'Anderlecht', 'AND', 'Brüksel', '#4C2683', '#FFFFFF'],
+  157: ['gent', 'Gent', 'GNT', 'Gent', '#005BAB', '#FFFFFF'],
+  3057: ['standard-liege', 'Standard Liège', 'STA', 'Liège', '#E30613', '#FFFFFF'],
+  1096: ['antwerp', 'Antwerp', 'ANT', 'Anvers', '#E30613', '#FFFFFF'],
+  968: ['westerlo', 'Westerlo', 'WES', 'Westerlo', '#FFE600', '#005BAB'],
+  475: ['st-truiden', 'Sint-Truiden', 'STV', 'Sint-Truiden', '#FFE600', '#003DA5'],
+  354: ['mechelen', 'Mechelen', 'KVM', 'Mechelen', '#FFE600', '#E30613'],
+  520: ['cercle-brugge', 'Cercle Brugge', 'CER', 'Brugge', '#00843D', '#000000'],
+  172: ['charleroi', 'Charleroi', 'CHA', 'Charleroi', '#000000', '#FFFFFF'],
+  2727: ['oh-leuven', 'OH Leuven', 'OHL', 'Leuven', '#00843D', '#FFFFFF'],
+  3508: ['zulte-waregem', 'Zulte Waregem', 'ZWA', 'Waregem', '#E30613', '#00843D'],
+  5026: ['lommel', 'Lommel', 'LOM', 'Lommel', '#00843D', '#FFFFFF'],
+  3901: ['la-louviere', 'La Louvière', 'RAL', 'La Louvière', '#00843D', '#FFFFFF'],
+  601: ['kortrijk', 'Kortrijk', 'KVK', 'Kortrijk', '#E30613', '#FFFFFF'],
+  28643: ['beveren', 'Beveren', 'BEV', 'Beveren', '#FFE600', '#003DA5'],
+};
+
+/**
+ * Yeni yurtdışı kulübünün itibarı kadro değerinden: elle ayarlanmış 40 kulübe uydurulan doğru (sapma ±3,4 puan).
+ * Bütçeler de değerden (Manchester City: değer 1,5 Mr → transfer 150 Mn, maaş 380 Mn).
+ */
+const reputationFromValue = (value) => Math.round(Math.max(40, Math.min(125, -156.6 + 13.008 * Math.log(value))));
+const roundMillion = (n) => Math.round(n / 500_000) * 500_000;
 
 const POSITIONS = {
   'Kaleci': ['GK'], 'Stoper': ['DC'], 'Sol Bek': ['DL'], 'Sağ Bek': ['DR'],
@@ -73,12 +251,13 @@ function parseDate(s) {
   return `${m[3]}-${String(MONTHS[m[2]]).padStart(2, '0')}-${m[1].padStart(2, '0')}`;
 }
 
-/** "13.00 mil. €" / "850 bin €" → €. */
+/** "13.00 mil. €" / "45.0 Mn €" / "1.2 Mr €" / "850 bin €" / "300 Bin €" → € (site birimleri zamanla değişti). */
 function parseValue(s) {
-  const m = /([\d.,]+)\s*(mil\.|bin)?/.exec(s.replace(/\s+/g, ' '));
+  const m = /([\d.,]+)\s*(mil\.|mn|mr|bin)?/i.exec(s.replace(/\s+/g, ' '));
   if (!m) return null;
   const n = Number(m[1].replace(',', '.'));
-  return m[2] === 'mil.' ? n * 1e6 : m[2] === 'bin' ? n * 1e3 : n;
+  const unit = m[2]?.toLowerCase();
+  return unit === 'mr' ? n * 1e9 : unit === 'mil.' || unit === 'mn' ? n * 1e6 : unit === 'bin' ? n * 1e3 : n;
 }
 
 function ageOn(birth, date) {
@@ -165,11 +344,94 @@ function parseSquad(html, today) {
   return { players, unknown };
 }
 
+/** Lig tablosundaki kadro değeri: "1.4 Mr €" / "57.3 Mn €" / "850 bin €" → €. */
+function parseTotal(s) {
+  const m = /([\d.,]+)\s*(Mr|Mn|bin)/.exec(s);
+  if (!m) return null;
+  const n = Number(m[1].replace(',', '.'));
+  return m[2] === 'Mr' ? n * 1e9 : m[2] === 'Mn' ? n * 1e6 : n * 1e3;
+}
+
+/** Kadronun bitiminde nations.json'da olmayan uyrukları yazar. */
+function reportNations(missingNations) {
+  if (missingNations.size === 0) return;
+  console.warn('\nnations.json\'da olmayan uyruklar (oyuncularda "?Ad" yazıldı; ülkeyi ekleyip betiği yeniden çalıştır):');
+  for (const [n, ids] of missingNations) console.warn(`  ${n}: ${[...new Set(ids)].join(', ')}`);
+}
+
+function writeSquad(id, players) {
+  const file = join(ROOT, 'data', 'squads', `${id}.json`);
+  mkdirSync(dirname(file), { recursive: true });
+  // Oyuncu başına bir satır: elle düzenlemesi kolay olsun
+  const source = JSON.stringify(`Transfermarkt ${SEASON}/${String(SEASON + 1).slice(2)}`);
+  writeFileSync(file, `{\n  "source": ${source},\n  "players": [\n${players.map((p) => '    ' + JSON.stringify(p)).join(',\n')}\n  ]\n}\n`);
+}
+
+/**
+ * Yurtdışı ligleri: kadrolar data/squads/'a, kulüpler data/foreign_clubs.json'a. Dosyada zaten olan kulüp korunur
+ * (elle ayarlandı), yeni kulüp FOREIGN tablosundan + kadro sayfasından (stadyum, kapasite) + kadro değerinden kurulur.
+ */
+async function foreignMain(only, today) {
+  const file = join(ROOT, 'data', 'foreign_clubs.json');
+  const existing = new Map(JSON.parse(readFileSync(file, 'utf8')).map((c) => [c.id, c]));
+  const clubs = [];
+  const missingNations = new Map();
+  for (const [league, country] of Object.entries(FOREIGN_LEAGUES)) {
+    const html = await page(`/x/startseite/wettbewerb/${league}/saison_id/${SEASON}`);
+    const rows = [...html.matchAll(/hauptlink no-border-links"><a title="([^"]+)" href="\/([^/]+)\/startseite\/verein\/(\d+)[\s\S]*?<td class="rechts">[^<]*<\/td><td class="rechts"><a[^>]*>([^<]+)<\/a>/g)];
+    const inLeague = [];
+    for (const m of rows) {
+      const def = FOREIGN[m[3]];
+      if (!def) {
+        console.warn(`Eşleşmeyen kulüp: ${m[1].trim()} (${m[3]}, ${league}) — FOREIGN tablosuna ekle`);
+        continue;
+      }
+      inLeague.push({ tmId: Number(m[3]), slug: m[2], def, value: parseTotal(m[4]) ?? 10e6 });
+    }
+    // Beklenti lig içindeki değer sırasından: lider (ve ona yakın olanlar) şampiyonluk, ilk çeyrek Avrupa…
+    inLeague.sort((a, b) => b.value - a.value);
+    inLeague.forEach((c, rank) => {
+      const share = rank / inLeague.length;
+      c.expectation = rank === 0 || (rank <= 2 && c.value >= 0.6 * inLeague[0].value) ? 'title'
+        : share < 0.25 ? 'europe' : share < 0.5 ? 'top_half' : share < 0.75 ? 'mid_table' : 'avoid_relegation';
+    });
+    for (const c of inLeague) {
+      const [id, name, shortName, city, primary, secondary] = c.def;
+      const kader = await page(`/${c.slug}/kader/verein/${c.tmId}/saison_id/${SEASON}/plus/1`);
+      const old = existing.get(id);
+      if (!old) {
+        const stadium = text(/Stadyum:[\s\S]*?<a[^>]*>([^<]+)<\/a>/.exec(kader)?.[1] ?? '') || `${city} Stadyumu`;
+        const seats = Number(text(/Stadyum:[\s\S]*?<span class="tabellenplatz">([^<]+)<\/span>/.exec(kader)?.[1] ?? '').replace(/\D/g, '')) || 15000;
+        clubs.push({
+          id, country, name, shortName, city, stadium, capacity: seats,
+          reputation: reputationFromValue(c.value),
+          budget: roundMillion(c.value * 0.1),
+          wageBudget: roundMillion(c.value * 0.25),
+          fanExpectation: c.expectation,
+          colors: { primary, secondary },
+        });
+      } else clubs.push(old);
+      if (only.length > 0 && !only.includes(id)) continue;
+      const { players, unknown } = parseSquad(kader, today);
+      for (const n of unknown.nations) missingNations.set(n, [...(missingNations.get(n) ?? []), id]);
+      if (unknown.positions.size > 0) console.warn(`${id}: bilinmeyen mevki ${[...unknown.positions].join(', ')}`);
+      writeSquad(id, players);
+      console.log(`${country} ${id}: ${players.length} oyuncu${old ? '' : ` (yeni kulüp, itibar ${reputationFromValue(c.value)})`}`);
+    }
+  }
+  // Ligden düşen (listede olmayan) eski kulüpler dosyadan çıkar; kadro dosyaları elle silinir
+  for (const id of existing.keys()) if (!clubs.some((c) => c.id === id)) console.warn(`Listede olmayan eski kulüp çıkarıldı: ${id}`);
+  writeFileSync(file, `[\n${clubs.map((c) => '  ' + JSON.stringify(c)).join(',\n')}\n]\n`);
+  console.log(`\n${clubs.length} yurtdışı kulübü yazıldı.`);
+  reportNations(missingNations);
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const info = args.includes('--info');
   const only = args.filter((a) => !a.startsWith('--'));
   const today = `${SEASON}-07-01`;
+  if (args.includes('--foreign')) return foreignMain(only, today);
   const clubs = [];
   for (const league of ['TR1', 'TR2']) {
     const html = await page(`/x/startseite/wettbewerb/${league}/saison_id/${SEASON}`);
@@ -196,17 +458,10 @@ async function main() {
     const { players, unknown } = parseSquad(html, today);
     for (const n of unknown.nations) missingNations.set(n, [...(missingNations.get(n) ?? []), club.id]);
     if (unknown.positions.size > 0) console.warn(`${club.id}: bilinmeyen mevki ${[...unknown.positions].join(', ')}`);
-    const file = join(ROOT, 'data', 'squads', `${club.id}.json`);
-    mkdirSync(dirname(file), { recursive: true });
-    // Oyuncu başına bir satır: elle düzenlemesi kolay olsun
-    const source = JSON.stringify(`Transfermarkt ${SEASON}/${String(SEASON + 1).slice(2)}`);
-    writeFileSync(file, `{\n  "source": ${source},\n  "players": [\n${players.map((p) => '    ' + JSON.stringify(p)).join(',\n')}\n  ]\n}\n`);
+    writeSquad(club.id, players);
     console.log(`${club.id}: ${players.length} oyuncu`);
   }
-  if (missingNations.size > 0) {
-    console.warn('\nnations.json\'da olmayan uyruklar (oyuncularda "?Ad" yazıldı; ülkeyi ekleyip betiği yeniden çalıştır):');
-    for (const [n, ids] of missingNations) console.warn(`  ${n}: ${[...new Set(ids)].join(', ')}`);
-  }
+  reportNations(missingNations);
 }
 
 main().catch((e) => {

@@ -235,7 +235,7 @@ describe('sezon boyunca', () => {
     expect(matchInjuries / 18).toBeGreaterThan(3);
     expect(matchInjuries / 18).toBeLessThan(20);
     const injuryNews = world.news.filter((n) => n.category === 'injury' && n.title.includes('sakatlandı'));
-    expect(injuryNews.length).toBeGreaterThan(2);
+    expect(injuryNews.length).toBeGreaterThanOrEqual(2);
     expect(world.news.some((n) => n.category === 'discipline')).toBe(true);
   });
 

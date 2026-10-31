@@ -1,4 +1,4 @@
-import { fixtureLabel, getClub, nextFixtureFor, primaryPosition, seasonLabel, tournamentTitle, type GameWorld } from '../../engine';
+import { fixtureLabel, getClub, leagueName, nextFixtureFor, primaryPosition, seasonLabel, tournamentTitle, userLeague, type GameWorld } from '../../engine';
 import type { ScreenId } from '../../store/gameStore';
 import { nationName, POSITION_NAMES } from '../labels';
 import { screenInfo, UNEMPLOYED_SCREENS } from '../screens';
@@ -68,7 +68,7 @@ export function pageHeading(
       : 'Maç';
     return {
       title,
-      subtitle: fixture ? fixtureLabel(fixture) : 'Süper Lig',
+      subtitle: fixture ? fixtureLabel(fixture) : leagueName(userLeague(world)),
       colors: LEAGUE_COLORS,
     };
   }
@@ -84,7 +84,7 @@ export function pageHeading(
   if (screen === 'fixtures' || screen === 'table' || screen === 'stats') {
     return {
       title: info.label,
-      subtitle: `Süper Lig ${seasonLabel(world.season.year)}`,
+      subtitle: `${leagueName(userLeague(world))} ${seasonLabel(world.season.year)}`,
       colors: LEAGUE_COLORS,
     };
   }

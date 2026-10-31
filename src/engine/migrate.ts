@@ -20,12 +20,14 @@ import { createInternational } from './league/international';
 import { migrateManager } from './season/manager';
 import { initFacilities } from './finance/facilities';
 import { Rng } from './rng';
+import { makeDate } from './date';
+import { generateForeignLeagues } from './league/leagues';
 import { initialBoard } from './season/expectation';
 import { DEFAULT_TRAINING } from './squad/training';
 import { DEFAULT_INSTRUCTIONS } from './match/tactics';
 import type { GameWorld } from './types';
 
-export const CURRENT_WORLD_VERSION = 17;
+export const CURRENT_WORLD_VERSION = 18;
 
 /** `raw` eski biçimdeki dünya; dönüştürülmüş dünya döner (yerinde değiştirir). */
 export function migrateWorld(raw: unknown, fromVersion: number, data: GameData): GameWorld {
@@ -143,6 +145,11 @@ export function migrateWorld(raw: unknown, fromVersion: number, data: GameData):
   }
   if (fromVersion < 17) {
     for (const t of Object.values(world.tactics)) t.instructions = { ...DEFAULT_INSTRUCTIONS, ...t.instructions };
+  }
+  if (fromVersion < 18) {
+    // Yurtdışı ligleri: eksik kulüpler (gerçek kadrolarıyla) eklenir; ligler sezon başlamadıysa hemen, yoksa gelecek sezon
+    addForeignClubs(world, data, new Rng((world.seed ^ FOREIGN_SEED_SALT ^ 18) >>> 0));
+    if (world.seasonState === 'running' && world.date < makeDate(world.season.year, 8, 8)) generateForeignLeagues(world, world.season.year);
   }
   return world;
 }

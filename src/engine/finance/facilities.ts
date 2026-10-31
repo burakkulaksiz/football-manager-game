@@ -9,7 +9,7 @@ import { addDays, daysBetween, formatDateTR, makeDate, type GameDate } from '../
 import { getClub } from '../generation/worldGenerator';
 import { addNews } from '../news';
 import { managerReputation } from '../season/manager';
-import type { GameWorld } from '../types';
+import type { Club, GameWorld } from '../types';
 import { addExpense } from './finance';
 
 export type FacilityKind = 'training' | 'youth' | 'medical';
@@ -63,14 +63,19 @@ export function levelForReputation(reputation: number): number {
   return clampLevel(1 + (reputation / 100) * 8);
 }
 
+/** Kulübün başlangıç tesisleri: itibardan, kulüpten kulübe biraz farklı (kimliğe bağlı sabit sapma; rastgelelik yok). */
+export function initialFacilityLevels(club: Club): ClubFacilities {
+  const base = levelForReputation(club.reputation);
+  const nudge = (salt: number) => ((club.id.length * 7 + salt * 13 + club.id.charCodeAt(0)) % 3) - 1;
+  return { training: clampLevel(base + nudge(1)), youth: clampLevel(base + nudge(2)), medical: clampLevel(base + nudge(3)) };
+}
+
+/** Türkiye kulüpleri ve kullanıcının (yurtdışı) kulübü; diğer yurtdışı kulüplerinin seviyesi itibardan okunur. */
 export function initFacilities(world: GameWorld): FacilitiesState {
   const levels: Record<string, ClubFacilities> = {};
   for (const club of world.clubs) {
-    if (club.country !== undefined) continue;
-    const base = levelForReputation(club.reputation);
-    // Kulüpten kulübe biraz farklı (kimliğe bağlı sabit sapma; rastgelelik kullanılmaz)
-    const nudge = (salt: number) => ((club.id.length * 7 + salt * 13 + club.id.charCodeAt(0)) % 3) - 1;
-    levels[club.id] = { training: clampLevel(base + nudge(1)), youth: clampLevel(base + nudge(2)), medical: clampLevel(base + nudge(3)) };
+    if (club.country !== undefined && club.id !== world.playerClubId) continue;
+    levels[club.id] = initialFacilityLevels(club);
   }
   return { levels, projects: [], rejected: {} };
 }

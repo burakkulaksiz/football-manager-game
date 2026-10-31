@@ -6,6 +6,7 @@ import { addIncome } from '../finance/finance';
 import { formatPlain } from '../transfer/market';
 import { getClub, leagueClubs } from '../generation/worldGenerator';
 import { computeStandings, goalDifference } from '../league/standings';
+import { foreignLeagueSummaries, leagueName, leagueTable, userLeague } from '../league/leagues';
 import { lowerStandings, playLowerLeague } from '../league/lowerLeague';
 import { CUP_NAME, cupChampion, leagueFixtures } from '../league/cup';
 import { EUROPE, europeChampion } from '../league/europe';
@@ -104,10 +105,16 @@ export function endSeason(world: GameWorld, rng: Rng): SeasonSummary {
   const promotedIds = world.season.lower
     ? lowerStandings(world).slice(0, RELEGATED_COUNT).map((r) => r.clubId)
     : choosePromoted(world, rng, RELEGATED_COUNT);
-  const userPosition = table.findIndex((r) => r.clubId === world.playerClubId) + 1;
+  // Kullanıcının sırası kendi liginde (yurtdışı liginde küme düşme yok)
+  const own = userLeague(world);
+  const ownTable = own === undefined ? table : leagueTable(world, own);
+  const userPosition = ownTable.findIndex((r) => r.clubId === world.playerClubId) + 1;
+  const userRelegated = own === undefined && relegatedIds.includes(world.playerClubId);
+  const leagues = foreignLeagueSummaries(world);
 
-  // Sıralama primleri
+  // Sıralama primleri (yurtdışı liglerinde de aynı ölçek)
   table.forEach((row, i) => addIncome(world.finances[row.clubId]!, 'prize', prizeFor(i + 1, table.length)));
+  for (const league of leagues) league.table.forEach((row, i) => addIncome(world.finances[row.clubId]!, 'prize', prizeFor(i + 1, league.table.length)));
 
   const summary: SeasonSummary = {
     year: world.season.year,
@@ -122,6 +129,7 @@ export function endSeason(world: GameWorld, rng: Rng): SeasonSummary {
     targetPosition: world.board.targetPosition,
     awards: seasonAwards(world),
   };
+  if (leagues.length > 0) summary.leagues = leagues;
   const cupWinner = cupChampion(world);
   if (cupWinner) {
     summary.cupWinnerId = cupWinner;
@@ -145,7 +153,8 @@ export function endSeason(world: GameWorld, rng: Rng): SeasonSummary {
       `${summary.year}/${String((summary.year + 1) % 100).padStart(2, '0')} sezonu tamamlandı. Şampiyon: ${champion}. ` +
       `${summary.cupWinnerName ? `${CUP_NAME}: ${summary.cupWinnerName}. ` : ''}` +
       `${summary.clWinnerName ? `${EUROPE.cl.name}: ${summary.clWinnerName}. ` : ''}${summary.elWinnerName ? `${EUROPE.el.name}: ${summary.elWinnerName}. ` : ''}Küme düşenler: ${summary.relegatedNames.join(', ')}. 1. Lig'den çıkanlar: ${summary.promotedNames.join(', ')}. ` +
-      (employed && userPosition > 0 ? `${userName} ligi ${userPosition}. sırada bitirdi (hedef ${summary.targetPosition}.) ve €${formatPlain(prizeFor(userPosition, table.length))} sıralama primi kazandı. ` : '') +
+      (employed && userPosition > 0 ? `${userName} ${own === undefined ? 'ligi' : `${leagueName(own)} sezonunu`} ${userPosition}. sırada bitirdi (hedef ${summary.targetPosition}.) ve €${formatPlain(prizeFor(userPosition, ownTable.length))} sıralama primi kazandı. ` : '') +
+      (leagues.length > 0 ? `Yurtdışı şampiyonları: ${leagues.map((l) => `${leagueName(l.league)}: ${l.championName}`).join(', ')}. ` : '') +
       `Ödüller: ${summary.awards.map((a) => `${a.title}: ${a.playerName} (${a.clubName}, ${a.value})`).join('; ')}. ` +
       `Yeni sezon 1 Temmuz'da başlıyor; sözleşmesi 30 Haziran'da biten oyuncular kulüpten ayrılacak.`,
     important: true,
@@ -164,8 +173,8 @@ export function endSeason(world: GameWorld, rng: Rng): SeasonSummary {
   if (!employed) return summary; // işsiz menajerin sezonu yok
   if (userPosition === 1) world.manager.titles++;
   // Menajer: itibar (hedefe göre sıra, kupalar) ve kariyer sezonu; görevden alma kararından önce
-  managerSeasonEnd(world, userPosition, relegatedIds.includes(world.playerClubId));
-  boardSeasonReview(world, userPosition, relegatedIds.includes(world.playerClubId));
+  managerSeasonEnd(world, userPosition, userRelegated);
+  boardSeasonReview(world, userPosition, userRelegated);
   return summary;
 }
 

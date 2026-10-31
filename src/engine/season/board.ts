@@ -2,8 +2,7 @@
  * Yönetim: hedef sıra ve güven (0–100).
  * Maç sonuçları ve aylık sıralama değerlendirmesiyle değişir; çok düşerse görevden alınırsın.
  */
-import { leagueClubs } from '../generation/worldGenerator';
-import { computeStandings } from '../league/standings';
+import { leagueFixturesOf, leagueTable, userLeague } from '../league/leagues';
 import { addNews } from '../news';
 import type { Fixture, GameWorld } from '../types';
 import { isUnemployed, leaveClub } from './jobs';
@@ -25,14 +24,13 @@ export function confidenceLabel(confidence: number): string {
   return 'Güveni kalmadı';
 }
 
-/** Kullanıcının sıradaki/şimdiki lig sırası. */
+/** Kullanıcının kendi ligindeki (Süper Lig ya da yurtdışı ligi) şimdiki sırası. */
 export function userPosition(world: GameWorld): number {
-  const table = computeStandings(leagueClubs(world).map((c) => c.id), world.season.fixtures);
-  return table.findIndex((r) => r.clubId === world.playerClubId) + 1;
+  return leagueTable(world, userLeague(world)).findIndex((r) => r.clubId === world.playerClubId) + 1;
 }
 
 function roundsPlayed(world: GameWorld): number {
-  return world.season.fixtures.filter((f) => f.result && f.competition === undefined && (f.homeId === world.playerClubId || f.awayId === world.playerClubId)).length;
+  return leagueFixturesOf(world.season.fixtures, userLeague(world)).filter((f) => f.result && (f.homeId === world.playerClubId || f.awayId === world.playerClubId)).length;
 }
 
 /** Kullanıcının maçından sonra: galibiyet +1.5, yenilgi −2.5 (büyük hedefli kulüpte daha sert; menajerin itibarı yumuşatır). */

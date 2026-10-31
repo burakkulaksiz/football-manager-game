@@ -29,7 +29,9 @@ src/engine/            SAF TypeScript oyun motoru. React/DOM/IndexedDB'ye bağı
   league/stats.ts      Gol/asist/puan sıralamaları, oyuncu sezon istatistikleri (maç kayıtlarından türetilir).
   league/cup.ts        Türkiye Kupası: turlar (CUP_ROUNDS), kura (cupDay), kazanan (fixtureWinner, penaltılar),
                        tur sonrası ödül/haber (cupAfterMatch), scoreLine, leagueFixtures (yalnızca lig: competition yok).
-  league/europe.ts     Avrupa kupaları (ŞL / AL): katılım (turkishQualifiers), kuralar (europeDay), grup tablosu
+  league/leagues.ts    Ligler: lig adı, kullanıcının ligi, ligin kulüpleri / maçları / tablosu, yurtdışı fikstürü ve takvimi,
+                       sıkıştırılmış sonuç + oyuncu sayaçları, sezon sonu tabloları (bkz. world.md > "Yurtdışı ligleri").
+  league/europe.ts     Avrupa kupaları (ŞL / AL): katılım (turkishQualifiers, foreignQualifiers), kuralar (europeDay), grup tablosu
                        (groupTable → standings.tableFrom), iki maçlı eşleşme (aggregateScore, tieWinner), ödüller.
   league/competitions.ts Organizasyon etiketleri: competitionName, stageLabel, fixtureLabel, shortFixtureLabel.
   league/international.ts Milli takımlar: döngü (createInternational), sanal oyuncular (virtualPool), kadro (selectSquad),

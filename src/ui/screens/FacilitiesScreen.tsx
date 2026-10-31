@@ -5,7 +5,8 @@ import {
   formatDateTR,
   getClub,
   injuryDurationFactor,
-  leagueClubs,
+  clubsInLeague,
+  userLeague,
   maintenancePerYear,
   MAINTENANCE_PER_LEVEL,
   matchInjuryFactor,
@@ -74,9 +75,9 @@ function ProjectProgress({ project, today }: { project: FacilityProject; today: 
   );
 }
 
-/** Ligdeki sırası (Süper Lig kulüpleri arasında). */
+/** Ligdeki sırası (kullanıcının liginin kulüpleri arasında). */
 function leagueRank(world: GameWorld, kind: FacilityKind): { rank: number; best: number } {
-  const levels = leagueClubs(world).map((c) => ({ id: c.id, level: facilityLevel(world, c.id, kind) }));
+  const levels = clubsInLeague(world, userLeague(world)).map((c) => ({ id: c.id, level: facilityLevel(world, c.id, kind) }));
   const own = facilityLevel(world, world.playerClubId, kind);
   return { rank: 1 + levels.filter((l) => l.level > own).length, best: Math.max(...levels.map((l) => l.level)) };
 }

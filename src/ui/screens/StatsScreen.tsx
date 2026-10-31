@@ -1,18 +1,22 @@
 import {
+  activeForeignLeagues,
   cleanSheets,
+  clubsInLeague,
   computeStandings,
   CUP_NAME,
   EUROPE,
   getClub,
-  leagueClubs,
-  leagueFixtures,
+  leagueFixturesOf,
+  leagueName,
   seasonLabel,
   topAssists,
   topRatings,
+  tallyLeaders,
   topScorers,
+  userLeague,
   type GameWorld,
 } from '../../engine';
-import { useGameStore, useWorld } from '../../store/gameStore';
+import { useGameStore, useUiState, useWorld } from '../../store/gameStore';
 import { ClubBadge } from '../components/ClubBadge';
 import { ratingClass } from '../labels';
 
@@ -78,22 +82,34 @@ function LeaderTable({ world, title, unit, rows, empty, ratings = false }: {
 
 export function StatsScreen() {
   const world = useWorld();
+  // Lig: '' = Süper Lig, diğerleri yurtdışı liginin ülke kodu; varsayılan kullanıcının ligi
+  const [league, setLeague] = useUiState<string>('stats.league', userLeague(world) ?? '');
+  const key = league || undefined;
   // Lig istatistikleri (kupa maçları hariç)
-  const fixtures = leagueFixtures(world.season.fixtures);
+  const fixtures = leagueFixturesOf(world.season.fixtures, key);
   const roundsPlayed = new Set(fixtures.filter((f) => f.result).map((f) => f.round)).size;
   // Puan sıralamasına girmek için oynanan haftaların en az üçte biri kadar maç gerekir.
   const minApps = Math.max(1, Math.ceil(roundsPlayed / 3));
+  // Kullanıcının liginde olmayan yurtdışı ligi: oyuncu kayıtları sezon sayaçlarında
+  const tallied = key !== undefined && key !== userLeague(world);
 
-  const scorers = topScorers(fixtures, 15).map((s) => ({ playerId: s.playerId, clubId: s.clubId, value: s.goals }));
-  const assists = topAssists(fixtures, 15);
-  const ratings = topRatings(fixtures, minApps, 15).map((r) => ({ ...r, value: r.value.toFixed(2) }));
-  const teams = computeStandings(leagueClubs(world).map((c) => c.id), fixtures).sort(
+  const scorers = tallied
+    ? tallyLeaders(world, key, 'goals', 15)
+    : topScorers(fixtures, 15).map((s) => ({ playerId: s.playerId, clubId: s.clubId, value: s.goals }));
+  const assists = tallied ? tallyLeaders(world, key, 'assists', 15) : topAssists(fixtures, 15);
+  const ratings = (tallied ? tallyLeaders(world, key, 'rating', 15, minApps) : topRatings(fixtures, minApps, 15)).map((r) => ({ ...r, value: r.value.toFixed(2) }));
+  const teams = computeStandings(clubsInLeague(world, key).map((c) => c.id), fixtures).sort(
     (a, b) => b.goalsFor - a.goalsFor || a.goalsAgainst - b.goalsAgainst,
   );
   const empty = 'Henüz maç oynanmadı.';
 
   return (
     <div className="screen">
+      <div className="tabs" role="tablist" aria-label="Lig">
+        {['', ...activeForeignLeagues(world)].map((l) => (
+          <button key={l} className={`tab${l === league ? ' active' : ''}`} onClick={() => setLeague(l)}>{leagueName(l || undefined)}</button>
+        ))}
+      </div>
       <div className="two-columns">
         <LeaderTable world={world} title="Gol Krallığı" unit="Gol" rows={scorers} empty={empty} />
         <LeaderTable world={world} title="Asist Krallığı" unit="Asist" rows={assists} empty={empty} />

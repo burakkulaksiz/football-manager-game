@@ -68,7 +68,8 @@ describe('sezon döngüsü', () => {
     playUntil(world, '2027-06-30');
     for (const id of expiringUser) {
       const p = world.players[id];
-      if (p) expect(p.clubId).toBeNull();
+      // Kulüpten ayrılır (aynı gün başka bir kulüp serbest oyuncu olarak alabilir)
+      if (p) expect(p.clubId).not.toBe('galatasaray');
     }
     // Yapay zekâ kulüplerinde süresi bugün biten ve hâlâ kulübünde olan kalmadı
     const stale = Object.values(world.players).filter((p) => p.clubId && p.clubId !== 'galatasaray' && p.contract.expires <= world.date);
@@ -81,7 +82,10 @@ describe('sezon döngüsü', () => {
     playUntil(world, '2027-07-01');
     expect(world.seasonState).toBe('running');
     expect(world.season.year).toBe(2027);
-    expect(world.season.fixtures).toHaveLength(306);
+    expect(world.season.fixtures.filter((f) => f.league === undefined)).toHaveLength(306);
+    // Yurtdışı ligleri de yeni sezonun fikstüründe; geçen sezonun tabloları özette
+    expect(world.season.fixtures.some((f) => f.league === 'ESP' && f.round === 1)).toBe(true);
+    expect(summary.leagues?.map((l) => l.league)).toContain('ENG');
     const league = leagueClubs(world).map((c) => c.id);
     expect(league).toHaveLength(18);
     for (const id of summary.promotedIds) expect(league).toContain(id);
@@ -101,7 +105,7 @@ describe('sezon döngüsü', () => {
     expect(world.history).toHaveLength(2);
     expect(world.history[1]!.year).toBe(2027);
     // Tam sezon simülasyonu: yük altında 30 sn'lik varsayılanı aşabiliyor (bkz. FINDINGS.md, test süreleri)
-  }, 120_000);
+  }, 400_000);
 });
 
 describe('serbest oyuncular', () => {

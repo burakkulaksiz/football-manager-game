@@ -7,8 +7,9 @@ hatalı bir alan varsa Türkçe hata mesajıyla neyin yanlış olduğu söylenir
   stadyum, kapasite, taraftar beklentisi (`title`, `europe`, `top_half`, `mid_table`, `avoid_relegation`),
   renkler. İtibar kadro gücünü belirler.
 - `lower_league.json` — 1. Lig kulüpleri (aynı biçim; gerçek 2026/27 1. Ligi); küme düşenlerin yerine çıkanlar.
-- `foreign_clubs.json` — yurtdışı kulüpleri (aynı biçim + `country`: nations.json'daki ülke kodu). Maç
-  oynamazlar; kadroları transfer pazarında yer alır. İtibar 130'a kadar çıkabilir (devler ~120).
+- `foreign_clubs.json` — yurtdışı kulüpleri (aynı biçim + `country`: nations.json'daki ülke kodu): 8 ülkenin birinci
+  ligi (gerçek 2026/27). Her ülkenin kulüpleri kendi liginde oynar (çift sayıda olmalı); yeni oyunda seçilebilir.
+  İtibar 130'a kadar çıkabilir (devler ~120). `node scripts/transfermarkt.mjs --foreign` dosyayı ve kadroları yeniler.
 - `nations.json` — ülkeler; `weight` yabancı oyuncu üretiminde o ülkenin seçilme ağırlığıdır. Milli takımlar için:
   `confederation` (`UEFA`, `CONMEBOL`, `CAF`, `AFC`, `CONCACAF`, `OFC`; eleme grupları UEFA ülkeleriyle, en az 8),
   `strength` (1–100: ülkenin oyun dünyasında olmayan oyuncularının seviyesi; milli kadro dünyadaki oyuncularla bu

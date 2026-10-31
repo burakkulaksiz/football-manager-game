@@ -11,15 +11,16 @@
  * Rastgelelik kendi akışından (JOBS_SEED_SALT + gün): iş piyasası ana dünyanın rastgelelik akışını değiştirmez.
  */
 import { addDays, daysBetween, weekday, type GameDate } from '../date';
-import { clubPlayers, getClub, leagueClubs } from '../generation/worldGenerator';
-import { computeStandings } from '../league/standings';
+import { initialFacilityLevels } from '../finance/facilities';
+import { clubPlayers, getClub } from '../generation/worldGenerator';
+import { activeForeignLeagues, clubsInLeague, leagueFixturesOf, leaguePosition, leagueTable } from '../league/leagues';
 import { defaultTactics } from '../match/tactics';
 import { addNews } from '../news';
 import { Rng } from '../rng';
 import { DEFAULT_TRAINING } from '../squad/training';
 import { isActive } from '../transfer/offers';
 import type { Club, GameWorld } from '../types';
-import { divisionOf, EXPECTATION_TARGET, initialBoard } from './expectation';
+import { EXPECTATION_TARGET, initialBoard } from './expectation';
 import { managerLeft, managerReputation } from './manager';
 
 /** İşsizken `playerClubId`: hiçbir kulübün kimliği boş metin değildir. */
@@ -112,10 +113,6 @@ function releaseClub(world: GameWorld, clubId: string): void {
   for (const p of world.facilities.projects) p.clubId ??= clubId;
 }
 
-function leaguePosition(world: GameWorld, clubId: string): number {
-  return computeStandings(leagueClubs(world).map((c) => c.id), world.season.fixtures).findIndex((r) => r.clubId === clubId) + 1;
-}
-
 /** Kulüpten ayrılış (görevden alınma ya da istifa): menajer işsiz kalır, koltuk boşalır. */
 export function leaveClub(world: GameWorld, reason: LeaveReason, text: string): void {
   if (isUnemployed(world)) return;
@@ -164,6 +161,8 @@ export function takeJob(world: GameWorld, clubId: string): void {
   world.tactics[clubId] = defaultTactics(clubPlayers(world, clubId));
   world.training[clubId] = { ...DEFAULT_TRAINING };
   world.facilities.rejected = {};
+  // Yurtdışı kulübünün tesis kaydı yoksa itibardan kurulur
+  world.facilities.levels[clubId] ??= initialFacilityLevels(club);
   world.manager.clubSince = world.date;
   addNews(world, {
     category: 'job',
@@ -217,23 +216,24 @@ function sackingsInAiClubs(world: GameWorld, rng: Rng): void {
   if (world.date.endsWith('-07-01')) {
     const relegated = new Set(world.history[world.history.length - 1]?.relegatedIds ?? []);
     for (const c of world.clubs) {
-      if (c.country !== undefined || c.id === world.playerClubId || vacant.has(c.id)) continue;
+      if (c.division === 2 || c.id === world.playerClubId || vacant.has(c.id)) continue;
       if (rng.chance(relegated.has(c.id) ? 0.5 : 0.08)) openVacancy(world, c.id, rng);
     }
     return;
   }
-  // Sezon içi ay başı: hedefinin çok gerisindeki Süper Lig kulübü hocasını kovabilir (6 hafta oynandıktan sonra)
+  // Sezon içi ay başı: hedefinin çok gerisindeki (Süper Lig ya da yurtdışı ligi) kulüp hocasını kovabilir (6 hafta oynandıktan sonra)
   if (!world.date.endsWith('-01') || world.seasonState !== 'running') return;
-  const leagueGames = world.season.fixtures.filter((f) => f.competition === undefined && f.result !== null).length;
-  if (leagueGames < leagueClubs(world).length * 3) return;
-  const table = computeStandings(leagueClubs(world).map((c) => c.id), world.season.fixtures);
-  table.forEach((row, i) => {
-    const club = getClub(world, row.clubId);
-    if (club.id === world.playerClubId || club.id === user || vacant.has(club.id) || divisionOf(club) !== 1) return;
-    const gap = i + 1 - EXPECTATION_TARGET[club.fanExpectation];
-    const chance = gap >= 5 ? 0.3 : gap >= 3 ? 0.12 : 0;
-    if (chance > 0 && rng.chance(chance)) openVacancy(world, club.id, rng);
-  });
+  for (const league of [undefined, ...activeForeignLeagues(world)]) {
+    const leagueGames = leagueFixturesOf(world.season.fixtures, league).filter((f) => f.result !== null).length;
+    if (leagueGames < clubsInLeague(world, league).length * 3) continue;
+    leagueTable(world, league).forEach((row, i) => {
+      const club = getClub(world, row.clubId);
+      if (club.id === world.playerClubId || club.id === user || vacant.has(club.id)) return;
+      const gap = i + 1 - EXPECTATION_TARGET[club.fanExpectation];
+      const chance = gap >= 5 ? 0.3 : gap >= 3 ? 0.12 : 0;
+      if (chance > 0 && rng.chance(chance)) openVacancy(world, club.id, rng);
+    });
+  }
 }
 
 /** Her gün: koltukların dolması, başvuru yanıtları, haftalık teklifler, süresi dolan teklifler, işsizlik sınırı. */

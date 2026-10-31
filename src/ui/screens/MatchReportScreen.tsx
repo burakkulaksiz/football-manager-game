@@ -225,9 +225,9 @@ export function MatchReportScreen() {
     setFixturesView(tabFor(fixture.competition), fixture.round);
     setScreen('fixtures', europePreset);
   };
-  // Puan durumu maçın kendi turnuvasının: lig → Süper Lig tablosu, Avrupa → grup tabloları / eşleşmeler; kupada tablo yok
+  // Puan durumu maçın kendi turnuvasının: lig → o ligin tablosu, Avrupa → grup tabloları / eşleşmeler; kupada tablo yok
   const showStandings = fixture.competition === undefined
-    ? () => setScreen('table')
+    ? () => setScreen('table', { 'table.view': fixture.league ?? 'table' })
     : europePreset ? () => { setFixturesView('europe'); setScreen('fixtures', europePreset); } : null;
 
   return (
@@ -292,17 +292,23 @@ export function MatchReportScreen() {
             <h2 className="panel-title">İstatistikler</h2>
             <MatchStatRows home={result.stats.home} away={result.stats.away} />
           </section>
-          <section className="panel">
-            <h2 className="panel-title">Şut ve Isı Haritası</h2>
-            <MatchMaps shots={result.shots} timeline={result.timeline} home={home} away={away} nameOf={(id) => playerName(world, id)} />
-          </section>
+          {result.players.length > 0 && (
+            <section className="panel">
+              <h2 className="panel-title">Şut ve Isı Haritası</h2>
+              <MatchMaps shots={result.shots} timeline={result.timeline} home={home} away={away} nameOf={(id) => playerName(world, id)} />
+            </section>
+          )}
         </div>
       </div>
 
-      <div className="two-columns">
-        <PlayerRatings fixture={fixture} clubId={home.id} />
-        <PlayerRatings fixture={fixture} clubId={away.id} />
-      </div>
+      {result.players.length > 0 ? (
+        <div className="two-columns">
+          <PlayerRatings fixture={fixture} clubId={home.id} />
+          <PlayerRatings fixture={fixture} clubId={away.id} />
+        </div>
+      ) : (
+        <div className="motm">Başka bir ligin maçı: kadrolar ve oyuncu puanları saklanmaz (skor, goller ve istatistikler var).</div>
+      )}
     </div>
   );
 }

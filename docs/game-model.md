@@ -52,7 +52,8 @@
   Maç sonrası puan oyuncunun `form` listesine eklenir (son 5).
 - **Devam akışı:** maç günü değilse sonraki maç gününe (gün gün; `advanceOneDay` ileride günlük işler için)
   gider. Maç günü kendi maçımız canlı oynanır (maç ekranı), bitince günün diğer maçları arka planda
-  aynı motorla oynanır ve haftanın sonuçları açılır. Sezon bitince 1'er gün ilerler.
+  aynı motorla oynanır ve haftanın sonuçları açılır. Sezon bitince 1'er gün ilerler. Yalnızca izlenen maçlarda durur
+  (followedFixture: kullanıcının liginin maçı, kupa, Avrupa); başka bir yurtdışı liginin günü sessizce oynanıp geçilir (world.md).
 - **GameWorld.season** = { year, fixtures[] }; Fixture.result = MatchResult { skor, goals[{minute, extra,
   clubId, playerId, assistId, kind}], cards, injuries, stats {home, away}, players[{rating, minutes,
   goals, assists, started}], manOfTheMatch }. Anlatım metni saklanmaz (yalnızca canlı maçta).

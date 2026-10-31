@@ -1,0 +1,33 @@
+{
+  "source": "Transfermarkt 2026/27",
+  "players": [
+    {"firstName":"Maduka","lastName":"Okoye","born":"1999-08-28","nationality":"NGA","positions":["GK"],"ability":15.2,"number":40,"foot":"right","joined":"2023-08-24","contractExpires":"2028-06-30","marketValue":10000000},
+    {"firstName":"Bartosz","lastName":"Mrozek","born":"2000-02-23","nationality":"POL","positions":["GK"],"ability":13.4,"number":41,"foot":"right","joined":"2026-08-28","contractExpires":"2030-06-30","marketValue":2000000},
+    {"firstName":"Daniele","lastName":"Padelli","born":"1985-10-25","nationality":"ITA","positions":["GK"],"ability":12.9,"number":93,"foot":"right","joined":"2021-07-01","contractExpires":"2027-06-30","marketValue":150000},
+    {"firstName":"Oumar","lastName":"Solet","born":"2000-02-07","nationality":"FRA","positions":["DC"],"ability":15.5,"number":28,"foot":"right","joined":"2025-01-02","contractExpires":"2027-06-30","marketValue":20000000},
+    {"firstName":"James","lastName":"Abankwah","born":"2004-01-16","nationality":"IRL","positions":["DC"],"ability":14.2,"number":14,"foot":"right","joined":"2022-01-26","contractExpires":"2029-06-30","marketValue":8000000},
+    {"firstName":"Matteo","lastName":"Palma","born":"2008-03-13","nationality":"GER","positions":["DC"],"ability":13.4,"number":16,"foot":"right","joined":"2024-07-01","contractExpires":"2031-06-30","marketValue":8000000},
+    {"firstName":"Nicolò","lastName":"Bertola","born":"2003-03-23","nationality":"ITA","positions":["DC"],"ability":14.2,"number":13,"foot":"right","joined":"2025-07-01","contractExpires":"2030-06-30","marketValue":7000000},
+    {"firstName":"David","lastName":"Alaba","born":"1992-06-24","nationality":"AUT","positions":["DC"],"ability":14.4,"number":5,"foot":"left","joined":"2026-09-24","contractExpires":"2027-06-30","marketValue":3000000},
+    {"firstName":"Enzo","lastName":"Ebosse","born":"1999-03-11","nationality":"CMR","positions":["DC"],"ability":13.2,"number":77,"foot":"left","joined":"2022-07-29","contractExpires":"2027-06-30","marketValue":2800000},
+    {"firstName":"Christian","lastName":"Kabasele","born":"1991-02-24","nationality":"BEL","positions":["DC"],"ability":13,"number":27,"foot":"right","joined":"2023-07-25","contractExpires":"2027-06-30","marketValue":750000},
+    {"firstName":"Hassane","lastName":"Kamara","born":"1994-03-05","nationality":"CIV","positions":["DL"],"ability":13.8,"number":11,"foot":"left","joined":"2022-08-22","contractExpires":"2028-06-30","marketValue":3000000},
+    {"firstName":"Alessandro","lastName":"Zanoli","born":"2000-10-03","nationality":"ITA","positions":["DR"],"ability":13.6,"number":59,"foot":"right","joined":"2026-07-01","contractExpires":"2029-06-30","marketValue":4500000},
+    {"firstName":"Mërgim","lastName":"Vojvoda","born":"1995-02-01","nationality":"KOS","positions":["DR"],"ability":13.4,"number":23,"foot":"right","joined":"2026-07-18","contractExpires":"2028-06-30","marketValue":2500000},
+    {"firstName":"Jesper","lastName":"Karlström","born":"1995-06-21","nationality":"SWE","positions":["DM"],"ability":13.8,"number":8,"foot":"right","joined":"2024-08-03","contractExpires":"2028-06-30","marketValue":4000000},
+    {"firstName":"Jurgen","lastName":"Ekkelenkamp","born":"2000-04-05","nationality":"NED","positions":["MC"],"ability":14.7,"number":32,"foot":"right","joined":"2024-08-06","contractExpires":"2029-06-30","marketValue":13000000},
+    {"firstName":"Lennon","lastName":"Miller","born":"2006-08-25","nationality":"SCO","positions":["MC"],"ability":13.7,"number":38,"foot":"right","joined":"2025-08-12","contractExpires":"2030-06-30","marketValue":10000000},
+    {"firstName":"Jakub","lastName":"Piotrowski","born":"1997-10-04","nationality":"POL","positions":["MC"],"ability":13.4,"number":24,"foot":"right","joined":"2025-08-02","contractExpires":"2029-06-30","marketValue":4500000},
+    {"firstName":"Sandi","lastName":"Lovrić","born":"1998-03-28","nationality":"SVN","positions":["MC"],"ability":13.1,"number":4,"foot":"right","joined":"2022-07-01","contractExpires":"2027-06-30","marketValue":3500000},
+    {"firstName":"Oier","lastName":"Zarraga","born":"1999-01-04","nationality":"ESP","positions":["MC"],"ability":12.2,"number":6,"foot":"right","joined":"2023-07-01","contractExpires":"2027-06-30","marketValue":1500000},
+    {"firstName":"Juan","lastName":"Arizala","born":"2005-10-10","nationality":"COL","positions":["ML"],"ability":12.6,"number":20,"foot":"left","joined":"2026-01-06","contractExpires":"2030-06-30","marketValue":3500000},
+    {"firstName":"Unai","lastName":"Gómez","born":"2003-05-25","nationality":"ESP","positions":["AMC"],"ability":13.6,"number":46,"foot":"left","joined":"2026-07-08","contractExpires":"2031-06-30","marketValue":5000000},
+    {"firstName":"Giorgi","lastName":"Chakvetadze","born":"1999-08-29","nationality":"GEO","positions":["AMC"],"ability":13.2,"number":30,"foot":"right","joined":"2026-07-06","contractExpires":"2030-06-30","marketValue":3500000},
+    {"firstName":"Lazar","lastName":"Jovanovic","born":"2006-11-30","nationality":"SRB","positions":["AMR"],"ability":12.7,"number":91,"foot":"left","joined":"2026-09-01","contractExpires":"2031-06-30","marketValue":6000000},
+    {"firstName":"Nicolò","lastName":"Zaniolo","born":"1999-07-02","nationality":"ITA","positions":["AMC","ST"],"ability":14.9,"number":10,"foot":"left","joined":"2026-07-01","contractExpires":"2029-06-30","marketValue":15000000},
+    {"firstName":"Keinan","lastName":"Davis","born":"1998-02-13","nationality":"ENG","positions":["ST"],"ability":14,"number":9,"foot":"left","joined":"2023-09-01","contractExpires":"2031-06-30","marketValue":10000000},
+    {"firstName":"Idrissa","lastName":"Gueye","born":"2006-09-16","nationality":"SEN","positions":["ST"],"ability":13.1,"number":7,"foot":"right","joined":"2026-07-01","contractExpires":"2030-06-30","marketValue":8000000},
+    {"firstName":"Vakoun","lastName":"Bayo","born":"1997-01-10","nationality":"CIV","positions":["ST"],"ability":12.4,"number":15,"foot":"right","joined":"2024-08-29","contractExpires":"2028-06-30","marketValue":2500000},
+    {"firstName":"Giulio","lastName":"Vinciati","born":"2007-08-29","nationality":"ITA","positions":["ST"],"ability":7.7,"number":45,"foot":"right","joined":"2026-07-01","contractExpires":"2029-06-30","marketValue":100000}
+  ]
+}

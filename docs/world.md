@@ -1,14 +1,49 @@
 # Yurtdışı kulüpleri ve milli takımlar
 
-## Yurtdışı kulüpleri (kullanıcı seçti: maç oynanmayan kulüpler, 8 ülke ~40 kulüp, gerçek adlar)
-- data/foreign_clubs.json (clubs.json biçimi + `country`; itibar 1–130). İngiltere, İspanya, Almanya, İtalya,
-  Fransa, Portekiz, Hollanda, Belçika; 40 kulüp. nations.json'a ENG / ITA (ağırlık 0: Süper Lig üretimi değişmez),
-  names/en.json, names/it.json eklendi.
-- Club.country varsa yurtdışı: divisionOf = 0 (Süper Lig / 1. Lig sorguları onları görmez), fikstür, tablo,
-  küme yok. İtibar 100'ü geçebilir: devler ~120 → kadro seviyesi ~17 (ilk 11 ort. ~170; Galatasaray ~150).
-- Kadrolar ayrı rng ile (FOREIGN_SEED_SALT) Türkiye dünyasından sonra üretilir: aynı tohumla Türkiye kadroları ve
-  fikstür değişmez. Uyruk: kendi ülkesi ağırlıklı (ilk 11 %30–55, yedek %60, genç %85), yabancılar her ülkeden.
-- U19 yok; her yaz A takıma 2–3 genç (17–18). Finans: maç geliri olmadığından yayın payı maaş bütçesinin %75'i.
+## Yurtdışı ligleri (2026-10-31: 8 ülkenin birinci ligi, gerçek 2026/27 kulüpleri ve kadroları, oynanır ve seçilebilir)
+- data/foreign_clubs.json (clubs.json biçimi + `country`; itibar 1–130): İngiltere 20, İspanya 20, Almanya 18, İtalya 20,
+  Fransa 18, Portekiz 18, Hollanda 18, Belçika 18 = 150 kulüp; hepsinin gerçek kadrosu data/squads/'ta
+  (`node scripts/transfermarkt.mjs --foreign`; bkz. data-and-saves.md). Önceki 40 kulübün elle ayarlanan itibarı, bütçeleri
+  ve beklentisi korundu; yeni 110 kulüp kadro değerinden: itibar = −156,6 + 13,0 × ln(değer) (40 kulübe uydurma, sapma ±3,4),
+  transfer bütçesi değerin %10'u, maaş bütçesi %25'i, beklenti lig içindeki değer sırasından. Renk ve şehir betikte elle.
+- **Ligler** (league/leagues.ts): Fixture.league = ülke kodu (lig maçında yoksa Süper Lig). Sezon fikstürüne Süper Lig'den
+  sonra eklenir (generateForeignLeagues; createWorld ve 1 Temmuz rollover), çift devre, her ligin kendi tohumu
+  (LEAGUES_SEED_SALT). Takvim pazar (Süper Lig cumartesi, kupa çarşamba, ŞL salı, AL perşembe, milli maçlar cuma / salı ile
+  çakışmaz): 8 Ağustos'tan sonraki pazarlar, 24 Mayıs'a kadar, milli aralar atlanır; kış arası yalnızca gerekirse (20 takımlı
+  ligler 38 hafta), o da yetmezse çarşambalar. Küme düşme yok (alt ligler oyunda değil). Tek sayıda kulüpte lig oynanmaz.
+- **Oynatma** (gameFlow.playTodaysMatches): Süper Lig / kupa / Avrupa ana rng ile, yurtdışı lig maçları günün ayrı rng'siyle
+  (leaguesRng: tohum ^ tuz ^ tarih) → Türkiye'nin sonuçları yurtdışı maçları yüzünden kaymaz. Tam motor ve tam etki (form,
+  kondisyon, sakatlık, kart cezası, moral, finans). Kullanıcının liginde olmayan maçın sonucu etkiler işlendikten sonra
+  sıkıştırılır (compactResult: skor, goller, takım istatistiği; oyuncu kayıtları, şut, ısı haritası yok). Sıkıştırmadan önce
+  oyuncu kayıtları Season.tallies'e ("oyuncuId|kulüpId" → [maç, ilk 11, gol, asist, puan×10, MA, sarı, kırmızı]) eklenir:
+  kariyer, oyuncu sezon istatistiği (seasonStatsByClub / playerSeasonStats `tallies` parametresi) ve o ligin krallık listeleri
+  (tallyLeaders) buradan. Ölçüm: tam sonuç ~6,5 KB, sıkıştırılmış ~0,5 KB; dünya JSON'u başta 7,2 MB, bir sezon sonunda 12,7 MB.
+- **Devam** yalnızca izlenen maç gününde durur (followedFixture: kullanıcının liginin maçı, kupa ya da Avrupa); başka liglerin
+  oynadığı gün maçlar sessizce oynanıp geçilir (NavBar'da "Günün Maçları" da yalnızca izlenen maçta).
+- **Sezon sonu**: SeasonSummary.leagues = yurtdışı final tabloları (şampiyon, puan); sıralama primi (prizeFor) yurtdışında da.
+  Kullanıcının sırası, şampiyonluğu, yönetim ve menajer değerlendirmesi kendi liginde; küme düşme yalnızca Süper Lig'de.
+  1 Temmuz: yurtdışı itibarı Süper Lig kuralıyla (şampiyon +3, ilk 4 +1, itibar sırasına göre ±1; 30–125), beklenti lig içindeki
+  itibar sırasından (expectationForRank).
+- **Avrupa** (europe.foreignQualifiers): ülke kontenjanı FOREIGN_EUROPE_SLOTS (ŞL / AL): İngiltere 3/2, İspanya 3/2, Almanya 2/2,
+  İtalya 2/2, Fransa 2/2, Portekiz 1/1, Hollanda 1/1, Belçika 0/1 = 14 + 13 (Türkiye 2 + 3). Sıra geçen sezonun lig tablosundan,
+  ilk sezonda itibardan; boş kalan yer itibar sırasıyla (ülke sınırıyla). Önceden AL'ye "ŞL dışındaki en zayıf yabancılar"
+  alınıyordu (40 kulüpte); 150 kulüpte bu en küçük Belçika kulüplerini getirirdi.
+- **Kullanıcı yurtdışı kulübünü yönetebilir** (yeni oyunda lig sekmeleri; İş Merkezi'nde yurtdışı koltukları da açılır):
+  createWorld yurtdışı kulübünü kabul eder (taktik yurtdışı kulüpleri eklendikten sonra kurulur), kullanıcının yurtdışı
+  kulübünün U19'u (fillAcademies ayrı akış, academyIntake) ve tesis kaydı (initialFacilityLevels; takeJob'da da) olur, yaz
+  genç katılımı (foreignIntake) ona uygulanmaz. Yönetim güveni / sırası (board.userPosition) kullanıcının liginden.
+  Türkiye Kupası'na yurtdışı kulübü katılmaz.
+- Club.country varsa yurtdışı: divisionOf = 0 (Süper Lig / 1. Lig sorguları onları görmez). İtibar 100'ü geçebilir: devler
+  ~118–120. Gerçek kadrolarla ilk 11 ortalaması: Real Madrid / Manchester City güç ~16,5, Brentford ~15, Málaga ~13,
+  Marítimo / Telstar ~11 (Galatasaray 159 CA ≈ 16).
+- Eksik kadro üretimi (25'ten az) ayrı rng ile (FOREIGN_SEED_SALT). Uyruk: gerçek kadrolarda kendi ülkesi ~%40. Eksik 42 uyruk
+  nations.json'a eklendi (ağırlık 0, `nationalTeam: false`: milli turnuvalar değişmez; Japonya için names/jp.json).
+- U19 yok (kullanıcınınki hariç); her yaz A takıma 2–3 genç (17–18). Finans: yayın payı maaş bütçesinin %55'i (FOREIGN_TV_SHARE;
+  ligler oynanmadan önce bilet geliri yoktu, %75'ti). Ölçüm (bir sezon, %75'te): kasa maaş bütçesinin ort. +%72'si kadar arttı,
+  Türkiye kulüplerinde +%52; lig başına İngiltere +%31 … Hollanda +%115 (küçük maaşlı ligde bilet ağır basıyor).
+- Hız: maç günü kulüp → kadro dizini (withSquadIndex; clubPlayers 5600 oyuncuyu taramaz), chooseFormation yedekleri kurmaz
+  (aynı sonuç). Oyuncu ~2400 → ~5600, sezonda ~450 → ~3100 maç (+1. Lig); bir sezon ~5,6 sn → ~16 sn (Node, Vitest'te ~18 sn).
+  Maç başına ~3,3 ms: çoğu motorun kendisi (teamUnits, simulateMinute); kurulum ~1 ms.
 - Pazar: istekliliği itibar belirler (oyuncu kendinden 20 puan, 30+ yaşta 30 puan düşük kulübe gitmez); devlerin
   yıldızları Türkiye'ye gelmez, 30+ yaşlılar gelebilir. Yurtdışı kulüplerinin günlük alım şansı Türk kulüplerinin
   %40'ı (FOREIGN_BUY_FACTOR). Ölçüm (bir sezon + yaz): Türkiye → yurtdışı ~8 transfer (€170–210 Mn), yurtdışı →

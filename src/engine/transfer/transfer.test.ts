@@ -7,7 +7,7 @@ import { marketValue } from '../player';
 import { playSeason } from '../testing';
 import type { GameWorld, Player } from '../types';
 import { agentProfile, contractDemand } from './agents';
-import { askingPrice, loanFeeAsk, playerImportance, returnLoans, transferPlayer, type TransferTerms } from './market';
+import { askingPrice, contractExpiry, loanFeeAsk, playerImportance, returnLoans, transferPlayer, type TransferTerms } from './market';
 import {
   acceptCounter,
   exerciseOption,
@@ -48,6 +48,13 @@ describe('transfer dönemleri', () => {
     expect(transferWindow('2026-09-09')).toMatchObject({ open: false, nextOpens: '2027-01-02' });
     expect(transferWindow('2027-01-15')).toMatchObject({ open: true, name: 'Devre arası' });
     expect(transferWindow('2027-03-01')).toMatchObject({ open: false, nextOpens: '2027-07-01' });
+  });
+
+  it('sözleşme bitişi: sezonun 30 Haziran\'ı; sezonun son günü imzalanan imza günü bitmez', () => {
+    expect(contractExpiry('2026-07-01', 1)).toBe('2027-06-30');
+    expect(contractExpiry('2027-01-15', 2)).toBe('2028-06-30');
+    expect(contractExpiry('2027-06-29', 1)).toBe('2027-06-30');
+    expect(contractExpiry('2027-06-30', 1)).toBe('2028-06-30');
   });
 });
 

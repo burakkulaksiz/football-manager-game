@@ -230,3 +230,23 @@ Maç düzeyindeki ölçülerin tamamı hedef aralıkta: gol 2,74, ev galibiyeti 
   - Düzeltme: colors.ts teamColorsOn (şut haritasındaki seçim genelleştirildi): zeminde okunan ilk kulüp rengi, deplasman ev sahibine
     benziyorsa diğer rengi, yoksa yedek renk. Baskı çubuğu ve son 10 dk koyu panel zemininde (DARK_PANEL) kullanır: Beşiktaş beyaz görünür.
     Kanıt: colors.test.ts (koyu zeminde takım renkleri). Sahadaki oyuncu noktaları forma rengiyle kalır (forma gerçekten siyah).
+- [x] Sakat / cezalı oyuncunun yerine otomatik giren alakasız biri oluyordu: kulübede iyi bir yedek varken kadro dışından biri,
+  ofansif orta saha yerine stoper.
+  - Neden (tactics.ts `resolveLineup`): yedekler aday havuzundan bilerek çıkarılıyordu; kadro dışında o mevkinin oyuncusu yoksa,
+    bilmediği mevkide bile verimi 0,6 sayılan yüksek CA'lı oyuncu en iyi aday çıkıyordu.
+  - Düzeltme: boş mevkiye önce yedeklerden o mevkiyi bilen en iyisi; yoksa bütün kadrodan, mevki uyumunun karesiyle (CA × uyum² ×
+    kondisyon) en uygunu. Yalnızca kullanıcı takımını etkiler (kayıtlı taktiği olan tek kulüp). Kanıt: tactics.test.ts "boşalan yere önce".
+    Giren yedek kulübeden düşer, yerine kimse eklenmez (kulübe bir kişi eksik kalır).
+- [x] 30 Haziran'da imzalanan 1 yıllık sözleşme imza günü bitiyordu (yapay zekâ serbest oyuncu alınca oyuncu sözleşmesi bitmiş halde
+  kulüpte kalıyordu; season.test.ts yukarıdaki düzeltmeden sonra tohum 101'de yakaladı).
+  - Düzeltme (market.ts `contractExpiry`): sezonun son günü imzalanan sözleşme gelecek sezondan sayılır. Kanıt: transfer.test.ts "sözleşme bitişi".
+- [x] Kulübeden 11'e giren yedeğin yerine kimse eklenmiyordu (kulübe bir kişi eksik kalıyordu).
+  - Düzeltme (tactics.ts `resolveLineup`): eksilen kulübe kalanlardan kullanıcının yedek sayısına tamamlanır; tek yedek kaleci.
+    Kanıt: tactics.test.ts "boşalan yere önce" (kulübe uzunluğu ve kaleci sayısı).
+- [x] Maç içinde saha görünümünde sürükle-bırak ile değişiklik ve yer değiştirme (Taktik ekranındaki gibi).
+  - Yapıldı: taktik paneli / tam ekran Taktik çekmecesi başında saha düzeni (LiveLineup.tsx). Yedeği sahadakinin üstüne bırak →
+    değişiklik; sahada iki oyuncu → yer değişimi (motor `swapPositions`, hak harcamaz). Tıklayarak da olur. Kanıt: engine.test.ts
+    "yer değiştirme"; tip kontrolü. Tarayıcıda elle denenmedi.
+- [x] Yanlış oyuncu değişikliği geri alınabilmeli (maç yeniden başlamadıysa).
+  - Yapıldı: "↶ Geri Al" (değişiklik paneli başlığı ve saha düzeni): son değişiklik (oyuncu, yer, taktik) maç bir adım
+    ilerleyene kadar geri alınır; hak da geri gelir. Kanıt: matchSave.test.ts "canlı maçta geri alma".

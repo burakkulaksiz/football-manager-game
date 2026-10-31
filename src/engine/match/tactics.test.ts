@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { gameData } from '../../gameData';
 import { clubPlayers, createWorld, getClub } from '../generation/worldGenerator';
-import type { Position } from '../types';
+import type { Player, Position } from '../types';
 import { buildResult, changeTactics, createMatch, simulateToEnd, stepMatch, type TeamSetup } from './engine';
 import {
   autoSelectLineup,
@@ -92,6 +92,36 @@ describe('kadro düzenleme', () => {
     const ids = lineup.starters.map((s) => s.playerId);
     expect(ids).not.toContain(injured);
     expect(ids).not.toContain(gone);
+  });
+
+  it('boşalan yere önce o mevkiyi bilen yedek; yedekte yoksa o mevkinin oyuncusu, bilmediği mevkideki iyi oyuncu değil', () => {
+    const i = 9;
+    const slot = FORMATIONS[t.formation][i]!;
+    expect(['GK', 'DC']).not.toContain(slot);
+    const out = t.lineup[i]!;
+    const keeper = (id: number) => squad.find((p) => p.id === id)!.positions.GK !== undefined;
+    const benchMan = t.bench.find((id) => !keeper(id))!;
+    const [star, natural] = squad.filter((p) => !t.lineup.includes(p.id) && !t.bench.includes(p.id) && !keeper(p.id));
+    const only = (pos: Position, v = 20) => ({ [pos]: v }) as Player['positions'];
+    const scenario = (benchKnows: boolean) =>
+      squad.map((p): Player => {
+        if (p.id === out) return { ...p, suspension: 1 };
+        if (p.id === benchMan) return { ...p, currentAbility: 100, condition: 100, positions: benchKnows ? only(slot, 15) : only('DC') };
+        if (p.id === star!.id) return { ...p, currentAbility: 180, condition: 100, positions: benchKnows ? only(slot) : only('DC') };
+        if (p.id === natural!.id) return { ...p, currentAbility: 110, condition: 100, positions: only(slot) };
+        // geri kalan saha oyuncuları yalnızca stoper: aday olarak karışmasınlar
+        return t.lineup.includes(p.id) || keeper(p.id) ? p : { ...p, positions: only('DC') };
+      });
+    const at = (players: Player[]) => resolveLineup(t, players).starters.find((s) => s.slot === slot && !t.lineup.includes(s.playerId))?.playerId;
+
+    // Kadro dışında daha iyisi (180) olsa da mevkiyi bilen yedek girer; kulübe kalanlardan tamamlanır (tek yedek kaleci)
+    expect(at(scenario(true))).toBe(benchMan);
+    const { bench } = resolveLineup(t, scenario(true));
+    expect(bench).toHaveLength(t.bench.length);
+    expect(bench).not.toContain(benchMan);
+    expect(bench.filter(keeper)).toHaveLength(t.bench.filter(keeper).length);
+    // Yedeklerde mevkiyi bilen yok: CA 180'lik stoper değil, mevkinin doğal oyuncusu (110)
+    expect(at(scenario(false))).toBe(natural!.id);
   });
 });
 

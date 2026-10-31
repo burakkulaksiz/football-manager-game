@@ -18,9 +18,10 @@ export function seasonEndYear(date: GameDate): number {
   return Number(date.slice(5, 7)) >= 7 ? year + 1 : year;
 }
 
-/** `years` yıllık sözleşmenin bitişi: ilgili sezonun 30 Haziran'ı. */
+/** `years` yıllık sözleşmenin bitişi: ilgili sezonun 30 Haziran'ı (sezonun son günü imzalanan, imza günü bitmesin diye gelecek sezondan). */
 export function contractExpiry(date: GameDate, years: number): GameDate {
-  return makeDate(seasonEndYear(date) + years - 1, 6, 30);
+  const lastDay = date.slice(5) === '06-30' ? 1 : 0;
+  return makeDate(seasonEndYear(date) + lastDay + years - 1, 6, 30);
 }
 
 /** Kulübün maaş ölçeği: gerçek maaşlar / CA'ya göre ham maaş. Büyük kulüp aynı oyuncuya daha çok öder. */

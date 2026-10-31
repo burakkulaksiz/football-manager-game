@@ -33,11 +33,20 @@
   rakibe ortada açık; dar → orta saha ↑, atak/korner/kafa ↓. Varsayılan talimatlar etkisiz (denge testleri bununla).
 - **Kaptan:** sahadaysa liderliğine göre takıma ±%3. Penaltı/serbest vuruşçu seçiliyse ve sahadaysa o kullanır.
 - **Kullanıcı taktiği** `world.tactics[clubId]` içinde (yalnızca kendi kulübümüz). Maçta `resolveLineup`
-  sakat/ayrılmış oyuncuyu çıkarır, boş mevkiyi otomatik doldurur, yedek boşsa otomatik seçer.
+  sakat/cezalı/ayrılmış oyuncuyu çıkarır. Boş mevkiye önce yedeklerden o mevkiyi bilen en iyisi, yoksa bütün kadrodan
+  CA × uyum² × kondisyon en yüksek olan girer (uyumun karesi: bilmediği mevkideki iyi oyuncu mevkinin oyuncusunu geçmesin).
+  Yedek boşsa otomatik seçilir; eksildiyse (yedek 11'e girdi / sakat) kalanlardan kullanıcının yedek sayısına tamamlanır
+  (yedek kaleci yoksa önce kaleci, varsa ikincisi alınmaz).
 - **Yapay zekâ** her maçta kadrosuna en uygun dizilişi seçer (`chooseFormation`), talimatları varsayılan,
   mentaliteyi skora göre değiştirir.
 - **Maç içi taktik:** diziliş değişince sahadakiler yeni mevkilere dağıtılır (kaleci kalede). Başlama
   öncesi Taktik ekranında yapılan değişiklik maç ekranına dönünce aynı tohumla maça yansır (`refreshPreMatch`).
+  Taktik panelinde saha düzeni (`ui/components/LiveLineup.tsx`): yedek → sahadaki oyuncu değişiklik, saha ↔ saha
+  `swapPositions` (hak harcamaz, bireysel talimat mevkide kalır).
+- **Maç içi geri alma:** store'daki `liveEdit` her kullanıcı değişikliğinden (oyuncu, yer, taktik, set) önce maçın
+  `structuredClone` kopyasını `liveUndo.stack`'e koyar (en çok 20); `undoLiveChange` sonuncuyu geri yükler (RNG durumu ve
+  anlatım satırı dahil). Yığın yalnızca `liveUndo.match === liveMatch` iken geçerli: maç adımı, devre arası konuşması,
+  yeniden kurma ve yükleme yeni nesne verdiği için geri alma kendiliğinden düşer (ayrıca sıfırlamak gerekmez).
 - **Puan (1–10):** 6.0'dan başlar; gol +1, asist +0.6, kurtarış +0.3, blok +0.15, sarı −0.3, kırmızı −1.5,
   yenilen gol (kaleci −0.4, defans −0.15), maç sonu galibiyet ±0.3, gol yemeyen kaleci/defans bonus.
   Maç sonrası puan oyuncunun `form` listesine eklenir (son 5).
